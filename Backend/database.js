@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// JSON database file paths
-const dbDir = path.join(__dirname, 'data');
+// JSON database file paths - use process.cwd() for absolute reliability in containers
+const dbDir = path.join(process.cwd(), 'data');
 const dbFiles = {
     users: path.join(dbDir, 'users.json'),
     projects: path.join(dbDir, 'projects.json'),
@@ -19,6 +19,8 @@ if (!fs.existsSync(dbDir)) {
 // Initialize JSON files if they don't exist
 function initDatabase() {
     console.log('--- Initializing Database ---');
+    console.log(`Working Directory: ${process.cwd()}`);
+    console.log(`Database Directory: ${dbDir}`);
     Object.entries(dbFiles).forEach(([key, filepath]) => {
         console.log(`Checking ${key}: ${filepath}`);
         if (!fs.existsSync(filepath)) {

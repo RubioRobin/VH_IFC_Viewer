@@ -8,28 +8,24 @@ const session = require('express-session');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 
-console.log('--- STARTING UP (Stage 1) ---');
-
 const app = express();
-const port = parseInt(process.env.PORT || '3001', 10);
+const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
-// Request Logger (First middleware)
+// Essential for Railway/Proxies
+app.set('trust proxy', 1);
+
+// Comprehensive Request Logger
 app.use((req, res, next) => {
-    console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - (IP: ${req.ip})`);
     next();
 });
 
-// Health Check (Responsive immediately)
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString(), port });
-});
+// Primary Health Checks
+app.get('/', (req, res) => res.send('BIM Backend: Online 🚀'));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', port, time: new Date().toISOString() }));
 
-app.get('/', (req, res) => {
-    res.send(`Backend is UP and listening on port ${port} 🚀`);
-});
-
-// Basic Middleware
+// Middleware
 app.use(cors({
     origin: frontendUrl === '*' ? true : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
     credentials: true
@@ -42,29 +38,25 @@ app.use(session({
     cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// Initialize DB and Folders
-console.log('--- INITIALIZING DB & FOLDERS (Stage 2) ---');
-let db;
-try {
-    db = require('./database');
-    console.log('✅ Database module loaded');
-} catch (e) {
-    console.error('❌ FAILED TO LOAD DATABASE:', e);
-}
-
-const uploadsDir = path.join(__dirname, 'uploads');
-const qrCodesDir = path.join(__dirname, 'qr-codes');
-const modelsDir = path.join(__dirname, 'models');
+// Setup Persistence
+const baseDir = process.cwd();
+const uploadsDir = path.join(baseDir, 'uploads');
+const qrCodesDir = path.join(baseDir, 'qr-codes');
+const modelsDir = path.join(baseDir, 'models');
 
 [uploadsDir, qrCodesDir, modelsDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
-        console.log(`✅ Directory created: ${dir}`);
+        console.log(`✅ Folder confirmed: ${dir}`);
     }
 });
 
 app.use('/models', express.static(uploadsDir));
 app.use('/qr-codes', express.static(qrCodesDir));
+
+// Load Database
+console.log('--- Loading Database ---');
+const db = require('./database');
 
 // --- ROUTES ---
 const upload = multer({
@@ -77,7 +69,7 @@ const upload = multer({
 
 const requireAuth = (req, res, next) => {
     if (req.session && req.session.userId) next();
-    else res.status(401).json({ error: 'Auth required' });
+    else res.status(401).json({ error: 'Unauthorized' });
 };
 
 app.post('/api/auth/login', (req, res) => {
@@ -85,8 +77,8 @@ app.post('/api/auth/login', (req, res) => {
     const user = db.getUserByUsername(username);
     if (user && bcrypt.compareSync(password, user.password_hash)) {
         req.session.userId = user.id;
-        res.json({ user: { id: user.id, username: user.username } });
-    } else res.status(401).json({ error: 'Invalid' });
+        res.json({ message: 'OK', user: { id: user.id, username: user.username } });
+    } else res.status(401).json({ error: 'Auth Failed' });
 });
 
 app.get('/api/projects', requireAuth, (req, res) => res.json(db.getAllProjects()));
@@ -107,22 +99,23 @@ app.post('/api/qr/generate', requireAuth, async (req, res) => {
 
 app.get('/api/viewer/resolve/:elementId', (req, res) => {
     const qr = db.getAllQRCodes().find(q => q.element_id === req.params.elementId);
-    if (!qr) return res.status(404).json({ error: 'Not found' });
+    if (!qr) return res.status(404).json({ error: 'Not Found' });
     const file = db.getFileById(qr.file_id);
     res.json({ file_url: `/models/${file.filename}`, element_id: qr.element_id });
 });
 
-// Final Start
-console.log(`--- BINDING TO PORT ${port} (Stage 3) ---`);
-const server = app.listen(port, '0.0.0.0', () => {
-    console.log(`\n🚀 BIM Backend Running!`);
-    console.log(`📡 URL: http://0.0.0.0:${port}`);
-    console.log(`-------------------------\n`);
+// START SERVER
+console.log(`\n--- SERVER START ATTEMPT ---`);
+console.log(`Port: ${port}`);
+console.log(`CWD: ${process.cwd()}`);
 
-    // Heartbeat to keep logs alive
-    setInterval(() => console.log(`[HEARTBEAT] ${new Date().toISOString()}`), 30000);
-});
+app.listen(port, () => {
+    console.log(`\n🚀 BIM Backend Running on port ${port}`);
+    console.log(`📡 Local: http://localhost:${port}`);
 
-server.on('error', (err) => {
-    console.error('❌ SERVER BINDING ERROR:', err);
+    // Explicitly verify binding
+    setInterval(() => {
+        const timestamp = new Date().toISOString();
+        console.log(`[STATUS] ${timestamp} - Server active - Port ${port}`);
+    }, 60000);
 });
