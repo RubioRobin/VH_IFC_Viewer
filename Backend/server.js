@@ -20,10 +20,10 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 // Directories (must be defined before middleware that uses them)
 const uploadsDir = path.join(__dirname, 'uploads');
 const qrCodesDir = path.join(__dirname, 'qr-codes');
-const modelsDir = path.join(__dirname, '../Examples/IfcSampleFiles-main/IfcSampleFiles-main');
+const modelsDir = path.join(__dirname, 'models'); // Use local models dir in cloud
 
 // Ensure directories exist
-[uploadsDir, qrCodesDir].forEach(dir => {
+[uploadsDir, qrCodesDir, modelsDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
