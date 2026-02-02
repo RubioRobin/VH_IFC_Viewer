@@ -13,6 +13,10 @@ const app = express();
 const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
+// Basic health check routes
+app.get('/', (req, res) => res.send('VH IFC Viewer Backend is running 🚀'));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
 // Directories (must be defined before middleware that uses them)
 const uploadsDir = path.join(__dirname, 'uploads');
 const qrCodesDir = path.join(__dirname, 'qr-codes');
