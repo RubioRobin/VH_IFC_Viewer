@@ -18,13 +18,15 @@ if (!fs.existsSync(dbDir)) {
 
 // Initialize JSON files if they don't exist
 function initDatabase() {
+    console.log('--- Initializing Database ---');
     Object.entries(dbFiles).forEach(([key, filepath]) => {
+        console.log(`Checking ${key}: ${filepath}`);
         if (!fs.existsSync(filepath)) {
             fs.writeFileSync(filepath, JSON.stringify([], null, 2));
             console.log(`✅ Created ${key}.json`);
         }
     });
-    console.log('✅ Database initialized');
+    console.log('✅ Database initialization check complete');
 }
 
 // Helper functions to read/write JSON

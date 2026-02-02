@@ -7,7 +7,9 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+console.log('--- Loading Dependencies ---');
 const db = require('./database');
+console.log('✅ Dependencies loaded');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -103,7 +105,9 @@ function initDefaultUser() {
     }
 }
 
+console.log('--- Initializing Admin User ---');
 initDefaultUser();
+console.log('✅ Admin user check complete');
 
 // ==================== AUTHENTICATION ====================
 
@@ -514,10 +518,19 @@ app.get('/api/models', (req, res) => {
 
 // ==================== SERVER START ====================
 
+console.log('--- Starting Server ---');
 app.listen(port, '0.0.0.0', () => {
     console.log(`\n🚀 BIM Admin Backend running at http://0.0.0.0:${port}`);
     console.log(`📁 Serving models from: ${modelsDir}`);
     console.log(`📤 Uploads directory: ${uploadsDir}`);
     console.log(`📱 QR codes directory: ${qrCodesDir}`);
     console.log(`\n🔐 Default login: username=admin, password=admin123\n`);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('❌ UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ UNHANDLED REJECTION:', reason);
 });
