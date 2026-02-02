@@ -3,7 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
@@ -105,9 +105,8 @@ function initDefaultUser() {
     }
 }
 
-console.log('--- Initializing Admin User ---');
-initDefaultUser();
-console.log('✅ Admin user check complete');
+// Initializing Admin User moved to server start
+// initDefaultUser();
 
 // ==================== AUTHENTICATION ====================
 
@@ -524,7 +523,12 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`📁 Serving models from: ${modelsDir}`);
     console.log(`📤 Uploads directory: ${uploadsDir}`);
     console.log(`📱 QR codes directory: ${qrCodesDir}`);
-    console.log(`\n🔐 Default login: username=admin, password=admin123\n`);
+
+    console.log('--- Initializing Admin User ---');
+    initDefaultUser();
+    console.log('✅ Admin user check complete');
+
+    console.log('\n🔐 Default login: username=admin, password=admin123\n');
 });
 
 process.on('uncaughtException', (err) => {
