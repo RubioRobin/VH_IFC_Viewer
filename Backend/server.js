@@ -12,20 +12,19 @@ const app = express();
 const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
-// Essential for Railway/Proxies
+// --- CONFIG & HEALTH (Immediate) ---
 app.set('trust proxy', 1);
 
-// Comprehensive Request Logger
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - (IP: ${req.ip})`);
-    next();
+app.get('/', (req, res) => {
+    console.log(`[LOG] Root hit at ${new Date().toISOString()}`);
+    res.send('VH IFC Viewer Backend is ONLINE! 🚀');
 });
 
-// Primary Health Checks
-app.get('/', (req, res) => res.send('BIM Backend: Online 🚀'));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', port, time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-// Middleware
+// --- MIDDLEWARE ---
 app.use(cors({
     origin: frontendUrl === '*' ? true : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
     credentials: true
@@ -38,38 +37,34 @@ app.use(session({
     cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// Setup Persistence
-const baseDir = process.cwd();
-const uploadsDir = path.join(baseDir, 'uploads');
-const qrCodesDir = path.join(baseDir, 'qr-codes');
-const modelsDir = path.join(baseDir, 'models');
+// --- DIRECTORIES ---
+const uploadsDir = path.join(__dirname, 'uploads');
+const qrCodesDir = path.join(__dirname, 'qr-codes');
+const modelsDir = path.join(__dirname, 'models');
 
 [uploadsDir, qrCodesDir, modelsDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        console.log(`✅ Folder confirmed: ${dir}`);
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
 app.use('/models', express.static(uploadsDir));
 app.use('/qr-codes', express.static(qrCodesDir));
 
-// Load Database
+// --- DATABASE ---
 console.log('--- Loading Database ---');
 const db = require('./database');
+db.initDatabase();
 
-// --- ROUTES ---
+// --- AUTH & BUSINESS ROUTES ---
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => cb(null, uploadsDir),
         filename: (req, file, cb) => cb(null, `${uuidv4()}-${file.originalname}`)
-    }),
-    limits: { fileSize: 500 * 1024 * 1024 }
+    })
 });
 
 const requireAuth = (req, res, next) => {
     if (req.session && req.session.userId) next();
-    else res.status(401).json({ error: 'Unauthorized' });
+    else res.status(401).json({ error: 'Auth required' });
 };
 
 app.post('/api/auth/login', (req, res) => {
@@ -78,7 +73,7 @@ app.post('/api/auth/login', (req, res) => {
     if (user && bcrypt.compareSync(password, user.password_hash)) {
         req.session.userId = user.id;
         res.json({ message: 'OK', user: { id: user.id, username: user.username } });
-    } else res.status(401).json({ error: 'Auth Failed' });
+    } else res.status(401).json({ error: 'Failed' });
 });
 
 app.get('/api/projects', requireAuth, (req, res) => res.json(db.getAllProjects()));
@@ -99,23 +94,16 @@ app.post('/api/qr/generate', requireAuth, async (req, res) => {
 
 app.get('/api/viewer/resolve/:elementId', (req, res) => {
     const qr = db.getAllQRCodes().find(q => q.element_id === req.params.elementId);
-    if (!qr) return res.status(404).json({ error: 'Not Found' });
+    if (!qr) return res.status(404).json({ error: 'Not found' });
     const file = db.getFileById(qr.file_id);
     res.json({ file_url: `/models/${file.filename}`, element_id: qr.element_id });
 });
 
-// START SERVER
-console.log(`\n--- SERVER START ATTEMPT ---`);
-console.log(`Port: ${port}`);
-console.log(`CWD: ${process.cwd()}`);
-
-app.listen(port, () => {
-    console.log(`\n🚀 BIM Backend Running on port ${port}`);
-    console.log(`📡 Local: http://localhost:${port}`);
-
-    // Explicitly verify binding
-    setInterval(() => {
-        const timestamp = new Date().toISOString();
-        console.log(`[STATUS] ${timestamp} - Server active - Port ${port}`);
-    }, 60000);
+// --- GO ---
+app.listen(port, '0.0.0.0', () => {
+    console.log(`\n🚀 BIM Backend active on port ${port}`);
+    console.log(`--- Server Details ---`);
+    console.log(`Dir: ${__dirname}`);
+    console.log(`Time: ${new Date().toISOString()}`);
+    console.log(`----------------------\n`);
 });
