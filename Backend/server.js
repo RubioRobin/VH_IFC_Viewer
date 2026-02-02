@@ -15,6 +15,12 @@ const app = express();
 const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
+// Standard request logger for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 console.log('--- SERVER CONFIG ---');
 console.log('Port:', port);
 console.log('Frontend URL:', frontendUrl);
@@ -22,11 +28,9 @@ console.log('---------------------');
 
 // Basic health check routes
 app.get('/', (req, res) => {
-    console.log('Root request received');
     res.send('VH IFC Viewer Backend is running 🚀');
 });
 app.get('/api/health', (req, res) => {
-    console.log('Health check request received');
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -518,8 +522,8 @@ app.get('/api/models', (req, res) => {
 // ==================== SERVER START ====================
 
 console.log('--- Starting Server ---');
-app.listen(port, '0.0.0.0', () => {
-    console.log(`\n🚀 BIM Admin Backend running at http://0.0.0.0:${port}`);
+app.listen(port, () => {
+    console.log(`\n🚀 BIM Admin Backend running at port: ${port}`);
     console.log(`📁 Serving models from: ${modelsDir}`);
     console.log(`📤 Uploads directory: ${uploadsDir}`);
     console.log(`📱 QR codes directory: ${qrCodesDir}`);
