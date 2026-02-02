@@ -1,0 +1,9 @@
+{
+    "name": "vh-ifc-viewer-root",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "npm start --prefix Backend",
+        "install-backend": "npm install --prefix Backend"
+    }
+}
