@@ -13,9 +13,20 @@ const app = express();
 const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
+console.log('--- SERVER CONFIG ---');
+console.log('Port:', port);
+console.log('Frontend URL:', frontendUrl);
+console.log('---------------------');
+
 // Basic health check routes
-app.get('/', (req, res) => res.send('VH IFC Viewer Backend is running 🚀'));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/', (req, res) => {
+    console.log('Root request received');
+    res.send('VH IFC Viewer Backend is running 🚀');
+});
+app.get('/api/health', (req, res) => {
+    console.log('Health check request received');
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Directories (must be defined before middleware that uses them)
 const uploadsDir = path.join(__dirname, 'uploads');
