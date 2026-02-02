@@ -1,0 +1,990 @@
+/* Animations enabled */
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+  /* Total scrollbar annihilation */
+  font-family: "Outfit", sans-serif;
+  background-color: #f3f4f6;
+  /* Matching app-content background */
+  height: 100%;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+/* Custom Grid Layout */
+.app-content {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  gap: 1rem;
+  height: 100vh;
+  width: 100vw;
+  padding: 1rem;
+  box-sizing: border-box;
+  background-color: #f3f4f6;
+}
+
+.app-side-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.app-side-panel--left {
+  grid-column: 1;
+}
+
+.app-side-panel--right {
+  grid-column: 3;
+}
+
+.app-viewer-container {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+:root {
+  /* Grayscale Colors */
+  --bim-ui_gray-0: hsl(220, 20%, 8%);
+  --bim-ui_gray-1: hsl(220, 15%, 12%);
+  --bim-ui_gray-2: hsl(220, 10%, 20%);
+  --bim-ui_gray-4: hsl(220, 5%, 30%);
+  --bim-ui_gray-6: hsl(220, 3%, 60%);
+  --bim-ui_gray-8: hsl(220, 2%, 60%);
+  --bim-ui_gray-9: hsl(220, 1%, 70%);
+  --bim-ui_gray-10: hsl(220, 0%, 80%);
+
+  /* Brand Colors Contrasts */
+  --bim-ui_main-contrast: var(--bim-ui_gray-10);
+  --bim-ui_accent-contrast: var(--bim-ui_gray-0);
+
+  /* Glassmorphism Defaults */
+  --glass-blur: blur(12px);
+  --glass-border-light: 1px solid rgba(255, 255, 255, 0.5);
+  --glass-border-dark: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Background Colors */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bim-ui_bg-base: var(--bim-ui_gray-0);
+    --bim-ui_bg-contrast-10: var(--bim-ui_gray-1);
+    --bim-ui_bg-contrast-20: var(--bim-ui_gray-2);
+    --bim-ui_bg-contrast-40: var(--bim-ui_gray-4);
+    --bim-ui_bg-contrast-60: var(--bim-ui_gray-6);
+    --bim-ui_bg-contrast-80: var(--bim-ui_gray-8);
+    --bim-ui_bg-contrast-100: var(--bim-ui_gray-10);
+    --bim-ui_bg-glass: rgba(30, 30, 40, 0.75);
+    --glass-border: var(--glass-border-dark);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bim-ui_bg-base: #ffffff;
+    --bim-ui_bg-contrast-10: #ffffff;
+    --bim-ui_bg-contrast-20: #fcfcfc;
+    --bim-ui_bg-contrast-40: #f0f0f0;
+    --bim-ui_bg-contrast-60: #d1d5db;
+    --bim-ui_bg-contrast-80: #4b5563;
+    --bim-ui_bg-contrast-100: #111827;
+    --bim-ui_accent-base: #6528d7;
+
+    /* White Glass */
+    --bim-ui_bg-glass: rgba(255, 255, 255, 0.95);
+    --glass-border: 1px solid rgba(255, 255, 255, 1.0);
+  }
+}
+
+html.bim-ui-dark {
+  --bim-ui_bg-base: var(--bim-ui_gray-0);
+  --bim-ui_bg-contrast-10: var(--bim-ui_gray-1);
+  --bim-ui_bg-contrast-20: var(--bim-ui_gray-2);
+  --bim-ui_bg-contrast-40: var(--bim-ui_gray-4);
+  --bim-ui_bg-contrast-60: var(--bim-ui_gray-6);
+  --bim-ui_bg-contrast-80: var(--bim-ui_gray-8);
+  --bim-ui_bg-contrast-100: var(--bim-ui_gray-10);
+  --bim-ui_bg-glass: rgba(30, 30, 40, 0.75);
+  --glass-border: var(--glass-border-dark);
+}
+
+html.bim-ui-light {
+  --bim-ui_bg-base: #f9fafb;
+  --bim-ui_bg-contrast-10: #ffffff;
+  --bim-ui_bg-contrast-20: #f3f4f6;
+  --bim-ui_bg-contrast-40: #9ca3af;
+  /* Darkened from #e5e7eb for better visibility if used for text */
+  --bim-ui_bg-contrast-60: #6b7280;
+  /* Darkened from #d1d5db for secondary text */
+  --bim-ui_bg-contrast-80: #374151;
+  /* Darkened from #4b5563 for primary text */
+  --bim-ui_bg-contrast-100: #111827;
+
+  /* Broodjes "Blurple" Brand Color */
+  --bim-ui_accent-base: #4f46e5;
+  --bim-ui_main-base: #4f46e5;
+
+  --bim-ui_bg-glass: rgba(255, 255, 255, 1);
+  --glass-border: 1px solid rgba(0, 0, 0, 0.04);
+  --bim-ui_shadow-glass: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+}
+
+/* Force high contrast for tables/properties */
+bim-table,
+bim-tree {
+  --bim-ui_bg-contrast-40: #9ca3af !important;
+  --bim-ui_bg-contrast-60: #4b5563 !important;
+  /* Make labels readable */
+  --bim-ui_bg-contrast-80: #111827 !important;
+  /* Make values completely dark */
+  color: #111827 !important;
+}
+
+/* Force right alignment for table values as requested */
+bim-table::part(row) {
+  justify-content: space-between !important;
+}
+
+/* 
+   We removed generic text-align: right because it messed up the first column.
+   row justify-content: space-between should push the first cell left and last cell right.
+*/
+bim-table {
+  /* text-align: right !important; - REMOVED */
+}
+
+/* Hide warning emojis in empty tables/states */
+bim-table::part(empty-icon),
+bim-table bim-icon,
+[part="empty-icon"],
+.bim-table-empty-icon {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Ultra-broad icon removal for warning/alert emojis */
+bim-icon[icon*="warning"],
+bim-icon[icon*="alert"],
+bim-icon[icon*="error"],
+bim-icon[icon*="info"],
+[icon*="warning"],
+[icon*="alert"] {
+  display: none !important;
+}
+
+/* Aggressive hide all icons in table parts that could be emojis */
+bim-table::part(empty-icon),
+bim-table::part(icon),
+bim-table::part(empty-container) bim-icon,
+bim-table bim-icon,
+bim-label bim-icon[icon*="warning"],
+bim-label bim-icon[icon*="alert"] {
+  display: none !important;
+}
+
+/* Ensure icons don't animate if they do show up */
+bim-icon {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* GLOBAL ANIMATION KILL: Broodjes Style is Static */
+/* Animation killer removed */
+
+
+/* Button Refinements: Broodjes Style - ABSOLUTELY STATIC */
+bim-button {
+  --bim-ui_main-base: #4f46e5 !important;
+  background-color: var(--bim-ui_main-base) !important;
+
+  /* Text and Icon Colors - Force White */
+  color: white !important;
+  --bim-icon--c: white !important;
+  --bim-label--c: white !important;
+
+  /* Disable Ripple & State Layers */
+  --md-sys-color-on-primary: transparent !important;
+  --md-ripple-hover-color: transparent !important;
+  --md-ripple-pressed-color: transparent !important;
+  --md-ripple-focus-color: transparent !important;
+  --bim-ui_ripple-color: transparent !important;
+  --md-ripple-hover-opacity: 0 !important;
+  --md-ripple-pressed-opacity: 0 !important;
+  --md-comp-filled-button-hover-state-layer-opacity: 0 !important;
+  --md-comp-filled-button-pressed-state-layer-opacity: 0 !important;
+
+  border-radius: 0.5rem !important;
+  font-weight: 600;
+  box-shadow: none !important;
+
+  /* Enable transforms and transitions for feedback */
+  transition: transform 0.1s ease, background-color 0.1s ease !important;
+  transform: scale(1);
+}
+
+/* Kill all internal parts and potential ripple elements - NO EXCEPTIONS */
+bim-button ::part(ripple),
+bim-button ::part(state-layer),
+bim-button ::part(focus-ring),
+md-ripple,
+.md-ripple,
+[part="ripple"],
+[part="state-layer"],
+::part(ripple),
+::part(state-layer),
+::part(focus-ring) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Force instant transitions on EVERYTHING */
+/* Transition killer removed */
+
+
+/* Specific button state reset to prevent center-out animations */
+bim-button:active,
+bim-button:hover,
+bim-button:focus {
+  outline: none !important;
+}
+
+bim-button:hover {
+  background-color: #4338ca !important;
+  transform: scale(1.03) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
+}
+
+bim-button:active {
+  background-color: #3730a3 !important;
+  transform: scale(0.95) !important;
+  box-shadow: none !important;
+}
+
+/* Keep context menu items clean (transparent with dark text) unless active */
+bim-context-menu bim-button {
+  background-color: transparent;
+  color: var(--bim-ui_bg-contrast-100);
+  box-shadow: none;
+  font-weight: normal;
+  border-radius: 0.5rem !important;
+}
+
+bim-context-menu bim-button:hover {
+  background-color: var(--bim-ui_bg-contrast-20) !important;
+  color: var(--bim-ui_main-base) !important;
+  transform: none !important;
+  box-shadow: none;
+}
+
+bim-context-menu bim-button[active] {
+  background-color: var(--bim-ui_main-base) !important;
+  color: white !important;
+}
+
+* {
+  margin: 0;
+}
+
+body {
+  height: 100vh;
+}
+
+html {
+  font-family: sans-serif;
+  font-size: 17px;
+}
+
+bim-grid[floating] {
+  z-index: 100;
+}
+
+bim-grid:not([floating]) {
+  border-radius: 0;
+  background-color: var(--bim-ui_bg-base);
+}
+
+bim-panel {
+  outline: none;
+  border: var(--glass-border);
+  border-radius: 1.5rem;
+  /* Rounder panels */
+  box-shadow: var(--bim-ui_shadow-glass);
+  background-color: var(--bim-ui_bg-contrast-10);
+  overflow: hidden;
+}
+
+/* Pill Inputs & Dropdowns - FORCE EXACT HEIGHT MATCH */
+bim-text-input,
+bim-number-input,
+bim-dropdown {
+  --bim-input--brad: 0.5rem !important;
+  --bim-input--bgc: #ffffff;
+  --bim-input--bc: #d1d5db;
+  --bim-input--olc: var(--bim-ui_main-base);
+  --bim-input--p: 0 0.75rem !important;
+  /* Set internal padding via variable */
+
+  /* Force exact height on wrapper */
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  line-height: 2rem !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+/* Force exact height on inner input */
+bim-text-input::part(input),
+bim-number-input::part(input),
+bim-dropdown::part(input) {
+  box-shadow: none !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  line-height: 2rem !important;
+  box-sizing: border-box !important;
+  padding: 0 0.75rem !important;
+  margin: 0 !important;
+  border: none !important;
+  vertical-align: middle !important;
+}
+
+
+
+bim-grid:not([floating])>bim-panel {
+  background-color: var(--bim-ui_bg-contrast-10);
+}
+
+bim-panel-section {
+  --bim-panel-section_hc: var(--bim-ui_accent-base);
+  overflow: auto;
+  transition: none !important;
+}
+
+bim-panel-section[fixed] {
+  overflow: visible !important;
+}
+
+bim-panel-section::part(content) {
+  transition: none !important;
+  animation: none !important;
+}
+
+bim-panel-section::part(header-icon) {
+  display: none !important;
+}
+
+bim-tree-item {
+  transition: none !important;
+}
+
+bim-panel-section>bim-table {
+  flex: 1;
+}
+
+:not(bim-panel)>bim-panel-section {
+  outline: none;
+  border: var(--glass-border);
+  border-radius: 1rem;
+  box-shadow: var(--bim-ui_shadow-glass);
+  background-color: var(--bim-ui_bg-contrast-10);
+}
+
+bim-grid[floating]>bim-toolbar {
+  border: none;
+  justify-self: center;
+  outline: 1px solid var(--bim-ui_bg-contrast-40);
+  background-color: var(--bim-ui_bg-glass);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--bim-ui_shadow-glass);
+  border-radius: 0.75rem;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  max-width: calc(100% - 2rem);
+  width: fit-content;
+  margin: 0 1rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+bim-toolbar-section {
+  gap: 0.2rem !important;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+bim-toolbar bim-button {
+  padding: 0 0.4rem !important;
+  --bim-label--fz: 0.75rem;
+  min-height: 2.2rem;
+}
+
+bim-toolbar bim-button::part(label) {
+  font-size: 0.75rem !important;
+  margin-left: 0.25rem !important;
+}
+
+bim-toolbar bim-button::part(icon) {
+  --bim-icon--sz: 1.1rem;
+}
+
+
+bim-context-menu {
+  background-color: var(--bim-ui_bg-base);
+  outline: 1px solid var(--bim-ui_bg-contrast-40);
+  transform: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+bim-context-menu[open] {
+  display: flex !important;
+  animation: none !important;
+}
+
+/* Ensure panel sections don't animate expansion */
+bim-panel-section,
+bim-panel,
+bim-panel>*,
+bim-panel-section>* {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+bim-panel-section::part(content) {
+  transition: none !important;
+  transition-duration: 0s !important;
+  max-height: none !important;
+  display: block !important;
+}
+
+bim-context-menu bim-button {
+  background-color: transparent;
+}
+
+bim-context-menu bim-button[active] {
+  background-color: var(--bim-ui_main-base);
+}
+
+bim-context-menu bim-dropdown {
+  --bim-input--bgc: transparent
+}
+
+bim-context-menu bim-button:hover {
+  background-color: var(--bim-ui_main-base) !important;
+}
+
+
+/* Glassmorphism Helper */
+.glass-panel {
+  background-color: var(--bim-ui_bg-glass) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+.context-style-a {
+  --bim-input--bgc: transparent
+}
+
+.context-panel {
+  padding: 0;
+  max-height: none;
+}
+
+.context-panel bim-dropdown {
+  --bim-input--bgc: var(--bim-dropdown--bgc,
+      var(--bim-ui_bg-contrast-20))
+}
+
+.dashboard-card {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: none !important;
+  /* Stronger separation shadow */
+  border-radius: 1rem;
+  outline: none;
+  border: var(--glass-border);
+  background-color: var(--bim-ui_bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: auto;
+}
+
+bim-grid[floating] .dashboard-card {
+  background-color: var(--bim-ui_bg-base);
+  height: fit-content;
+}
+
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--small-column-width, 24rem) 1fr var(--small-column-width, 24rem);
+  grid-template-areas: "left main right";
+  gap: 1.5rem;
+  /* Increased gap for better "loose card" feel */
+  padding: 1.5rem;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  /* Light gray background to make white cards pop */
+  height: calc(100vh - 3rem);
+  box-sizing: border-box;
+}
+
+.app-side-panel {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Fix horizontal scrollbar */
+  background-color: white;
+  border-radius: 1rem;
+  /* More rounded */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* Stronger shadow */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-side-panel--left {
+  grid-area: left;
+}
+
+.app-side-panel--right {
+  grid-area: right;
+}
+
+.app-viewer-container {
+  grid-area: main;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: white;
+  /* Required for the card look */
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  height: 100%;
+}
+
+.app-viewer-container>.dashboard-card {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+bim-viewport {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden !important;
+}
+
+.dashboard-card>div:first-child {
+  overflow: hidden;
+  height: 100%;
+}
+
+.card-label {
+  font-size: 0.9rem;
+  color: var(--bim-ui_accent-base);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.viewer-message-label {
+  justify-self: center;
+  background-color: #dad588;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  color: #424025;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Viewport UI Overlay */
+.viewport-ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Let clicks pass through to the canvas */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.viewport-ui-bottom {
+  pointer-events: auto;
+  /* Re-enable clicks for the toolbar */
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+
+/* ========================================
+   MODERN FACELIFT STYLES
+   ======================================== */
+
+/* App Layout - Floating Feel */
+.app-content {
+  gap: 1.5rem !important;
+  background-color: #f8fafc !important;
+  /* Slate-50: Crisp white-ish */
+  padding: 1.5rem !important;
+}
+
+/* Side Panels - Glass/Card Effect */
+.app-side-panel {
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  /* Slate-200 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+  border-radius: 1rem !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Viewer Container */
+.app-viewer-container {
+  border-radius: 1rem !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025) !important;
+  overflow: hidden;
+}
+
+/* Custom Panel Header */
+.custom-panel__header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 1rem 1.25rem !important;
+  background-color: white !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  min-height: 3.5rem;
+}
+
+.custom-panel__header:hover {
+  background-color: #f8fafc !important;
+}
+
+.custom-panel__label {
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: #1e293b !important;
+  /* Slate-800 */
+  letter-spacing: -0.01em;
+}
+
+.custom-panel__header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5 !important;
+  /* Indigo-600 */
+  background-color: #eef2ff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+}
+
+/* Custom Panel Content */
+.custom-panel__content {
+  padding: 1rem !important;
+  background-color: white !important;
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.custom-panel__content.expanded {
+  display: flex;
+}
+
+.custom-panel.custom-panel--fixed .custom-panel__content {
+  display: flex;
+  height: 100%;
+}
+
+/* Inputs Facelift */
+.custom-input,
+bim-text-input {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  color: #334155 !important;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+  height: 2.25rem !important;
+  min-height: 2.25rem !important;
+  padding: 0 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.custom-input:focus,
+bim-text-input:focus-within {
+  border-color: #4f46e5 !important;
+  background-color: white !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+}
+
+/* Fix for internal input parts */
+bim-text-input::part(input),
+bim-number-input::part(input) {
+  height: 100% !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Buttons Facelift - USING CORRECT CLASS */
+.custom-btn,
+bim-button {
+  background-color: #4f46e5 !important;
+  /* Default Primary */
+  color: white !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease !important;
+  height: 2.25rem !important;
+  min-height: 2.25rem !important;
+  padding: 0 1rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  gap: 0.5rem !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.custom-btn:hover,
+bim-button:hover {
+  background-color: #4338ca !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2) !important;
+}
+
+.custom-btn:active,
+bim-button:active {
+  transform: scale(0.95) !important;
+  box-shadow: none !important;
+}
+
+/* Panel Button Variant */
+.custom-btn--panel {
+  width: 100%;
+}
+
+/* Icon-only Buttons */
+.custom-btn--icon-only {
+  width: 2.25rem !important;
+  min-width: 2.25rem !important;
+  padding: 0 !important;
+}
+
+/* Subtle Buttons (Ghost) */
+.custom-btn--subtle {
+  background-color: transparent !important;
+  color: #6b7280 !important;
+  box-shadow: none !important;
+}
+
+.custom-btn--subtle:hover {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+  transform: none !important;
+}
+
+
+/* Properties Table Styling */
+bim-table {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+bim-table::part(table) {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  /* Fixed layout */
+}
+
+bim-table::part(row) {
+  border-bottom: 1px solid var(--bim-ui_bg-contrast-20);
+  transition: background-color 0.15s ease;
+  height: auto !important;
+  /* Allow growing */
+  min-height: 2.5rem;
+}
+
+bim-table::part(cell) {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-all !important;
+  /* Aggressive break */
+  display: table-cell !important;
+  vertical-align: top;
+}
+
+/* Force Column Widths to prevent squeezing */
+bim-table::part(cell):first-child {
+  width: 45%;
+  word-break: break-word !important;
+}
+
+bim-table::part(cell):last-child {
+  width: 55%;
+  word-break: break-all !important;
+  /* Ensure GUIDs break */
+}
+
+bim-table::part(header-cell) {
+  font-weight: 600;
+  color: var(--bim-ui_bg-contrast-80);
+  background-color: var(--bim-ui_bg-contrast-10);
+  padding: 1rem;
+  border-bottom: 2px solid var(--bim-ui_bg-contrast-40);
+}
+
+/* Tree indentation */
+bim-table [data-table-group-row] {
+  font-weight: 500;
+  color: var(--bim-ui_bg-contrast-100);
+}
+
+bim-table [data-table-cell-name] {
+  color: var(--bim-ui_bg-contrast-80);
+  font-weight: 500;
+}
+
+/* Deep wrapping for labels */
+bim-label::part(label) {
+  white-space: normal !important;
+  word-break: break-all !important;
+}
+
+/* Selector for value if specific part not available */
+bim-table [data-table-cell-value] {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  /* display: block; REMOVED to prevent layout issues */
+}
+
+
+/* Better tree structure styling */
+.app-side-panel--right bim-table {
+  background: white;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+/* Cleaner row styling */
+.app-side-panel--right bim-table tr {
+  border-bottom: 1px solid #f3f4f6 !important;
+}
+
+.app-side-panel--right bim-table tr:hover {
+  background-color: #f9fafb !important;
+}
+
+/* Tree indentation styling */
+.app-side-panel--right bim-table [style*='padding-left'] {
+  border-left: 2px solid #e5e7eb;
+  margin-left: 0.5rem;
+}
+
+
+/* Global Loading Overlay Spinner */
+/* MUST use !important to override the global animation reset at line 220 */
+.global-loader {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4f46e5;
+  border-radius: 50%;
+  animation: global-spin 1s linear infinite !important;
+  margin-bottom: 20px;
+}
+
+@keyframes global-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

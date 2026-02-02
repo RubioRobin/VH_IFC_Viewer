@@ -1,0 +1,10 @@
+[
+  {
+    "id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "name": "Test",
+    "description": "Test verhaal",
+    "status": "active",
+    "created_at": "2026-02-02T12:15:01.064Z",
+    "updated_at": "2026-02-02T12:15:04.102Z"
+  }
+]

@@ -1,0 +1,182 @@
+[
+  {
+    "id": "e4eba693-2f17-4ab2-9b7f-b8f9415ffed0",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_SampleHouse_1_Roof.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\b242cbdd-75a9-487a-939f-3a866c703d0d-Ifc4_SampleHouse_1_Roof.ifc",
+    "size": 63019,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.272Z"
+  },
+  {
+    "id": "97daab77-2325-411d-8f73-1a3f312c4dc0",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_SampleHouse_IfcWindow.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\1cfce76f-5c72-4c2c-9c46-41628699a3e0-Ifc4_SampleHouse_IfcWindow.ifc",
+    "size": 38350,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.275Z"
+  },
+  {
+    "id": "bcaf3910-ab8c-4f89-9a43-935f412dbb7a",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_SampleHouse_IfcWallStandardCase.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\020cff3d-d32a-457b-95cf-686eaf446e61-Ifc4_SampleHouse_IfcWallStandardCase.ifc",
+    "size": 22234,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.284Z"
+  },
+  {
+    "id": "44e25533-6519-44be-be88-0ed951b7648d",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_WallElementedCase.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\9281b90f-7793-4da3-9fc3-b02be099a8b3-Ifc4_WallElementedCase.ifc",
+    "size": 25510,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.288Z"
+  },
+  {
+    "id": "96f10b02-552c-4ee9-89de-c0fbcd37cb53",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_SampleHouse_0_GroundFloor.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\02af8552-4791-4f0a-9b90-e97367b5b47b-Ifc4_SampleHouse_0_GroundFloor.ifc",
+    "size": 2170634,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.328Z"
+  },
+  {
+    "id": "4e245ccd-3612-4d74-99b9-f4b7034fac9c",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_SampleHouse.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\6c380779-9e7e-44c9-bd7e-4633949fdbe6-Ifc4_SampleHouse.ifc",
+    "size": 2273870,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.331Z"
+  },
+  {
+    "id": "b88a427b-eea4-4b87-9536-61c2fd7bcc1e",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2s3_Duplex_Electrical.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\c34f8583-91af-4c19-8003-8f8247e1b01c-Ifc2s3_Duplex_Electrical.ifc",
+    "size": 1602758,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.334Z"
+  },
+  {
+    "id": "c02c3faf-215b-48f5-8165-9f7dbcb865b4",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2x3_Duplex_Architecture.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\304a5774-54b9-41c6-b867-f1da626f6d5d-Ifc2x3_Duplex_Architecture.ifc",
+    "size": 2380763,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.353Z"
+  },
+  {
+    "id": "aff75f82-039d-4ee4-8d2f-14b5cbfb0400",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2x3_Duplex_Mechanical.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\89708a92-6525-4c42-9ea5-ea2a88c96f64-Ifc2x3_Duplex_Mechanical.ifc",
+    "size": 8781887,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.474Z"
+  },
+  {
+    "id": "1b0976f1-06cd-4025-8f5e-bd378aa87217",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_BasinFacetedBrep.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\cbbd287b-9a57-4229-9f79-a6efaa306669-Ifc4_BasinFacetedBrep.ifc",
+    "size": 31853,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.488Z"
+  },
+  {
+    "id": "02b2aa9f-c777-4a5f-80a1-f791b5032df3",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_Revit_STR.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\1639ec63-f1c3-4a43-930b-4ad256916e93-Ifc4_Revit_STR.ifc",
+    "size": 11285247,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.490Z"
+  },
+  {
+    "id": "5942f1be-1313-4db5-9384-91cc0a4228c2",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_CubeAdvancedBrep.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\12a37ca9-f813-4b10-abb2-5055cbbafd45-Ifc4_CubeAdvancedBrep.ifc",
+    "size": 10611,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.496Z"
+  },
+  {
+    "id": "4649ea16-65f0-41ec-a69d-18b659f10aec",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2x3_Duplex_MEP.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\f66cc5a8-0763-4dfa-8235-c18c92e22a0b-Ifc2x3_Duplex_MEP.ifc",
+    "size": 17871432,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.613Z"
+  },
+  {
+    "id": "cc13919b-d426-4bce-b974-5a31fc8350dc",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_Revit_ARC.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\6c22e038-6d3b-46f8-8897-8d4f514291cd-Ifc4_Revit_ARC.ifc",
+    "size": 13646137,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.686Z"
+  },
+  {
+    "id": "837498f4-a8d6-4c9e-ab5c-415112494d96",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_Revit_ARC_FireRatingAdded.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\aaceca50-2542-47b9-a4b0-11a66bdbd95d-Ifc4_Revit_ARC_FireRatingAdded.ifc",
+    "size": 13650061,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.695Z"
+  },
+  {
+    "id": "2ae2937c-1511-4e88-8c2a-5a6870bcd7cc",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc4_Revit_MEP.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\21ea869c-4cb7-45c6-a87e-9c0b2e7090f9-Ifc4_Revit_MEP.ifc",
+    "size": 29165277,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.726Z"
+  },
+  {
+    "id": "1febcb17-71f2-4bb4-88a6-1ac3f561bbe0",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2x3_Duplex_Plumbing.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\564be209-3720-4317-a4ea-cb39926991e5-Ifc2x3_Duplex_Plumbing.ifc",
+    "size": 31556138,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.763Z"
+  },
+  {
+    "id": "e7c9d579-5e30-4693-b050-dd63ada8344d",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Ifc2x3_SampleCastle.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\8ad7f723-9531-46f0-a38e-a4d98e4634dd-Ifc2x3_SampleCastle.ifc",
+    "size": 49286967,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T14:15:34.903Z"
+  },
+  {
+    "id": "9bd589c1-dcaf-455d-9def-a727050e654a",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Project1-3d3b98aa-da06-4ad8-8b7c-843b52bd5778.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\0a8fb234-22a5-42e3-b52b-98fff475e36d-Project1-3d3b98aa-da06-4ad8-8b7c-843b52bd5778.ifc",
+    "size": 22632,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T18:42:55.660Z"
+  },
+  {
+    "id": "7f7d0196-b5a7-4650-9030-af50bc068940",
+    "project_id": "55b2d0bd-9275-49f5-91d9-90392e291f31",
+    "filename": "Project1-b6592950-6588-463c-927c-f80ff22c7997.ifc",
+    "filepath": "C:\\Users\\Robin\\Downloads\\VH_IFC_Viewer\\Backend\\uploads\\6f82e4f9-8e4f-4a85-ad4f-6202d1a4b6a0-Project1-b6592950-6588-463c-927c-f80ff22c7997.ifc",
+    "size": 33900,
+    "metadata": "{\"mimetype\":\"application/octet-stream\",\"encoding\":\"7bit\"}",
+    "upload_date": "2026-02-02T18:47:18.001Z"
+  }
+]

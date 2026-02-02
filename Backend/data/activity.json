@@ -1,0 +1,240 @@
+[
+  {
+    "id": 1,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "login",
+    "details": "User admin logged in",
+    "timestamp": "2026-02-02T12:14:30.092Z"
+  },
+  {
+    "id": 2,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "create_project",
+    "details": "Created project: Test",
+    "timestamp": "2026-02-02T12:15:01.064Z"
+  },
+  {
+    "id": 3,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "update_project",
+    "details": "Updated project: Test",
+    "timestamp": "2026-02-02T12:15:04.103Z"
+  },
+  {
+    "id": 4,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse.ifc to project: Test",
+    "timestamp": "2026-02-02T12:15:14.247Z"
+  },
+  {
+    "id": 5,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "generate_qr",
+    "details": "Generated QR code for element: Tets",
+    "timestamp": "2026-02-02T12:16:06.202Z"
+  },
+  {
+    "id": 6,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "login",
+    "details": "User admin logged in",
+    "timestamp": "2026-02-02T12:24:11.071Z"
+  },
+  {
+    "id": 7,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_Revit_ARC.ifc to project: Test",
+    "timestamp": "2026-02-02T12:48:00.420Z"
+  },
+  {
+    "id": 8,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "login",
+    "details": "User admin logged in",
+    "timestamp": "2026-02-02T14:02:20.633Z"
+  },
+  {
+    "id": 9,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "delete_file",
+    "details": "Deleted file: Ifc4_SampleHouse.ifc",
+    "timestamp": "2026-02-02T14:11:23.941Z"
+  },
+  {
+    "id": 10,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "delete_file",
+    "details": "Deleted file: Ifc4_Revit_ARC.ifc",
+    "timestamp": "2026-02-02T14:11:25.275Z"
+  },
+  {
+    "id": 11,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse_1_Roof.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.272Z"
+  },
+  {
+    "id": 12,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse_IfcWindow.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.276Z"
+  },
+  {
+    "id": 13,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse_IfcWallStandardCase.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.285Z"
+  },
+  {
+    "id": 14,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_WallElementedCase.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.289Z"
+  },
+  {
+    "id": 15,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse_0_GroundFloor.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.329Z"
+  },
+  {
+    "id": 16,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_SampleHouse.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.332Z"
+  },
+  {
+    "id": 17,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2s3_Duplex_Electrical.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.335Z"
+  },
+  {
+    "id": 18,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2x3_Duplex_Architecture.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.354Z"
+  },
+  {
+    "id": 19,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2x3_Duplex_Mechanical.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.475Z"
+  },
+  {
+    "id": 20,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_BasinFacetedBrep.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.489Z"
+  },
+  {
+    "id": 21,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_Revit_STR.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.491Z"
+  },
+  {
+    "id": 22,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_CubeAdvancedBrep.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.497Z"
+  },
+  {
+    "id": 23,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2x3_Duplex_MEP.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.614Z"
+  },
+  {
+    "id": 24,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_Revit_ARC.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.687Z"
+  },
+  {
+    "id": 25,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_Revit_ARC_FireRatingAdded.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.695Z"
+  },
+  {
+    "id": 26,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc4_Revit_MEP.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.726Z"
+  },
+  {
+    "id": 27,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2x3_Duplex_Plumbing.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.763Z"
+  },
+  {
+    "id": 28,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Ifc2x3_SampleCastle.ifc to project: Test",
+    "timestamp": "2026-02-02T14:15:34.904Z"
+  },
+  {
+    "id": 29,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "login",
+    "details": "User admin logged in",
+    "timestamp": "2026-02-02T18:42:55.481Z"
+  },
+  {
+    "id": 30,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Project1-3d3b98aa-da06-4ad8-8b7c-843b52bd5778.ifc to project: Test",
+    "timestamp": "2026-02-02T18:42:55.661Z"
+  },
+  {
+    "id": 31,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "generate_qr",
+    "details": "Generated QR code for element: null",
+    "timestamp": "2026-02-02T18:42:55.778Z"
+  },
+  {
+    "id": 32,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "login",
+    "details": "User admin logged in",
+    "timestamp": "2026-02-02T18:47:17.830Z"
+  },
+  {
+    "id": 33,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "upload_file",
+    "details": "Uploaded file: Project1-b6592950-6588-463c-927c-f80ff22c7997.ifc to project: Test",
+    "timestamp": "2026-02-02T18:47:18.001Z"
+  },
+  {
+    "id": 34,
+    "user_id": "f2882ab6-328b-4dbf-b60f-b7961e774674",
+    "action": "generate_qr",
+    "details": "Generated QR code for element: null",
+    "timestamp": "2026-02-02T18:47:18.109Z"
+  }
+]

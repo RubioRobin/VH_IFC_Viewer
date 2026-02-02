@@ -1,0 +1,36 @@
+{
+  "name": "web-ifc-three",
+  "version": "0.0.125",
+  "description": "This library is the implementation of [web-ifc](https://github.com/tomvandig/web-ifc) for [THREE.js](https://github.com/mrdoob/three.js/). This is the official IFCLoader of Three.js.",
+  "main": "web-ifc-three/src/IFCLoader.ts",
+  "private": true,
+  "scripts": {
+    "setup-repo": "npm i -g rollup && npm i -g cpy-cli",
+    "build": "cd ./web-ifc-three && npm run build && cd .. && cd ./example && npm run build",
+    "publish-repo": "cd ./web-ifc-three && npm run publish-repo",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IFCjs/web-ifc-three"
+  },
+  "keywords": [
+    "bim",
+    "openbim",
+    "ifc",
+    "architecture",
+    "engineering",
+    "construction",
+    "aec"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/IFCjs/web-ifc-three/issues"
+  },
+  "homepage": "https://ifcjs.github.io/info/docs/Guide/web-ifc-three/Introduction",
+  "workspaces": [
+    "web-ifc-three",
+    "example"
+  ]
+}
