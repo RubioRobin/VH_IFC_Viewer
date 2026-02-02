@@ -24,11 +24,12 @@ app.get('/', (req, res) => res.send('VH IFC Viewer Backend is running 🚀'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // 3. Start listening IMMEDIATELY
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`--- SERVER CONFIG ---`);
     console.log(`Port: ${port}`);
+    console.log(`Host: 0.0.0.0 (Publicly accessible)`);
     console.log(`Frontend URL: ${frontendUrl}`);
-    console.log(`🚀 Server listening on port: ${port}`);
+    console.log(`🚀 Server listening on http://0.0.0.0:${port}`);
     console.log(`---------------------`);
 
     // 4. Initialize everything else AFTER binding the port
