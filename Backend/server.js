@@ -499,8 +499,8 @@ app.get('/api/models', (req, res) => {
 
 // ==================== SERVER START ====================
 
-app.listen(port, () => {
-    console.log(`\n🚀 BIM Admin Backend running at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+    console.log(`\n🚀 BIM Admin Backend running at http://0.0.0.0:${port}`);
     console.log(`📁 Serving models from: ${modelsDir}`);
     console.log(`📤 Uploads directory: ${uploadsDir}`);
     console.log(`📱 QR codes directory: ${qrCodesDir}`);
