@@ -10,7 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('./database');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
+const frontendUrl = process.env.FRONTEND_URL || '*';
 
 // Directories (must be defined before middleware that uses them)
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -26,7 +27,7 @@ const modelsDir = path.join(__dirname, '../Examples/IfcSampleFiles-main/IfcSampl
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both Vite default ports
+    origin: frontendUrl === '*' ? true : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
     credentials: true
 }));
 app.use(express.json());
