@@ -244,20 +244,22 @@ async function uploadFileToStorage(filePath, destinationPath, contentType) {
     }
 }
 
-if (!supabase) return null;
-// Bucket is public, use getPublicUrl for direct access
-const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
-return data.publicUrl;
+async function getFileDownloadUrl(storagePath) {
+    if (!supabase) return null;
+    // Bucket is public, use getPublicUrl for direct access
+    const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
+    return data.publicUrl;
 
-// Legacy Signed URL (removed for stability with Public buckets)
-/*
-const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); 
-if (error) {
-    console.error('Error generating signed URL:', error);
-    return null;
+    // Legacy Signed URL (removed for stability with Public buckets)
+    /*
+    const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); 
+    if (error) {
+        console.error('Error generating signed URL:', error);
+        return null;
+    }
+    return data.signedUrl;
+    */
 }
-return data.signedUrl;
-*/
 
 // Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
 async function createFile(id, projectId, filename, originalname, size, type, tempFilePath) {
