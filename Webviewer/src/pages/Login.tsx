@@ -17,6 +17,12 @@ export function LoginPage() {
         e.preventDefault();
         setIsLoading(true);
 
+        // DEBUG: Check values before sending
+        console.log('Attempting login with:', { username, password });
+        if (!username || !password) {
+            alert(`DEBUG: State is empty! Username: "${username}", Password: "${password}"`);
+        }
+
         try {
             await fetchAPI('/auth/login', {
                 method: 'POST',
