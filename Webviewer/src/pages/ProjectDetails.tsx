@@ -231,7 +231,7 @@ export function ProjectDetailsPage() {
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                                             <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" /> {formatBytes(f.size)}</span>
                                             <span className="hidden sm:inline">•</span>
-                                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDistanceToNow(new Date(f.upload_date), { addSuffix: true, locale: nl })}</span>
+                                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {f.upload_date ? formatDistanceToNow(new Date(f.upload_date), { addSuffix: true, locale: nl }) : 'Onbekend'}</span>
                                         </div>
                                     </div>
                                 </div>

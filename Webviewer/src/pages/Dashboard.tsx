@@ -96,7 +96,7 @@ export function Dashboard() {
                                     <p className="text-sm font-medium">{act.username} <span className="text-muted-foreground font-normal">heeft</span> {act.action}</p>
                                     <p className="text-xs text-muted-foreground mb-1">{act.details}</p>
                                     <p className="text-[10px] text-gray-400">
-                                        {formatDistanceToNow(new Date(act.timestamp), { addSuffix: true, locale: nl })}
+                                        {act.timestamp ? formatDistanceToNow(new Date(act.timestamp), { addSuffix: true, locale: nl }) : '-'}
                                     </p>
                                 </div>
                             </div>
