@@ -181,15 +181,66 @@ async function getFileById(id) {
     return data;
 }
 
-// Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
-async function createFile(id, projectId, filename, originalname, size, type) {
+// --- STORAGE ---
+// Helper to read file from disk
+const fs = require('fs');
+const path = require('path');
+
+async function uploadFileToStorage(filePath, destinationPath, contentType) {
     if (!supabase) return null;
+    try {
+        const fileContent = fs.readFileSync(filePath);
+        const { data, error } = await supabase.storage
+            .from('ifc-models')
+            .upload(destinationPath, fileContent, {
+                contentType: contentType || 'application/octet-stream',
+                upsert: true
+            });
+
+        if (error) {
+            console.error('Storage Upload Error:', error);
+            throw error;
+        }
+        return data; // { path: "..." }
+    } catch (e) {
+        console.error('Upload wrapper error:', e);
+        return null;
+    }
+}
+
+async function getFilePublicUrl(storagePath) {
+    if (!supabase) return null;
+    const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
+    console.log('Generated Public URL:', data.publicUrl);
+    return data.publicUrl;
+}
+
+// Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
+async function createFile(id, projectId, filename, originalname, size, type, tempFilePath) {
+    if (!supabase) return null;
+
+    // 1. Upload to Supabase Storage
+    const storagePath = `${projectId}/${filename}`;
+    // If tempFilePath is provided (from server.js multer), upload it.
+    // If not provided (legacy/mock), skip upload or fail.
+
+    if (tempFilePath) {
+        console.log(`Uploading ${tempFilePath} to Storage: ${storagePath}`);
+        const uploadResult = await uploadFileToStorage(tempFilePath, storagePath, type);
+        if (!uploadResult) {
+            console.error('Failed to upload file to storage');
+            throw new Error('Storage upload failed');
+        }
+    }
+
+    // 2. Insert metadata into DB
     const newFile = {
         id: id || uuidv4(),
         project_id: projectId,
         filename: filename,
         original_name: originalname,
-        path: filename, // server.js uses filename as path
+        // Store storage path instead of local path
+        path: storagePath,
         size: size,
         type: type
     };
@@ -204,6 +255,19 @@ async function createFile(id, projectId, filename, originalname, size, type) {
 // Matches server.js: db.deleteFile(id)
 async function deleteFile(id) {
     if (!supabase) return;
+
+    // 1. Get file path from DB
+    const file = await getFileById(id);
+    if (!file) return;
+
+    // 2. Delete from Storage
+    if (file.path) {
+        const { error } = await supabase.storage.from('ifc-models').remove([file.path]);
+        if (error) console.error('Storage Delete Error:', error);
+        else console.log('File deleted from storage:', file.path);
+    }
+
+    // 3. Delete from DB
     await supabase.from('files').delete().eq('id', id);
 }
 
@@ -340,5 +404,6 @@ module.exports = {
 
     logActivity,
     getRecentActivity,
-    getStatistics
+    getStatistics,
+    getFilePublicUrl // Exported for server.js to redirect downloads
 };
