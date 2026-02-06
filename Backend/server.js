@@ -83,7 +83,9 @@ app.use('/qr-codes', express.static(qrCodesDir));
 // --- DATABASE ---
 console.log('--- Loading Database ---');
 const db = require('./database');
-db.initDatabase();
+// db.initDatabase() is async, but we can't await top-level in CJS without IIFE or ignored promise.
+// Just verify it starts.
+db.initDatabase().then(() => console.log('DB Init initiated'));
 
 // --- AUTH & BUSINESS ROUTES ---
 const upload = multer({
@@ -98,10 +100,10 @@ const requireAuth = (req, res, next) => {
     else res.status(401).json({ error: 'Auth required' });
 };
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     console.log(`[LOGIN] Attempt for user: ${username}`);
-    const user = db.getUserByUsername(username);
+    const user = await db.getUserByUsername(username);
     console.log(`[LOGIN] User found:`, user ? 'YES' : 'NO');
     if (user && bcrypt.compareSync(password, user.password_hash)) {
         req.session.userId = user.id;
@@ -113,8 +115,8 @@ app.post('/api/auth/login', (req, res) => {
     }
 });
 
-app.get('/api/projects', requireAuth, (req, res) => res.json(db.getAllProjects()));
-app.get('/api/files', requireAuth, (req, res) => res.json(db.getAllFiles()));
+app.get('/api/projects', requireAuth, async (req, res) => res.json(await db.getAllProjects()));
+app.get('/api/files', requireAuth, async (req, res) => res.json(await db.getAllFiles()));
 
 app.post('/api/qr/generate', requireAuth, async (req, res) => {
     try {
@@ -124,56 +126,58 @@ app.post('/api/qr/generate', requireAuth, async (req, res) => {
         const qrPath = path.join(qrCodesDir, qrFileName);
         const viewerUrl = `https://vh-ifc-viewer.vercel.app/viewer?project=${project_id}&file=${file_id}&element=${element_id}`;
         await QRCode.toFile(qrPath, viewerUrl);
-        const qr = db.createQRCode(qrId, project_id, file_id, element_id, `/qr-codes/${qrFileName}`);
+        const qr = await db.createQRCode(qrId, project_id, file_id, element_id, `/qr-codes/${qrFileName}`);
         res.status(201).json(qr);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/viewer/resolve/:elementId', (req, res) => {
-    const qr = db.getAllQRCodes().find(q => q.element_id === req.params.elementId);
+app.get('/api/viewer/resolve/:elementId', async (req, res) => {
+    const qrs = await db.getAllQRCodes();
+    const qr = qrs.find(q => q.element_id === req.params.elementId);
     if (!qr) return res.status(404).json({ error: 'Not found' });
-    const file = db.getFileById(qr.file_id);
+    const file = await db.getFileById(qr.file_id);
+    if (!file) return res.status(404).json({ error: 'File not found' });
     res.json({ file_url: `/models/${file.filename}`, element_id: qr.element_id });
 });
 
 // --- MISSING API ROUTES FIX ---
 
 // Project Detail
-app.get('/api/projects/:id', requireAuth, (req, res) => {
-    const project = db.getProjectById(req.params.id);
+app.get('/api/projects/:id', requireAuth, async (req, res) => {
+    const project = await db.getProjectById(req.params.id);
     if (project) res.json(project);
     else res.status(404).json({ error: "Project not found" });
 });
 
-app.post('/api/projects', requireAuth, (req, res) => {
+app.post('/api/projects', requireAuth, async (req, res) => {
     const { name, description, status } = req.body;
-    const newProject = db.createProject(uuidv4(), name, description || '', status || 'active');
+    const newProject = await db.createProject(uuidv4(), name, description || '', status || 'active');
     res.status(201).json(newProject);
 });
 
-app.put('/api/projects/:id', requireAuth, (req, res) => {
-    const updated = db.updateProject(req.params.id, req.body);
+app.put('/api/projects/:id', requireAuth, async (req, res) => {
+    const updated = await db.updateProject(req.params.id, req.body);
     if (updated) res.json(updated);
     else res.status(404).json({ error: "Project not found" });
 });
 
-app.delete('/api/projects/:id', requireAuth, (req, res) => {
-    db.deleteProject(req.params.id);
+app.delete('/api/projects/:id', requireAuth, async (req, res) => {
+    await db.deleteProject(req.params.id);
     res.status(204).send();
 });
 
 // Project Files
-app.get('/api/projects/:id/files', requireAuth, (req, res) => {
-    const projectFiles = db.getFilesByProjectId(req.params.id);
+app.get('/api/projects/:id/files', requireAuth, async (req, res) => {
+    const projectFiles = await db.getFilesByProjectId(req.params.id);
     res.json(projectFiles);
 });
 
 // File Upload
-app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), (req, res) => {
+app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     // Create DB entry
-    const newFile = db.createFile(
+    const newFile = await db.createFile(
         uuidv4(),
         req.params.id,
         req.file.filename,
@@ -184,22 +188,23 @@ app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), (req, r
 
     // Log activity
     if (req.session.userId) {
-        const user = db.getUserByUsername('admin'); // Simplify for now or fetch real user
-        db.logActivity(user?.id, user?.username, 'upload', `Bestand ${newFile.originalname} geupload`);
+        // const user = await db.getUserByUsername('admin'); // Performance hit?
+        // Just log text for now
+        await db.logActivity(req.params.id, 'admin', 'upload', `Bestand ${newFile.original_name} geupload`);
     }
 
     res.status(201).json(newFile);
 });
 
 // File Actions
-app.delete('/api/files/:id', requireAuth, (req, res) => {
-    const file = db.getFileById(req.params.id);
+app.delete('/api/files/:id', requireAuth, async (req, res) => {
+    const file = await db.getFileById(req.params.id);
     if (file) {
         // Try delete physical file
         try {
             fs.unlinkSync(path.join(uploadsDir, file.filename));
         } catch (e) { console.error("File delete error:", e); }
-        db.deleteFile(req.params.id);
+        await db.deleteFile(req.params.id);
         res.status(204).send();
     } else {
         res.status(404).json({ error: "File not found" });
@@ -207,20 +212,20 @@ app.delete('/api/files/:id', requireAuth, (req, res) => {
 });
 
 // QR Actions
-app.get('/api/qr', requireAuth, (req, res) => res.json(db.getAllQRCodes()));
-app.delete('/api/qr/:id', requireAuth, (req, res) => {
-    db.deleteQRCode(req.params.id);
+app.get('/api/qr', requireAuth, async (req, res) => res.json(await db.getAllQRCodes()));
+app.delete('/api/qr/:id', requireAuth, async (req, res) => {
+    await db.deleteQRCode(req.params.id);
     res.status(204).send();
 });
 
 // Statistics & Activity
-app.get('/api/statistics', requireAuth, (req, res) => {
-    res.json(db.getStatistics());
+app.get('/api/statistics', requireAuth, async (req, res) => {
+    res.json(await db.getStatistics());
 });
 
-app.get('/api/activity', requireAuth, (req, res) => {
+app.get('/api/activity', requireAuth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
-    res.json(db.getRecentActivity(limit));
+    res.json(await db.getRecentActivity(limit));
 });
 
 // --- GO ---
