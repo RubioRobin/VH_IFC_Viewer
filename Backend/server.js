@@ -61,10 +61,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production' || frontendUrl !== '*', // Secure if production OR specific frontend
+        secure: true, // Required for SameSite: None
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: (process.env.NODE_ENV === 'production' || frontendUrl !== '*') ? 'none' : 'lax' // Cross-site requires 'none'
+        sameSite: 'none' // Required for Cross-Site (Vercel -> Ngrok)
     }
 }));
 
@@ -176,8 +176,8 @@ app.get('/api/files/:id/download', async (req, res) => {
         const file = await db.getFileById(req.params.id);
         if (!file) return res.status(404).json({ error: 'File not found' });
 
-        // Get public URL from Supabase
-        const publicUrl = await db.getFilePublicUrl(file.path);
+        // Get signed URL from Supabase
+        const publicUrl = await db.getFileDownloadUrl(file.path);
 
         if (publicUrl) {
             res.redirect(publicUrl);
@@ -210,8 +210,8 @@ app.get('/api/viewer/resolve/:elementId', async (req, res) => {
     const file = await db.getFileById(qr.file_id);
     if (!file) return res.status(404).json({ error: 'File not found' });
 
-    // Use public URL instead of /models/
-    const publicUrl = await db.getFilePublicUrl(file.path);
+    // Use signed URL instead of /models/
+    const publicUrl = await db.getFileDownloadUrl(file.path);
 
     res.json({ file_url: publicUrl, element_id: qr.element_id });
 });

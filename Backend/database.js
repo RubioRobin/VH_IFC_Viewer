@@ -244,11 +244,15 @@ async function uploadFileToStorage(filePath, destinationPath, contentType) {
     }
 }
 
-async function getFilePublicUrl(storagePath) {
+async function getFileDownloadUrl(storagePath) {
     if (!supabase) return null;
-    const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
-    console.log('Generated Public URL:', data.publicUrl);
-    return data.publicUrl;
+    const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); // 24h link
+    if (error) {
+        console.error('Error generating signed URL:', error);
+        return null;
+    }
+    console.log('Generated Signed URL');
+    return data.signedUrl;
 }
 
 // Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
@@ -442,5 +446,5 @@ module.exports = {
     logActivity,
     getRecentActivity,
     getStatistics,
-    getFilePublicUrl // Exported for server.js to redirect downloads
+    getFileDownloadUrl // Exported for server.js to redirect downloads
 };
