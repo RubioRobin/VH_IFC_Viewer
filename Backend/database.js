@@ -2,8 +2,8 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lqkdcllyikctudrgdanp.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxa2RjbGx5aWtjdHVkcmdkYW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzUyMTUsImV4cCI6MjA4NTk1MTIxNX0.9FWKG_QLfcEc5qXw5irnTeB1ppaIOEk_GMkbyAOHELU';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 let supabase = null;
 if (SUPABASE_URL && SUPABASE_KEY) {
@@ -244,16 +244,20 @@ async function uploadFileToStorage(filePath, destinationPath, contentType) {
     }
 }
 
-async function getFileDownloadUrl(storagePath) {
-    if (!supabase) return null;
-    const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); // 24h link
-    if (error) {
-        console.error('Error generating signed URL:', error);
-        return null;
-    }
-    console.log('Generated Signed URL');
-    return data.signedUrl;
+if (!supabase) return null;
+// Bucket is public, use getPublicUrl for direct access
+const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
+return data.publicUrl;
+
+// Legacy Signed URL (removed for stability with Public buckets)
+/*
+const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); 
+if (error) {
+    console.error('Error generating signed URL:', error);
+    return null;
 }
+return data.signedUrl;
+*/
 
 // Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
 async function createFile(id, projectId, filename, originalname, size, type, tempFilePath) {
