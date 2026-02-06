@@ -96,7 +96,11 @@ db.initDatabase().then(() => console.log('DB Init initiated'));
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => cb(null, uploadsDir),
-        filename: (req, file, cb) => cb(null, `${uuidv4()}-${file.originalname}`)
+        filename: (req, file, cb) => {
+            // Sanitize filename: remove spaces and special chars, keep dots/dashes
+            const cleanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+            cb(null, `${uuidv4()}-${cleanName}`);
+        }
     })
 });
 
@@ -181,10 +185,11 @@ app.get('/api/files/:id/download', async (req, res) => {
         const file = await db.getFileById(req.params.id);
         if (!file) return res.status(404).json({ error: 'File not found' });
 
-        // Get signed URL from Supabase
+        // Get public URL from Supabase
         const publicUrl = await db.getFileDownloadUrl(file.path);
 
         if (publicUrl) {
+            console.log(`[DOWNLOAD] Redirecting to: ${publicUrl}`);
             res.redirect(publicUrl);
         } else {
             res.status(404).json({ error: 'File not found in storage' });
