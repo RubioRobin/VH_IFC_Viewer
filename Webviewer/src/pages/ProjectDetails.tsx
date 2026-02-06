@@ -13,6 +13,7 @@ import { Input } from '../components/ui/input';
 interface FileData {
     id: string;
     filename: string;
+    filepath?: string;
     size: number;
     upload_date: string;
 }
@@ -131,11 +132,15 @@ export function ProjectDetailsPage() {
         f.filename.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const getDiskFilename = (file: FileData) => {
+        return file.filepath ? file.filepath.split(/[\\/]/).pop() : file.filename;
+    };
+
     if (loading) return <div className="h-full flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
-            {/* Header */}
+            {/* ... (Header and Stats omitted for brevity, logic remains same) ... */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -236,7 +241,7 @@ export function ProjectDetailsPage() {
                                         size="sm"
                                         variant="outline"
                                         className="h-9 gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                                        onClick={() => window.open(`${window.location.origin}/?model=${f.filename}`, '_blank')}
+                                        onClick={() => window.open(`${window.location.origin}/?model=${getDiskFilename(f)}`, '_blank')}
                                     >
                                         <Eye className="w-4 h-4" /> Openen
                                     </Button>
@@ -245,7 +250,7 @@ export function ProjectDetailsPage() {
                                         variant="ghost"
                                         className="h-9 w-9 text-muted-foreground hover:text-green-600"
                                         title="Downloaden"
-                                        onClick={() => window.open(`${BASE_URL}/models/${f.filename}`, '_blank')}
+                                        onClick={() => window.open(`${BASE_URL}/models/${getDiskFilename(f)}`, '_blank')}
                                     >
                                         <Download className="w-4 h-4" />
                                     </Button>

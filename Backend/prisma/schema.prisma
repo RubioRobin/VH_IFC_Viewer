@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  password_hash String
+  role          String   @default("user")
+  created_at    DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  files       File[]
+  qr_codes    QRCode[]
+}
+
+model File {
+  id           String   @id @default(uuid())
+  project_id   String
+  project      Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  filename     String
+  originalname String
+  size         Int
+  type         String
+  upload_date  DateTime @default(now())
+  qr_codes     QRCode[]
+}
+
+model QRCode {
+  id           String   @id @default(uuid())
+  project_id   String
+  project      Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  file_id      String
+  file         File     @relation(fields: [file_id], references: [id], onDelete: Cascade)
+  element_id   String
+  qr_image_url String
+  created_at   DateTime @default(now())
+}
+
+// Activity log mirroring activity.json if needed
+model Activity {
+  id        String   @id @default(uuid())
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+}

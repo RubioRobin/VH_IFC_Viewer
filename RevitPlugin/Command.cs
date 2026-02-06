@@ -16,7 +16,7 @@ namespace VH_IFC_QR
     public class GenerateQRCommand : IExternalCommand
     {
         // Backend URL configuration - Default fallback
-        private const string DefaultBackendUrl = "http://localhost:3001";
+        private const string DefaultBackendUrl = "https://archegonial-unprotrusive-carolee.ngrok-free.dev";
         // Hardcoded project ID for MVP (User can change this or we implement a selector later)
         private const string ProjectId = "default-project-id"; 
 

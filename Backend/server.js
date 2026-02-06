@@ -99,6 +99,93 @@ app.get('/api/viewer/resolve/:elementId', (req, res) => {
     res.json({ file_url: `/models/${file.filename}`, element_id: qr.element_id });
 });
 
+// --- MISSING API ROUTES FIX ---
+
+// Project Detail
+app.get('/api/projects/:id', requireAuth, (req, res) => {
+    const project = db.getProjectById(req.params.id);
+    if (project) res.json(project);
+    else res.status(404).json({ error: "Project not found" });
+});
+
+app.post('/api/projects', requireAuth, (req, res) => {
+    const { name, description, status } = req.body;
+    const newProject = db.createProject(uuidv4(), name, description || '', status || 'active');
+    res.status(201).json(newProject);
+});
+
+app.put('/api/projects/:id', requireAuth, (req, res) => {
+    const updated = db.updateProject(req.params.id, req.body);
+    if (updated) res.json(updated);
+    else res.status(404).json({ error: "Project not found" });
+});
+
+app.delete('/api/projects/:id', requireAuth, (req, res) => {
+    db.deleteProject(req.params.id);
+    res.status(204).send();
+});
+
+// Project Files
+app.get('/api/projects/:id/files', requireAuth, (req, res) => {
+    const projectFiles = db.getFilesByProjectId(req.params.id);
+    res.json(projectFiles);
+});
+
+// File Upload
+app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // Create DB entry
+    const newFile = db.createFile(
+        uuidv4(),
+        req.params.id,
+        req.file.filename,
+        req.file.originalname,
+        req.file.size,
+        path.extname(req.file.originalname)
+    );
+
+    // Log activity
+    if (req.session.userId) {
+        const user = db.getUserByUsername('admin'); // Simplify for now or fetch real user
+        db.logActivity(user?.id, user?.username, 'upload', `Bestand ${newFile.originalname} geupload`);
+    }
+
+    res.status(201).json(newFile);
+});
+
+// File Actions
+app.delete('/api/files/:id', requireAuth, (req, res) => {
+    const file = db.getFileById(req.params.id);
+    if (file) {
+        // Try delete physical file
+        try {
+            fs.unlinkSync(path.join(uploadsDir, file.filename));
+        } catch (e) { console.error("File delete error:", e); }
+        db.deleteFile(req.params.id);
+        res.status(204).send();
+    } else {
+        res.status(404).json({ error: "File not found" });
+    }
+});
+
+// QR Actions
+app.get('/api/qr', requireAuth, (req, res) => res.json(db.getAllQRCodes()));
+app.delete('/api/qr/:id', requireAuth, (req, res) => {
+    db.deleteQRCode(req.params.id);
+    res.status(204).send();
+});
+
+// Statistics & Activity
+app.get('/api/statistics', requireAuth, (req, res) => {
+    res.json(db.getStatistics());
+});
+
+app.get('/api/activity', requireAuth, (req, res) => {
+    const limit = parseInt(req.query.limit) || 20;
+    res.json(db.getRecentActivity(limit));
+});
+
 // --- GO ---
 app.listen(port, '0.0.0.0', () => {
     console.log(`\n🚀 BIM Backend active on port ${port}`);

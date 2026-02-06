@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: vh-ifc-backend
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1
