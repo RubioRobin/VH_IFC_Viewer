@@ -81,8 +81,8 @@ export function ProjectsPage() {
                                     <Folder className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${project.status === 'active'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                        : 'bg-gray-100 text-gray-700'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-700'
                                     }`}>
                                     {project.status}
                                 </span>
@@ -100,7 +100,10 @@ export function ProjectsPage() {
                                 <span>{formatBytes(project.total_size)}</span>
                             </div>
                             <span>
-                                {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: nl })}
+                                {project.updated_at
+                                    ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: nl })
+                                    : 'Onbekend'
+                                }
                             </span>
                         </CardFooter>
                     </Card>

@@ -24,14 +24,16 @@ async function initDatabase() {
     console.log('--- Checking Supabase Admin ---');
 
     try {
-        const { data: users, error } = await supabase
+        const { data: user, error } = await supabase
             .from('users')
             .select('*')
-            .eq('username', 'admin');
+            .eq('username', 'admin')
+            .single();
 
-        if (error) throw error;
+        // If error implies no rows (PGRST116), handle creation. 
+        // Note: single() returns error if 0 or >1 rows.
 
-        if (!users || users.length === 0) {
+        if (!user) {
             console.log('Creating admin user...');
             await supabase.from('users').insert([{
                 id: 'admin-1',
@@ -41,10 +43,29 @@ async function initDatabase() {
             }]);
             console.log('✅ Admin user created');
         } else {
-            console.log('✅ Admin user exists');
+            console.log('✅ Admin user matches found');
+            // FIX: Check for truncated hash or bad seed
+            if (!user.password_hash || user.password_hash.length < 50) {
+                console.log('⚠️  Admin password hash appears invalid/truncated. Fixing...');
+                const newHash = bcrypt.hashSync('admin123', 10);
+                await supabase.from('users').update({ password_hash: newHash }).eq('id', user.id);
+                console.log('✅ Admin password hash auto-repaired.');
+            }
         }
     } catch (e) {
-        console.error('Database init error:', e.message);
+        // If error code is 'PGRST116' (JSON object), it means 0 rows.
+        if (e.code === 'PGRST116') {
+            console.log('Creating admin user (catch block)...');
+            await supabase.from('users').insert([{
+                id: 'admin-1',
+                username: 'admin',
+                password_hash: bcrypt.hashSync('admin123', 10),
+                role: 'admin'
+            }]);
+            console.log('✅ Admin user created');
+        } else {
+            console.error('Database init error:', e.message || e);
+        }
     }
 }
 
@@ -63,6 +84,21 @@ async function getUserByUsername(username) {
         console.log('QUERY RESULT: User not found for', username);
     }
     return data;
+}
+
+async function getAllUsers() {
+    if (!supabase) return [];
+    // Select only safe fields
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, username, role, created_at')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('getAllUsers error:', error);
+        return [];
+    }
+    return data || [];
 }
 
 // --- PROJECTS ---
@@ -385,6 +421,7 @@ async function getStatistics() {
 module.exports = {
     initDatabase,
     getUserByUsername,
+    getAllUsers,
     getAllProjects,     // server.js calls this
     getProjects: getAllProjects, // Alias just in case
     createProject,

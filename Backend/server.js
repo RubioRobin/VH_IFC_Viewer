@@ -61,10 +61,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || frontendUrl !== '*', // Secure if production OR specific frontend
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        sameSite: (process.env.NODE_ENV === 'production' || frontendUrl !== '*') ? 'none' : 'lax' // Cross-site requires 'none'
     }
 }));
 
@@ -112,6 +112,15 @@ app.post('/api/auth/login', async (req, res) => {
     } else {
         console.log(`[LOGIN] Failed - Invalid credentials`);
         res.status(401).json({ error: 'Failed' });
+    }
+});
+
+app.get('/api/users', requireAuth, async (req, res) => {
+    try {
+        const users = await db.getAllUsers();
+        res.json(users);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
