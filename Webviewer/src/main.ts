@@ -240,21 +240,29 @@ resizeWorld();
 const init = async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const modelName = urlParams.get("model");
+  const fileId = urlParams.get("fileId");
 
-  if (modelName) {
-    console.log(`Auto-loading: ${modelName}`);
+  if (modelName || fileId) {
+    console.log(`Auto-loading: ${modelName || fileId}`);
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const modelUrl = `${baseUrl}/models/${modelName}`;
+
+    // Determine URL: Static model (legacy) or API download (new)
+    const modelUrl = fileId
+      ? `${baseUrl}/api/files/${fileId}/download`
+      : `${baseUrl}/models/${modelName}`;
+
+    const displayTitle = modelName || 'Model';
+
     try {
       const response = await fetch(modelUrl);
       if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
 
       const blob = await response.blob();
-      const file = new File([blob], modelName, { type: 'application/octet-stream' });
+      const file = new File([blob], displayTitle, { type: 'application/octet-stream' });
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
 
-      await ifcLoader.load(bytes, true, modelName.replace(".ifc", ""));
+      await ifcLoader.load(bytes, true, displayTitle.replace(".ifc", ""));
     } catch (e) {
       console.error("Load failed:", e);
       alert(`Fout bij laden model: ${e}`);

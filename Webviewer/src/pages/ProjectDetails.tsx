@@ -241,7 +241,7 @@ export function ProjectDetailsPage() {
                                         size="sm"
                                         variant="outline"
                                         className="h-9 gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                                        onClick={() => window.open(`${window.location.origin}/?model=${getDiskFilename(f)}`, '_blank')}
+                                        onClick={() => window.open(`${window.location.origin}/?fileId=${f.id}`, '_blank')}
                                     >
                                         <Eye className="w-4 h-4" /> Openen
                                     </Button>
@@ -250,7 +250,7 @@ export function ProjectDetailsPage() {
                                         variant="ghost"
                                         className="h-9 w-9 text-muted-foreground hover:text-green-600"
                                         title="Downloaden"
-                                        onClick={() => window.open(`${BASE_URL}/models/${getDiskFilename(f)}`, '_blank')}
+                                        onClick={() => window.open(`${BASE_URL}/api/files/${f.id}/download`, '_blank')}
                                     >
                                         <Download className="w-4 h-4" />
                                     </Button>
