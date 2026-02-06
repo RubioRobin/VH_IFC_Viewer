@@ -1,4 +1,8 @@
-require('dotenv').config();
+try {
+    require('dotenv').config();
+} catch (e) {
+    console.log('Dotenv not loaded (likely in production with env vars set)');
+}
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
