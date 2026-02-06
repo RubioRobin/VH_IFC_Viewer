@@ -14,9 +14,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: SUPABASE_URL
-        sync: false
+        value: https://lqkdcllyikctudrgdanp.supabase.co
       - key: SUPABASE_KEY
-        sync: false
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxa2RjbGx5aWtjdHVkcmdkYW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzUyMTUsImV4cCI6MjA4NTk1MTIxNX0.9FWKG_QLfcEc5qXw5irnTeB1ppaIOEk_GMkbyAOHELU
     disk:
       name: uploads
       mountPath: /opt/render/project/src/uploads

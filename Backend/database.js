@@ -1,166 +1,222 @@
-const fs = require('fs');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-// JSON database file paths
-const dbDir = path.join(__dirname, 'data');
-const dbFiles = {
-    users: path.join(dbDir, 'users.json'),
-    projects: path.join(dbDir, 'projects.json'),
-    files: path.join(dbDir, 'files.json'),
-    qrCodes: path.join(dbDir, 'qr-codes.json'),
-    activity: path.join(dbDir, 'activity.json')
-};
+// Check environment variables at startup
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-// Ensure data directory exists
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase client initialized');
+} else {
+    console.error('❌ Supabase URL or Key missing!');
 }
 
-function initDatabase() {
-    console.log('--- Initializing Database ---');
-    Object.entries(dbFiles).forEach(([key, filepath]) => {
-        if (!fs.existsSync(filepath)) {
-            let initialData = [];
-            if (key === 'users') {
-                initialData = [{
-                    id: 'admin-1',
-                    username: 'admin',
-                    password_hash: bcrypt.hashSync('admin123', 10),
-                    role: 'admin',
-                    created_at: new Date().toISOString()
-                }];
-            }
-            fs.writeFileSync(filepath, JSON.stringify(initialData, null, 2));
-            console.log(`✅ Created ${key}.json`);
-        }
-    });
+async function initDatabase() {
+    console.log('--- Initializing Database (Supabase) ---');
+    if (!supabase) return;
 
-    // CRITICAL: Always ensure admin user exists
-    const users = readJSON(dbFiles.users);
-    const adminExists = users.find(u => u.username === 'admin');
-    if (!adminExists) {
-        console.log('⚠️  Admin user not found, creating...');
-        users.push({
-            id: 'admin-1',
-            username: 'admin',
-            password_hash: bcrypt.hashSync('admin123', 10),
-            role: 'admin',
-            created_at: new Date().toISOString()
-        });
-        writeJSON(dbFiles.users, users);
-        console.log('✅ Admin user created');
+    // Check if admin exists
+    const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', 'admin');
+
+    if (error) {
+        console.error('❌ Failed to check admin user:', error);
+        return;
+    }
+
+    if (!users || users.length === 0) {
+        console.log('⚠️ Admin user not found, creating...');
+        const passwordHash = bcrypt.hashSync('admin123', 10);
+        const { error: insertError } = await supabase
+            .from('users')
+            .insert([{
+                id: 'admin-1',
+                username: 'admin',
+                password_hash: passwordHash,
+                role: 'admin'
+            }]);
+
+        if (insertError) console.error('❌ Failed to create admin:', insertError);
+        else console.log('✅ Admin user created');
     } else {
         console.log('✅ Admin user exists');
     }
-
-    console.log('✅ Database check complete');
 }
 
-function readJSON(filepath) {
-    try {
-        if (!fs.existsSync(filepath)) return [];
-        const data = fs.readFileSync(filepath, 'utf8');
-        return JSON.parse(data);
-    } catch (e) { return []; }
+// WRAPPER: Get User
+async function getUserByUsername(username) {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+    if (error) {
+        console.error('Login fetch error:', error);
+        return null;
+    }
+    return data;
 }
 
-function writeJSON(filepath, data) {
-    try {
-        fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-        return true;
-    } catch (e) { return false; }
+// WRAPPER: Get Projects
+async function getProjects() {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+        .from('projects')
+        .select(`
+            *,
+            files (*)
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Get projects error:', error);
+        return [];
+    }
+
+    // Transform to match old JSON structure expected by frontend
+    return data.map(p => ({
+        ...p,
+        files: p.files || []
+    }));
+}
+
+// WRAPPER: Create Project
+async function createProject(name, description) {
+    if (!supabase) return null;
+    const newProject = {
+        id: uuidv4(),
+        name,
+        description
+    };
+
+    const { data, error } = await supabase
+        .from('projects')
+        .insert([newProject])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Create project error:', error);
+        throw error;
+    }
+
+    // Log activity
+    await logActivity(newProject.id, 'create_project', 'Admin', `Project "${name}" created`);
+
+    return { ...data, files: [] };
+}
+
+// WRAPPER: Get Project by ID
+async function getProjectById(id) {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+        .from('projects')
+        .select(`
+            *,
+            files (*)
+        `)
+        .eq('id', id)
+        .single();
+
+    if (error) return null;
+    return data;
+}
+
+// WRAPPER: Upload File Metadata
+async function saveFileMetadata(fileData) {
+    if (!supabase) return null;
+
+    // fileData comes from server.js: id, projectId, filename, originalName, path, size, type, createdAt
+    const dbFile = {
+        id: fileData.id,
+        project_id: fileData.projectId,
+        filename: fileData.filename,
+        original_name: fileData.originalName,
+        path: fileData.path,
+        size: fileData.size,
+        type: fileData.type,
+        uploaded_at: fileData.createdAt
+    };
+
+    const { error } = await supabase
+        .from('files')
+        .insert([dbFile]);
+
+    if (error) {
+        console.error('Save file error:', error);
+        throw error;
+    }
+
+    await logActivity(
+        fileData.projectId,
+        'upload_file',
+        'Admin',
+        `File "${fileData.originalName}" uploaded`
+    );
+
+    return fileData;
+}
+
+// WRAPPER: Get files
+async function getFiles(projectId) {
+    if (!supabase) return [];
+    const { data } = await supabase
+        .from('files')
+        .select('*')
+        .eq('project_id', projectId);
+    return data || [];
+}
+
+// WRAPPER: Activity
+async function getProjectActivity(projectId) {
+    if (!supabase) return [];
+    const { data } = await supabase
+        .from('activity')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('timestamp', { ascending: false });
+    return data || [];
+}
+
+async function logActivity(projectId, type, user, details) {
+    if (!supabase) return;
+    await supabase.from('activity').insert([{
+        project_id: projectId,
+        type,
+        user,
+        details
+    }]);
+}
+
+// WRAPPER: Delete Project
+async function deleteProject(id) {
+    if (!supabase) return;
+    await supabase.from('projects').delete().eq('id', id);
+}
+
+// WRAPPER: Delete File
+async function deleteFile(id) {
+    if (!supabase) return;
+    await supabase.from('files').delete().eq('id', id);
 }
 
 module.exports = {
     initDatabase,
-    getAllProjects: () => readJSON(dbFiles.projects),
-    getProjectById: (id) => readJSON(dbFiles.projects).find(p => p.id === id),
-    createProject: (id, name, description) => {
-        const projects = readJSON(dbFiles.projects);
-        const newProject = { id, name, description, created_at: new Date().toISOString() };
-        projects.push(newProject);
-        writeJSON(dbFiles.projects, projects);
-        return newProject;
-    },
-    getAllFiles: () => readJSON(dbFiles.files),
-    getFileById: (id) => readJSON(dbFiles.files).find(f => f.id === id),
-    createFile: (id, projectId, filename, realname, size, type) => {
-        const files = readJSON(dbFiles.files);
-        const newFile = { id, project_id: projectId, filename, originalname: realname, size, type, upload_date: new Date().toISOString() };
-        files.push(newFile);
-        writeJSON(dbFiles.files, files);
-        return newFile;
-    },
-    getAllQRCodes: () => readJSON(dbFiles.qrCodes),
-    createQRCode: (id, projectId, fileId, elementId, url) => {
-        const qrs = readJSON(dbFiles.qrCodes);
-        const newQR = { id, project_id: projectId, file_id: fileId, element_id: elementId, qr_image_url: url, created_at: new Date().toISOString() };
-        qrs.push(newQR);
-        writeJSON(dbFiles.qrCodes, qrs);
-        return newQR;
-    },
-    deleteProject: (id) => {
-        let projects = readJSON(dbFiles.projects);
-        projects = projects.filter(p => p.id !== id);
-        writeJSON(dbFiles.projects, projects);
-    },
-    updateProject: (id, updates) => {
-        const projects = readJSON(dbFiles.projects);
-        const index = projects.findIndex(p => p.id === id);
-        if (index !== -1) {
-            projects[index] = { ...projects[index], ...updates, updated_at: new Date().toISOString() };
-            writeJSON(dbFiles.projects, projects);
-            return projects[index];
-        }
-        return null;
-    },
-    deleteFile: (id) => {
-        let files = readJSON(dbFiles.files);
-        files = files.filter(f => f.id !== id);
-        writeJSON(dbFiles.files, files);
-    },
-    deleteQRCode: (id) => {
-        let qrs = readJSON(dbFiles.qrCodes);
-        qrs = qrs.filter(q => q.id !== id);
-        writeJSON(dbFiles.qrCodes, qrs);
-    },
-    getFilesByProjectId: (projectId) => readJSON(dbFiles.files).filter(f => f.project_id === projectId),
-    getStatistics: () => {
-        const projects = readJSON(dbFiles.projects);
-        const files = readJSON(dbFiles.files);
-        const qrs = readJSON(dbFiles.qrCodes);
-        return {
-            total_projects: projects.length,
-            active_projects: projects.filter(p => p.status === 'active').length,
-            total_files: files.length,
-            total_storage: files.reduce((acc, f) => acc + (f.size || 0), 0),
-            total_qr_codes: qrs.length
-        };
-    },
-    logActivity: (userId, username, action, details) => {
-        const activities = readJSON(dbFiles.activity);
-        const newActivity = {
-            id: uuidv4(),
-            user_id: userId,
-            username: username,
-            action: action,
-            details: details,
-            timestamp: new Date().toISOString()
-        };
-        activities.unshift(newActivity); // Add to beginning
-        if (activities.length > 100) activities.pop(); // Limit to 100
-        writeJSON(dbFiles.activity, activities);
-        return newActivity;
-    },
-    getRecentActivity: (limit = 20) => readJSON(dbFiles.activity).slice(0, limit),
-    getUserByUsername: (username) => readJSON(dbFiles.users).find(u => u.username === username),
-    createUser: (id, username, passwordHash, role) => {
-        const users = readJSON(dbFiles.users);
-        const newUser = { id, username, password_hash: passwordHash, role, created_at: new Date().toISOString() };
-        users.push(newUser);
-        writeJSON(dbFiles.users, users);
-        return newUser;
-    }
+    getUserByUsername,
+    getProjects,
+    createProject,
+    getProjectById,
+    saveFileMetadata,
+    getFiles,
+    getProjectActivity,
+    logActivity,
+    deleteProject,
+    deleteFile
 };
