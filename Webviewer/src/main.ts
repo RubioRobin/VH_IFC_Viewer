@@ -243,7 +243,7 @@ const init = async () => {
 
   if (modelName) {
     console.log(`Auto-loading: ${modelName}`);
-    const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const modelUrl = `${baseUrl}/models/${modelName}`;
     try {
       const response = await fetch(modelUrl);

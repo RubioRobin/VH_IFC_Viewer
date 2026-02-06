@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../lib/api';
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, Upload, FileText, Download, Trash2, Loader2, HardDrive, Eye, Calendar, Database } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
