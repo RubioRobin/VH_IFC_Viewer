@@ -33,9 +33,29 @@ app.get('/api/health', (req, res) => {
 // --- MIDDLEWARE ---
 app.use(cors({
     origin: frontendUrl === '*' ? true : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// DEBUG MIDDLEWARE: Log raw request details
+app.use((req, res, next) => {
+    if (req.path.includes('/auth/login')) {
+        console.log(`[REQ] ${req.method} ${req.path}`);
+        console.log(`[REQ] Content-Type: ${req.get('Content-Type')}`);
+        console.log(`[REQ] Headers:`, JSON.stringify(req.headers));
+    }
+    next();
+});
+
 app.use(express.json());
+
+// DEBUG MIDDLEWARE: Log parsed body
+app.use((req, res, next) => {
+    if (req.path.includes('/auth/login')) {
+        console.log(`[REQ] Body after parse:`, JSON.stringify(req.body));
+    }
+    next();
+});
 app.use(session({
     secret: 'bim-admin-secret-key',
     resave: false,
