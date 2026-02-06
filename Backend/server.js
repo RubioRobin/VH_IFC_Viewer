@@ -80,11 +80,17 @@ const requireAuth = (req, res, next) => {
 
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
+    console.log(`[LOGIN] Attempt for user: ${username}`);
     const user = db.getUserByUsername(username);
+    console.log(`[LOGIN] User found:`, user ? 'YES' : 'NO');
     if (user && bcrypt.compareSync(password, user.password_hash)) {
         req.session.userId = user.id;
+        console.log(`[LOGIN] Success! Session ID: ${req.session.id}`);
         res.json({ message: 'OK', user: { id: user.id, username: user.username } });
-    } else res.status(401).json({ error: 'Failed' });
+    } else {
+        console.log(`[LOGIN] Failed - Invalid credentials`);
+        res.status(401).json({ error: 'Failed' });
+    }
 });
 
 app.get('/api/projects', requireAuth, (req, res) => res.json(db.getAllProjects()));
