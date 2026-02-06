@@ -50,9 +50,18 @@ async function initDatabase() {
 
 // --- USERS ---
 async function getUserByUsername(username) {
-    if (!supabase) return null;
+    if (!supabase) {
+        console.log('QUERY ERROR: Supabase client not initialized');
+        return null;
+    }
     const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-    if (error) return null;
+    if (error) {
+        console.error('QUERY ERROR getUserByUsername:', error);
+        return null;
+    }
+    if (!data) {
+        console.log('QUERY RESULT: User not found for', username);
+    }
     return data;
 }
 
