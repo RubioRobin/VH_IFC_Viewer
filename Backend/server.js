@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -276,10 +277,10 @@ app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), async (
 app.delete('/api/files/:id', requireAuth, async (req, res) => {
     const file = await db.getFileById(req.params.id);
     if (file) {
-        // Try delete physical file
-        try {
-            fs.unlinkSync(path.join(uploadsDir, file.filename));
-        } catch (e) { console.error("File delete error:", e); }
+        // Legacy local delete removed
+        // try {
+        //     fs.unlinkSync(path.join(uploadsDir, file.filename));
+        // } catch (e) { console.error("File delete error:", e); }
         await db.deleteFile(req.params.id);
         res.status(204).send();
     } else {
