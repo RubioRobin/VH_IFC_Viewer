@@ -258,19 +258,25 @@ app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), async (
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     // Create DB entry
+    // Create DB entry AND upload to Supabase Storage
     const newFile = await db.createFile(
         uuidv4(),
         req.params.id,
         req.file.filename,
         req.file.originalname,
         req.file.size,
-        path.extname(req.file.originalname)
+        path.extname(req.file.originalname),
+        req.file.path // <--- Pass the temp path!
     );
+
+    // Clean up temp file
+    const fs = require('fs');
+    fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Failed to cleanup temp file:', err);
+    });
 
     // Log activity
     if (req.session.userId) {
-        // const user = await db.getUserByUsername('admin'); // Performance hit?
-        // Just log text for now
         await db.logActivity(req.params.id, 'admin', 'upload', `Bestand ${newFile.original_name} geupload`);
     }
 
