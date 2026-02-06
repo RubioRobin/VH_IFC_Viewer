@@ -15,6 +15,12 @@ const frontendUrl = process.env.FRONTEND_URL || '*';
 // --- CONFIG & HEALTH (Immediate) ---
 app.set('trust proxy', 1);
 
+console.log('--- CORS Configuration ---');
+console.log('FRONTEND_URL:', frontendUrl);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('Allowed origins:', frontendUrl === '*' ? 'ALL (*)' : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174']);
+console.log('-------------------------');
+
 app.get('/', (req, res) => {
     console.log(`[LOG] Root hit at ${new Date().toISOString()}`);
     res.send('VH IFC Viewer Backend is ONLINE! 🚀');
