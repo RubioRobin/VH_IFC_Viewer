@@ -116,7 +116,69 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.get('/api/projects', requireAuth, async (req, res) => res.json(await db.getAllProjects()));
-app.get('/api/files', requireAuth, async (req, res) => res.json(await db.getAllFiles()));
+app.get('/api/files', requireAuth, async (req, res) => {
+    try {
+        if (req.query.projectId) {
+            const files = await db.getFilesByProjectId(req.query.projectId);
+            res.json(files);
+        } else {
+            const files = await db.getAllFiles();
+            res.json(files);
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- FILES ROUTES ---
+
+app.post('/api/files', requireAuth, upload.single('ifcFile'), async (req, res) => {
+    try {
+        console.log(`[UPLOAD] File upload started`);
+        if (!req.file) {
+            console.log(`[UPLOAD] No file received`);
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const { projectId } = req.body;
+        console.log(`[UPLOAD] File: ${req.file.originalname} for Project: ${projectId}`);
+
+        // Create file entry AND upload to Supabase Storage (passing path)
+        const newFile = await db.createFile(null, projectId, req.file.filename, req.file.originalname, req.file.size, 'ifc', req.file.path);
+
+        // Clean up temp file (async, don't block response)
+        const fs = require('fs');
+        fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Failed to cleanup temp file:', err);
+            else console.log('Temp file cleaned up');
+        });
+
+        console.log(`[UPLOAD] Success: ${newFile.id}`);
+        res.json(newFile);
+    } catch (e) {
+        console.error(`[UPLOAD] Error:`, e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Redirect to Supabase Storage URL
+app.get('/api/files/:id/download', async (req, res) => {
+    try {
+        const file = await db.getFileById(req.params.id);
+        if (!file) return res.status(404).json({ error: 'File not found' });
+
+        // Get public URL from Supabase
+        const publicUrl = await db.getFilePublicUrl(file.path);
+
+        if (publicUrl) {
+            res.redirect(publicUrl);
+        } else {
+            res.status(404).json({ error: 'File not found in storage' });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.post('/api/qr/generate', requireAuth, async (req, res) => {
     try {
@@ -135,9 +197,14 @@ app.get('/api/viewer/resolve/:elementId', async (req, res) => {
     const qrs = await db.getAllQRCodes();
     const qr = qrs.find(q => q.element_id === req.params.elementId);
     if (!qr) return res.status(404).json({ error: 'Not found' });
+
     const file = await db.getFileById(qr.file_id);
     if (!file) return res.status(404).json({ error: 'File not found' });
-    res.json({ file_url: `/models/${file.filename}`, element_id: qr.element_id });
+
+    // Use public URL instead of /models/
+    const publicUrl = await db.getFilePublicUrl(file.path);
+
+    res.json({ file_url: publicUrl, element_id: qr.element_id });
 });
 
 // --- MISSING API ROUTES FIX ---
