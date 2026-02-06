@@ -36,6 +36,25 @@ function initDatabase() {
             console.log(`✅ Created ${key}.json`);
         }
     });
+
+    // CRITICAL: Always ensure admin user exists
+    const users = readJSON(dbFiles.users);
+    const adminExists = users.find(u => u.username === 'admin');
+    if (!adminExists) {
+        console.log('⚠️  Admin user not found, creating...');
+        users.push({
+            id: 'admin-1',
+            username: 'admin',
+            password_hash: bcrypt.hashSync('admin123', 10),
+            role: 'admin',
+            created_at: new Date().toISOString()
+        });
+        writeJSON(dbFiles.users, users);
+        console.log('✅ Admin user created');
+    } else {
+        console.log('✅ Admin user exists');
+    }
+
     console.log('✅ Database check complete');
 }
 
