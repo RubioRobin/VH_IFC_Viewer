@@ -12,53 +12,55 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 > = (state) => {
   const { components } = state;
 
-  // HELPER: Recursively format values to avoid [object Object]
+  // CONFIG: Copied from Examples/Engine IFC/ItemsData
+  const itemsDataConfig = {
+    attributesDefault: true,
+    relationsDefault: { attributes: false, relations: false },
+    relations: {
+      IsDefinedBy: { attributes: true, relations: true },
+      DefinesOcurrence: { attributes: false, relations: false },
+      ContainedInStructure: { attributes: true, relations: true },
+      ContainsElements: { attributes: false, relations: false }, // Keep false to avoid massive trees
+      Decomposes: { attributes: false, relations: false },
+    },
+  };
+
+  // HELPER: Recursively format values
   const formatValue = (val: any): string => {
     if (val === null || val === undefined) return "-";
-
-    // Handle Primitive Types directly
-    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
-      return String(val);
-    }
-
-    // Handle Objects
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
     if (typeof val === 'object') {
-      // If it has a 'value' property (standard web-ifc wrapper)
       if (val.value !== undefined) {
-        // Check if it is a type 5 (null)
         if (val.type === 5) return "-";
         return formatValue(val.value);
       }
-
-      // If it's an array
       if (Array.isArray(val)) {
         return val.map(v => formatValue(v)).join(", ");
       }
-
-      // If it's a minimal object (keys like type, value)
-      // Fallback: JSON stringify but cleaner
       try {
-        return JSON.stringify(val, (k, v) => {
-          if (k === "type") return undefined; // Hide internal type codes
-          return v;
-        }).replace(/["{}]/g, "").replace(/,/g, ", ");
-      } catch {
-        return String(val);
-      }
+        return JSON.stringify(val, (k, v) => k === "type" ? undefined : v).replace(/["{}]/g, "").replace(/,/g, ", ");
+      } catch { return String(val); }
     }
     return String(val);
   };
 
-  // HELPER: Create a row element using vanilla JS
-  const createPropertyRow = (key: string, value: any) => {
+  const createPropertyRow = (key: string, value: any, indent = 0) => {
     const startValue = formatValue(value);
-    if (startValue === "-" || startValue === "") return null; // Skip empty rows
+
+    // Don't skip empty rows if they might have children (like relations)
+    const isComplex = typeof value === 'object' && value !== null;
+    if ((startValue === "-" || startValue === "") && !isComplex) return null;
 
     const row = document.createElement("div");
     row.style.display = "flex";
     row.style.flexDirection = "column";
     row.style.borderBottom = "1px solid #f3f4f6";
     row.style.padding = "0.5rem 0";
+    if (indent > 0) {
+      row.style.marginLeft = `${indent}rem`;
+      row.style.borderLeft = "2px solid #e5e7eb";
+      row.style.paddingLeft = "0.5rem";
+    }
 
     const label = document.createElement("span");
     label.style.fontSize = "0.75rem";
@@ -71,22 +73,67 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     const val = document.createElement("span");
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
-    val.style.overflowWrap = "anywhere";
     val.style.wordBreak = "break-word";
-    val.style.whiteSpace = "normal";
-    val.style.lineHeight = "1.5";
-    val.textContent = startValue;
+
+    // Check if value is complex (array of relations)
+    if (Array.isArray(value)) {
+      val.textContent = "";
+    } else {
+      val.textContent = startValue;
+    }
 
     row.appendChild(label);
     row.appendChild(val);
-    return row;
+
+    // Container for this row + children
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.appendChild(row);
+
+    // Expand known relation keys
+    if (key === "IsDefinedBy" || key === "HasProperties") {
+      if (Array.isArray(value)) {
+        value.forEach((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            // Try to find Name or use index
+            const itemName = item.Name ? formatValue(item.Name) : "";
+
+            // If item has properties, render them
+            for (const k in item) {
+              // Skip internal/meta logic
+              if (["type", "expressID", "OwnerHistory", "Name", "GlobalId", "ObjectType"].includes(k)) continue;
+              // Pset properties usually in HasProperties
+
+              const subRow = createPropertyRow(k, item[k], indent + 1);
+              if (subRow) container.appendChild(subRow);
+            }
+          }
+        });
+      }
+    }
+
+    return container;
   };
 
   const highlighter = components.get(OBF.Highlighter);
 
-  // Helper to polyfill and fetch properties
   const fetchProperties = async (model: any, id: number) => {
     try {
+      // Priority 1: Use getItemsData if available (for PSets)
+      if (model.getItemsData) {
+        try {
+          // getItemsData returns [attrs]
+          const result = await model.getItemsData([id], itemsDataConfig);
+          if (result && result.length > 0) {
+            return result[0]; // Return the first result (the object with props)
+          }
+        } catch (err) {
+          console.warn("getItemsData failed, falling back", err);
+        }
+      }
+
+      // Fallback
       if (model.getProperties) {
         return await model.getProperties(id);
       } else if (model.getItem) {
@@ -118,26 +165,28 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         hasSelection = true;
         const props = await fetchProperties(model, id);
         if (props) {
-          // Priority Fields
           const addProp = (k: string, v: any) => {
             const el = createPropertyRow(k, v);
             if (el) container.appendChild(el);
           };
 
+          // Header info
           if (props.GlobalId) addProp("Guid", props.GlobalId);
           if (props.Name) addProp("Name", props.Name);
           if (props.ObjectType) addProp("Type", props.ObjectType);
-          if (props.Tag) addProp("Tag", props.Tag);
 
           // Loop all others
-          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];
+          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation", "_localId"];
           for (const key in props) {
             if (ignored.includes(key)) continue;
-            if (key.startsWith("_")) continue; // Skip internal props like _LOCALID
-            if (key === "MODEL") continue; // Skip Model ref
+            if (key.startsWith("_")) {
+              if (key === "_category") addProp("Category", props[key]);
+              continue;
+            }
+            if (key === "MODEL") continue;
 
             const val = props[key];
-            // Skip functions
+            if (val === null || val === undefined) continue;
             if (typeof val === 'function') continue;
 
             addProp(key, val);
