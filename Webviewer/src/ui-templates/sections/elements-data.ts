@@ -20,7 +20,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
   let currentProperties: { key: string; value: any }[] = [];
 
   // Create a custom component for the table content
-  const [propertiesUI, updatePropertiesUI] = BUI.Component.create<void>(() => {
+  const [propertiesUI, updatePropertiesUI] = BUI.Component.create<any>(() => {
     return BUI.html`
       <div style="display: flex; flex-direction: column; gap: 0.5rem;">
         ${currentProperties.length === 0
@@ -36,7 +36,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
       }
       </div>
     `;
-  });
+  }, {}); // FIX: Pass empty initial state to prevent "object is not iterable" errors
 
   const highlighter = components.get(OBF.Highlighter);
 
@@ -91,7 +91,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
   highlighter.events.select.onClear.add(() => {
     currentProperties = [];
-    updatePropertiesUI();
+    updatePropertiesUI({});
   });
 
   const search = (e: Event) => {
