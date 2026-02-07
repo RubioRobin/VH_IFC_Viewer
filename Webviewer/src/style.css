@@ -582,21 +582,54 @@ bim-grid[floating] .dashboard-card {
 .app-side-panel {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  /* Disable parent scroll, let child scroll */
   background-color: white;
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 0;
-  /* Crucial for Grid scrolling */
+}
+
+/* Ensure side panel contents fill the space */
+.app-side-panel>.custom-panel {
+  display: flex !important;
+  /* Force flex */
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Ensure content scrolling */
+.custom-panel__content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.2rem;
+}
+
+/* Improved Header Styling */
+.custom-panel__header {
+  flex-shrink: 0;
+  padding: 1rem;
+  border-bottom: 1px solid var(--bim-ui_bg-contrast-20);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--bim-ui_bg-contrast-100);
+}
+
+.custom-panel__content {
+  padding: 1rem;
 }
 
 .app-side-panel--left {
   grid-column: 1;
   grid-row: 1;
   height: 100%;
-  /* Fill the grid cell */
   margin: 0;
 }
 
@@ -604,7 +637,6 @@ bim-grid[floating] .dashboard-card {
   grid-column: 1;
   grid-row: 2;
   height: 100%;
-  /* Fill the grid cell */
   margin: 0;
 }
 
