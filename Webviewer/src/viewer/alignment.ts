@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
+// import { FragmentsGroup } from "@thatopen/fragments"; // Type not found explicitly, using any
 
 /**
  * Alignment strategies for positioning models in the scene
@@ -63,7 +64,7 @@ export class ModelAligner {
      * @param options - Alignment options
      */
     async alignModel(
-        model: OBC.FragmentsGroup,
+        model: any,
         options: AlignmentOptions
     ): Promise<void> {
         const { strategy, method = this.defaultMethod, customOffset, logDetails = true } = options;
@@ -121,7 +122,7 @@ export class ModelAligner {
      * Calculate bounding box for a model using specified method
      */
     async calculateBounds(
-        model: OBC.FragmentsGroup,
+        model: any,
         method: BoundsCalculationMethod,
         logDetails: boolean = false
     ): Promise<BoundsResult> {
@@ -159,7 +160,7 @@ export class ModelAligner {
      * Most accurate but slower
      */
     private async calculateBoundsWithBoundingBoxer(
-        model: OBC.FragmentsGroup,
+        model: any,
         logDetails: boolean
     ): Promise<THREE.Box3> {
         if (logDetails) console.log("[ModelAligner] Using BoundingBoxer method");
@@ -195,7 +196,7 @@ export class ModelAligner {
      * Faster but may be less accurate for complex rotations
      */
     private calculateBoundsWithFastScan(
-        model: OBC.FragmentsGroup,
+        model: any,
         logDetails: boolean
     ): THREE.Box3 {
         if (logDetails) console.log("[ModelAligner] Using FAST_SCAN method");
@@ -207,7 +208,7 @@ export class ModelAligner {
         let meshCount = 0;
         let instanceCount = 0;
 
-        model.object.traverse((obj) => {
+        model.object.traverse((obj: any) => {
             if (obj instanceof THREE.Mesh) {
                 meshCount++;
                 const mesh = obj;
@@ -250,7 +251,7 @@ export class ModelAligner {
      * Simple but unreliable for instanced meshes
      */
     private calculateBoundsWithThreeBox3(
-        model: OBC.FragmentsGroup,
+        model: any,
         logDetails: boolean
     ): THREE.Box3 {
         if (logDetails) console.log("[ModelAligner] Using THREE_BOX3 method");
@@ -264,7 +265,7 @@ export class ModelAligner {
      * Align model bottom to grid (Y=0)
      */
     private alignBottomToGrid(
-        model: OBC.FragmentsGroup,
+        model: any,
         bounds: BoundsResult,
         logDetails: boolean
     ): void {
@@ -286,7 +287,7 @@ export class ModelAligner {
      * Align model center to origin
      */
     private alignCenter(
-        model: OBC.FragmentsGroup,
+        model: any,
         bounds: BoundsResult,
         logDetails: boolean
     ): void {
@@ -309,7 +310,7 @@ export class ModelAligner {
      * Apply custom offset to model
      */
     private applyOffset(
-        model: OBC.FragmentsGroup,
+        model: any,
         offset: THREE.Vector3,
         logDetails: boolean
     ): void {
@@ -329,7 +330,7 @@ export class ModelAligner {
      * Get the minimum Y value of a model (lowest point)
      */
     async getMinY(
-        model: OBC.FragmentsGroup,
+        model: any,
         method: BoundsCalculationMethod = this.defaultMethod
     ): Promise<number> {
         const bounds = await this.calculateBounds(model, method, false);

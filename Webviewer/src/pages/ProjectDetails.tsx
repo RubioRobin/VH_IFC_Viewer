@@ -71,7 +71,7 @@ export function ProjectDetailsPage() {
         let failCount = 0;
 
         try {
-            toast({ title: 'Upload gestart', message: `${fileList.length} bestand(en) aan het uploaden...` });
+            toast({ type: 'info', title: 'Upload gestart', message: `${fileList.length} bestand(en) aan het uploaden...` });
 
             await Promise.all(fileList.map(async (file) => {
                 const formData = new FormData();

@@ -100,8 +100,8 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     const fragments = components.get(OBC.FragmentsManager);
     for (const fragID of Object.keys(modelIdMap)) {
       // Access model safely
-      const fragment = fragments.list.get(fragID);
-      const model = fragment ? fragment.group : null;
+      // Access model safely
+      const model = fragments.list.get(fragID);
 
       if (model) {
         await polyfillGetProperties(model);

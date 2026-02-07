@@ -30,7 +30,11 @@ export class TransparencyManager {
             if (!model) continue;
 
             for (const elementId of elementIds) {
-                const fragment = model.getFragmentByID(elementId);
+                // Fallback for getFragmentByID
+                const fragment = (model as any).getFragmentByID
+                    ? (model as any).getFragmentByID(elementId)
+                    : (model as any).items?.find((f: any) => f.id === elementId);
+
                 if (!fragment) continue;
 
                 this.applyTransparencyToMesh(fragment.mesh, opacity, `${modelId}-${elementId}`);

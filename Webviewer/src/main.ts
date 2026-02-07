@@ -242,9 +242,45 @@ const init = async () => {
   const modelName = urlParams.get("model");
   const fileId = urlParams.get("fileId");
 
-  if (modelName || fileId) {
+  // NEW: Check for /v/{publicId} in path
+  const pathParts = window.location.pathname.split('/');
+  const vIndex = pathParts.indexOf('v');
+  const publicId = (vIndex !== -1 && pathParts.length > vIndex + 1) ? pathParts[vIndex + 1] : null;
+
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  if (publicId) {
+    console.log(`Initializing Public Viewer for ID: ${publicId}`);
+    try {
+      // Fetch model info from Public API
+      const metaResponse = await fetch(`${baseUrl}/api/public/ifc/${publicId}`);
+
+      if (metaResponse.status === 404) throw new Error("Link ongeldig of verlopen");
+      if (metaResponse.status === 410) throw new Error("Link is verlopen");
+      if (!metaResponse.ok) throw new Error("Fout bij ophalen gegevens");
+
+      const { modelUrl, filename } = await metaResponse.json();
+      console.log(`Loading model: ${filename}`);
+
+      // Fetch the actual IFC file (via signed URL or proxy)
+      const modelResponse = await fetch(modelUrl);
+      if (!modelResponse.ok) throw new Error(`Fout bij downloaden model: ${modelResponse.status}`);
+
+      const blob = await modelResponse.blob();
+      const file = new File([blob], filename, { type: 'application/octet-stream' });
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
+    } catch (e) {
+      console.error("Public Viewer Error:", e);
+      alert(`Fout: ${e.message}`);
+      const loader = document.getElementById('initial-loading-overlay');
+      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${e.message}</p></div>`;
+    }
+  } else if (modelName || fileId) {
+    // Legacy / Admin Logic
     console.log(`Auto-loading: ${modelName || fileId}`);
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
     // Determine URL: Static model (legacy) or API download (new)
     const modelUrl = fileId

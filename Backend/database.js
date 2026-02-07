@@ -246,19 +246,18 @@ async function uploadFileToStorage(filePath, destinationPath, contentType) {
 
 async function getFileDownloadUrl(storagePath) {
     if (!supabase) return null;
-    // Bucket is public, use getPublicUrl for direct access
-    const { data } = supabase.storage.from('ifc-models').getPublicUrl(storagePath);
-    return data.publicUrl;
 
-    // Legacy Signed URL (removed for stability with Public buckets)
-    /*
-    const { data, error } = await supabase.storage.from('ifc-models').createSignedUrl(storagePath, 60 * 60 * 24); 
+    // Use Signed URL for private bucket access (15 minutes expiry)
+    // This allows the frontend to download the file securely without a permanent public link.
+    const { data, error } = await supabase.storage
+        .from('ifc-models')
+        .createSignedUrl(storagePath, 60 * 15); // 15 mins
+
     if (error) {
         console.error('Error generating signed URL:', error);
         return null;
     }
     return data.signedUrl;
-    */
 }
 
 // Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
@@ -361,45 +360,19 @@ async function deleteQRCode(id) {
 // I'll make projectId optional in schema (it is References projects(id)).
 // I'll update logic to accept the params server.js sends.
 
-async function logActivity(p1, p2, p3, p4) {
+async function logActivity(projectId, user, type, details) {
     if (!supabase) return;
 
-    // Attempt to map params loosely.
-    // implementation 1: (projectId, user, type, details)
-    // implementation 2: (userId, username, type, details)
-
-    // I will write a flexible logger.
-    // Schema: project_id (uuid, FK), type, user, details.
-
-    let projectId = null;
-    let user = 'System';
-    let type = 'info';
-    let details = '';
-
-    // Heuristic: if p1 looks like project UUID?
-    // Actually, let's just store simple logs.
-
-    // If called from createProject/createFile (internal): I used (projectId, User, Type, Details)
-    // If called from server.js: (userId, username, type, details)
-
-    // I'll consolidate to: (projectId (nullable), user, type, details)
-    // And update server.js to pass 4 args.
-
-    // For now, let's just try to insert what we have
-
     const logEntry = {
-        type: p3 || 'info', // p3 is type in server.js usage?
-        user: p2 || 'System', // p2 is username
-        details: p4 || '',
+        project_id: projectId, // Can be null
+        user_name: user || 'System',
+        type: type || 'info',
+        details: details || '',
         timestamp: new Date().toISOString()
     };
 
-    // If p1 is a valid project ID, use it? Or just ignore project_id for now if it causes FK constraint errors.
-    // If project_id is nullable in schema? "REFERENCES projects(id)". If NOT NULL is not specified, it's nullable.
-    // My schema creation: project_id TEXT REFERENCES ...
-    // Verify schema: "project_id TEXT REFERENCES projects(id) ON DELETE CASCADE" -> Nullable by default.
-
-    await supabase.from('activity').insert([logEntry]);
+    const { error } = await supabase.from('activity').insert([logEntry]);
+    if (error) console.error('Activity Log Error:', error);
 }
 
 // Matches server.js: db.getRecentActivity(limit)
@@ -428,6 +401,38 @@ async function getStatistics() {
     };
 }
 
+// --- PUBLIC LINKS ---
+async function createPublicLink(projectId, fileId) {
+    if (!supabase) return null;
+
+    // Check if active link exists? Optional. Let's create new one.
+    const newLink = {
+        public_id: uuidv4(),
+        project_id: projectId,
+        ifc_file_id: fileId,
+        is_active: true
+    };
+
+    const { data, error } = await supabase.from('public_links').insert([newLink]).select().single();
+    if (error) throw error;
+
+    await logActivity(projectId, 'Admin', 'create_link', `Public link created for file ${fileId}`);
+    return data;
+}
+
+async function getPublicLink(publicId) {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+        .from('public_links')
+        .select(`*, files (*)`) // Fetch nested file info
+        .eq('public_id', publicId)
+        .eq('is_active', true)
+        .single();
+
+    if (error) return null;
+    return data;
+}
+
 module.exports = {
     initDatabase,
     getUserByUsername,
@@ -448,6 +453,10 @@ module.exports = {
     getAllQRCodes,
     createQRCode,
     deleteQRCode,
+
+    // New Public Link Methods
+    createPublicLink,
+    getPublicLink,
 
     logActivity,
     getRecentActivity,

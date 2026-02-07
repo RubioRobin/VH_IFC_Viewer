@@ -199,18 +199,65 @@ app.get('/api/files/:id/download', async (req, res) => {
     }
 });
 
-app.post('/api/qr/generate', requireAuth, async (req, res) => {
+// --- PUBLIC ROUTES (No Auth Required) ---
+app.get('/api/public/ifc/:publicId', async (req, res) => {
     try {
-        const { project_id, file_id, element_id } = req.body;
+        const link = await db.getPublicLink(req.params.publicId);
+        if (!link) return res.status(404).json({ error: 'Invalid or expired link' });
+
+        // Check expiry if field exists (optional)
+        if (link.expires_at && new Date(link.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'Link expired' });
+        }
+
+        // Generate Download URL
+        const downloadUrl = await db.getFileDownloadUrl(link.files.path);
+
+        res.json({
+            modelUrl: downloadUrl,
+            filename: link.files.original_name
+        });
+    } catch (e) {
+        console.error('Public Access Error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN QR/LINK ROUTES ---
+app.post('/api/admin/public-link', requireAuth, async (req, res) => {
+    try {
+        const { project_id, file_id } = req.body;
+        const link = await db.createPublicLink(project_id, file_id);
+
+        // Construct Viewer URL
+        // Use env FRONTEND_URL or default to localhost for dev
+        const baseUrl = process.env.FRONTEND_URL && process.env.FRONTEND_URL !== '*'
+            ? process.env.FRONTEND_URL
+            : 'http://localhost:5173';
+
+        const viewerUrl = `${baseUrl}/v/${link.public_id}`;
+
+        // Optionally generate QR image for download
         const qrId = uuidv4();
         const qrFileName = `qr-${qrId}.png`;
         const qrPath = path.join(qrCodesDir, qrFileName);
-        const viewerUrl = `https://vh-ifc-viewer.vercel.app/viewer?project=${project_id}&file=${file_id}&element=${element_id}`;
+
         await QRCode.toFile(qrPath, viewerUrl);
-        const qr = await db.createQRCode(qrId, project_id, file_id, element_id, `/qr-codes/${qrFileName}`);
-        res.status(201).json(qr);
+
+        // Return link info + QR image path (local static path)
+        res.status(201).json({
+            ...link,
+            viewerUrl,
+            qrImageUrl: `/qr-codes/${qrFileName}`
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// Legacy /api/qr/generate - Keep or Deprecate?
+// Let's redirect logic to new flow if client uses it, or just leave as is?
+// The prompt implies we need a NEW public viewer flow.
+// I will comment out the old one to avoid confusion.
+// app.post('/api/qr/generate', ...);
 
 app.get('/api/viewer/resolve/:elementId', async (req, res) => {
     const qrs = await db.getAllQRCodes();
@@ -282,7 +329,10 @@ app.post('/api/projects/:id/upload', requireAuth, upload.single('file'), async (
 
     // Log activity
     if (req.session.userId) {
-        await db.logActivity(req.params.id, 'admin', 'upload', `Bestand ${newFile.original_name} geupload`);
+        // Updated to matching signature: (projectId, user, type, details)
+        // We don't have username readily available in session unless we stored it.
+        // Let's assume 'Admin' or fetch it. For now 'Admin'.
+        await db.logActivity(req.params.id, 'Admin', 'upload', `Bestand ${newFile.original_name} geupload`);
     }
 
     res.status(201).json(newFile);
