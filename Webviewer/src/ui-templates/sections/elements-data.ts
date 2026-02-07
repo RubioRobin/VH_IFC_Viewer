@@ -16,25 +16,39 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
   const createPropertyRow = (key: string, value: any) => {
     const row = document.createElement("div");
     row.style.display = "flex";
-    row.style.flexDirection = "column";
+    row.style.flexDirection = "column"; // Keep column for safe wrapping
     row.style.borderBottom = "1px solid #f3f4f6";
     row.style.padding = "0.5rem 0";
+
+    // Optional: Switch to Row if screen is wide enough? 
+    // Stick to column to ensure nothing gets cut off as per user request.
 
     const label = document.createElement("span");
     label.style.fontSize = "0.75rem";
     label.style.color = "#6b7280";
-    label.style.fontWeight = "500";
+    label.style.fontWeight = "600";
     label.style.textTransform = "uppercase";
+    label.style.marginBottom = "0.25rem";
     label.textContent = key;
 
     const val = document.createElement("span");
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
     val.style.overflowWrap = "anywhere";
-    val.style.wordBreak = "break-all";
+    val.style.wordBreak = "break-word"; // Better for normal text
     val.style.whiteSpace = "normal";
-    val.style.lineHeight = "1.4";
-    val.textContent = value ?? "-";
+    val.style.lineHeight = "1.5";
+
+    // Handle objects (like {type: 1, value: "..."})
+    let displayValue = "-";
+    if (value !== null && value !== undefined) {
+      if (typeof value === 'object' && value.value) {
+        displayValue = String(value.value);
+      } else {
+        displayValue = String(value);
+      }
+    }
+    val.textContent = displayValue;
 
     row.appendChild(label);
     row.appendChild(val);
@@ -61,9 +75,9 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
   const updateTableDirectly = async (modelIdMap: { [id: string]: Set<number> }) => {
     const container = document.getElementById("bim-props-dynamic-container");
-    if (!container) return; // Should exist if panel is rendered
+    if (!container) return;
 
-    container.innerHTML = ""; // Clear current
+    container.innerHTML = "";
 
     let hasSelection = false;
 
@@ -77,18 +91,24 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         hasSelection = true;
         const props = await fetchProperties(model, id);
         if (props) {
-          // Basic Attributes
-          if (props.Name) container.appendChild(createPropertyRow("Name", props.Name.value || props.Name));
-          if (props.GlobalId) container.appendChild(createPropertyRow("GlobalId", props.GlobalId.value || props.GlobalId));
-          if (props.ObjectType) container.appendChild(createPropertyRow("Type", props.ObjectType.value || props.ObjectType));
+          // Priority Fields
+          const addProp = (k: string, v: any) => container.appendChild(createPropertyRow(k, v));
 
-          // Loop others
+          if (props.GlobalId) addProp("Guid", props.GlobalId);
+          if (props.Name) addProp("Name", props.Name);
+          if (props.ObjectType) addProp("Type", props.ObjectType);
+          if (props.Tag) addProp("Tag", props.Tag);
+
+          // Loop all others
+          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];
           for (const key in props) {
-            if (["Name", "GlobalId", "ObjectType", "OwnerHistory", "expressID"].includes(key)) continue;
+            if (ignored.includes(key)) continue;
             const val = props[key];
-            if (val && (typeof val === 'string' || typeof val === 'number' || val.value)) {
-              container.appendChild(createPropertyRow(key, val.value || val));
-            }
+            // Skip complex objects or nulls that don't look like values
+            if (val === null || val === undefined) continue;
+            if (typeof val === 'function') continue;
+
+            addProp(key, val);
           }
         }
       }
@@ -119,25 +139,24 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
     const filter = input.value.toLowerCase();
     Array.from(container.children).forEach((child: any) => {
-      if (child.textContent.toLowerCase().includes(filter) || child.textContent === "Selecteer een element om eigenschappen te zien") {
+      if (child.textContent.toLowerCase().includes(filter) || child.textContent.includes("Selecteer")) {
         child.style.display = "flex";
       } else {
-        if (child.textContent !== "Selecteer een element om eigenschappen te zien")
-          child.style.display = "none";
+        child.style.display = "none";
       }
     });
   };
 
-  // Manual implementation of the panel to ensure strict control over layout and scrolling
+  // Manual implementation of the panel
   return BUI.html`
     <div class="custom-panel custom-panel--fixed" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; background: white; border-radius: 1rem; box-sizing: border-box;">
       
-      <!-- Fixed Header: Explicit Flex Start -->
-      <div class="custom-panel__header" style="flex-shrink: 0; padding: 1rem; border-bottom: 1px solid var(--bim-ui_bg-contrast-20); display: flex; align-items: center; justify-content: flex-start; gap: 0.75rem;">
+      <!-- Fixed Header: FORCE LEFT ALIGN -->
+      <div class="custom-panel__header" style="flex-shrink: 0; padding: 1rem; border-bottom: 1px solid var(--bim-ui_bg-contrast-20); display: flex; align-items: center; justify-content: flex-start !important; gap: 0.75rem;">
         <span class="custom-panel__header-icon" style="display: flex; color: var(--bim-ui_bg-contrast-100);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         </span>
-        <span class="custom-panel__label" style="font-weight: 600; color: var(--bim-ui_bg-contrast-100);">Eigenschappen</span>
+        <span class="custom-panel__label" style="font-weight: 600; color: var(--bim-ui_bg-contrast-100); flex: 1; text-align: left;">Eigenschappen</span>
       </div>
 
       <!-- Scrollable Content -->
@@ -148,10 +167,9 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         </div>
         
         <!-- Custom Table Container - Manual DOM -->
-        <div id="bim-props-dynamic-container" style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 100%;">
+        <div id="bim-props-dynamic-container" style="display: flex; flex-direction: column; gap: 0.25rem; width: 100%; max-width: 100%;">
           <div style="padding: 1rem; color: #9ca3af; text-align: center;">Selecteer een element om eigenschappen te zien</div>
         </div>
       </div>
     </div>
   `;
-};
