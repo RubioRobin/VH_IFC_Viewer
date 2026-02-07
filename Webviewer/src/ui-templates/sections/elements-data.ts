@@ -1,7 +1,7 @@
 import * as BUI from "@thatopen/ui";
 import * as OBF from "@thatopen/components-front";
 import * as OBC from "@thatopen/components";
-import { customInput } from "../../components/custom-input";
+import { customInput } from "../components/custom-input";
 
 export interface ElementsDataPanelState {
   components: OBC.Components;
