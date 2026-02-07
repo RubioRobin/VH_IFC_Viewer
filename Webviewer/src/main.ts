@@ -71,7 +71,7 @@ const transparencyManager = new TransparencyManager(components);
 components.get(OBC.Raycasters).get(world);
 
 const fragments = components.get(OBC.FragmentsManager);
-fragments.init("/node_modules/@thatopen/fragments/dist/Worker/worker.mjs");
+fragments.init("/obc-worker.mjs");
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {

@@ -129,7 +129,7 @@ async function fetchProjects() {
 }
 
 async function fetchFiles() {
-    const response = await fetch(`${API_URL}/api/files`, { credentials: 'include' });
+    const response = await fetch(`${API_URL}/api/files?t=${Date.now()}`, { credentials: 'include' });
     files = await response.json();
 }
 
