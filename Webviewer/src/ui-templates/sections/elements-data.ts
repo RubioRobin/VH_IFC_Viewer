@@ -173,3 +173,4 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
       </div>
     </div>
   `;
+};
