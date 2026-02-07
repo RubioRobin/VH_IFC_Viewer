@@ -429,14 +429,13 @@ bim-grid[floating]>bim-toolbar {
   border-radius: 0.75rem;
   gap: 0.5rem;
   padding: 0.4rem;
-  max-width: calc(100% - 2rem);
+  max-width: calc(100% - 1rem); /* More space */
   width: fit-content;
-  margin: 0 1rem;
+  margin: 0 auto;
   display: flex !important;
   justify-content: center;
-  flex-wrap: nowrap !important; /* Force single line */
-  overflow-x: auto; /* Allow scroll on very small screens */
-  scrollbar-width: none; /* Hide scrollbar Firefox */
+  flex-wrap: wrap !important; /* Allow wrapping */
+  overflow: visible;
 }
 
 /* Hide scrollbar Chrome/Safari/Edge */
