@@ -560,17 +560,19 @@ bim-grid[floating] .dashboard-card {
   overflow: hidden;
 }
 
+
 .app-content {
   flex: 1;
   display: grid;
-  grid-template-columns: var(--small-column-width, 24rem) 1fr var(--small-column-width, 24rem);
-  grid-template-areas: "left main right";
+  grid-template-columns: var(--small-column-width, 24rem) 1fr;
+  /* 2 Columns Only */
+  grid-template-areas:
+    "sidebar main"
+    "sidebar main";
   gap: 1.5rem;
-  /* Increased gap for better "loose card" feel */
   padding: 1.5rem;
   overflow: hidden;
   background-color: #f3f4f6;
-  /* Light gray background to make white cards pop */
   height: calc(100vh - 3rem);
   box-sizing: border-box;
 }
@@ -580,31 +582,51 @@ bim-grid[floating] .dashboard-card {
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Fix horizontal scrollbar */
   background-color: white;
   border-radius: 1rem;
-  /* More rounded */
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  /* Stronger shadow */
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .app-side-panel--left {
-  grid-area: left;
+  grid-column: 1;
+  grid-row: 1;
+  /* Top half */
+  height: calc(50% - 0.75rem);
+  /* Half height minus half gap */
+  margin-bottom: 0.75rem;
 }
 
 .app-side-panel--right {
-  grid-area: right;
+  grid-column: 1;
+  grid-row: 2;
+  /* Bottom half */
+  height: calc(50% - 0.75rem);
+  margin-top: 0.75rem;
 }
 
 .app-viewer-container {
-  grid-area: main;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+
+  /* Top half? No, we want them stacked */
+  /* Wait, if app-content is the parent, and we want them stacked, we need a container OR use rows */
+}
+
+.app-side-panel--right {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.app-viewer-container {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  /* Span both rows */
   position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: white;
-  /* Required for the card look */
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.05);
