@@ -561,11 +561,13 @@ bim-grid[floating] .dashboard-card {
 }
 
 
+
 .app-content {
   flex: 1;
   display: grid;
   grid-template-columns: var(--small-column-width, 24rem) 1fr;
-  /* 2 Columns Only */
+  grid-template-rows: 1fr 1fr;
+  /* Explicitly split height */
   grid-template-areas:
     "sidebar main"
     "sidebar main";
@@ -591,19 +593,19 @@ bim-grid[floating] .dashboard-card {
 .app-side-panel--left {
   grid-column: 1;
   grid-row: 1;
-  /* Top half */
-  height: calc(50% - 0.75rem);
-  /* Half height minus half gap */
-  margin-bottom: 0.75rem;
+  height: 100%;
+  /* Fill the grid cell */
+  margin: 0;
 }
 
 .app-side-panel--right {
   grid-column: 1;
   grid-row: 2;
-  /* Bottom half */
-  height: calc(50% - 0.75rem);
-  margin-top: 0.75rem;
+  height: 100%;
+  /* Fill the grid cell */
+  margin: 0;
 }
+
 
 .app-viewer-container {
   grid-column: 2;
