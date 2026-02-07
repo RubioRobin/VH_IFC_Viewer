@@ -58,7 +58,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
   highlighter.events.select.onHighlight.add(async (modelIdMap) => {
     currentProperties = []; // Clear previous
-    updatePropertiesUI();
+    updatePropertiesUI({});
 
     for (const fragID of Object.keys(modelIdMap)) {
       const fragments = components.get(OBC.FragmentsManager);
@@ -86,7 +86,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         }
       }
     }
-    updatePropertiesUI();
+    updatePropertiesUI({});
   });
 
   highlighter.events.select.onClear.add(() => {
