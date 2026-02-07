@@ -12,7 +12,6 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 > = (state) => {
   const { components } = state;
 
-  // CONFIG: Copied from Examples/Engine IFC/ItemsData
   const itemsDataConfig = {
     attributesDefault: true,
     relationsDefault: { attributes: false, relations: false },
@@ -20,12 +19,15 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
       IsDefinedBy: { attributes: true, relations: true },
       DefinesOcurrence: { attributes: false, relations: false },
       ContainedInStructure: { attributes: true, relations: true },
-      ContainsElements: { attributes: false, relations: false }, // Keep false to avoid massive trees
+      ContainsElements: { attributes: false, relations: false },
       Decomposes: { attributes: false, relations: false },
     },
   };
 
-  // HELPER: Recursively format values
+  const toTitleCase = (str: string) => {
+    return str.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()).trim();
+  };
+
   const formatValue = (val: any): string => {
     if (val === null || val === undefined) return "-";
     if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
@@ -46,8 +48,8 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
   const createPropertyRow = (key: string, value: any, indent = 0) => {
     const startValue = formatValue(value);
+    const keyUpper = key.toUpperCase();
 
-    // Don't skip empty rows if they might have children (like relations)
     const isComplex = typeof value === 'object' && value !== null;
     if ((startValue === "-" || startValue === "") && !isComplex) return null;
 
@@ -68,14 +70,19 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     label.style.fontWeight = "600";
     label.style.textTransform = "uppercase";
     label.style.marginBottom = "0.25rem";
-    label.textContent = key;
+
+    let prettyKey = key;
+    if (keyUpper === "NOMINALVALUE") prettyKey = "Value";
+    else if (keyUpper.startsWith("PSET_")) prettyKey = key.substring(5);
+    else prettyKey = toTitleCase(key);
+
+    label.textContent = prettyKey;
 
     const val = document.createElement("span");
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
     val.style.wordBreak = "break-word";
 
-    // Check if value is complex (array of relations)
     if (Array.isArray(value)) {
       val.textContent = "";
     } else {
@@ -85,27 +92,54 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     row.appendChild(label);
     row.appendChild(val);
 
-    // Container for this row + children
     const container = document.createElement("div");
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.appendChild(row);
 
-    // Expand known relation keys
-    if (key === "IsDefinedBy" || key === "HasProperties") {
+    if (keyUpper === "ISDEFINEDBY" || keyUpper === "HASPROPERTIES" || keyUpper === "QUANTITIES") {
+      row.style.display = "none";
+
       if (Array.isArray(value)) {
         value.forEach((item: any) => {
           if (typeof item === 'object' && item !== null) {
-            // Try to find Name or use index
-            const itemName = item.Name ? formatValue(item.Name) : "";
+            const itemName = item.Name ? formatValue(item.Name) : (item._category || "Property Set");
 
-            // If item has properties, render them
+            const header = document.createElement("div");
+            header.textContent = itemName;
+            header.style.fontWeight = "700";
+            header.style.fontSize = "0.85rem";
+            header.style.color = "#4b5563";
+            header.style.marginTop = "0.75rem";
+            header.style.marginBottom = "0.25rem";
+            header.style.padding = "0.25rem 0.5rem";
+            header.style.backgroundColor = "#f9fafb";
+            header.style.borderRadius = "0.25rem";
+
+            if (indent > 0) header.style.marginLeft = `${indent}rem`;
+
+            container.appendChild(header);
+
             for (const k in item) {
-              // Skip internal/meta logic
-              if (["type", "expressID", "OwnerHistory", "Name", "GlobalId", "ObjectType"].includes(k)) continue;
-              // Pset properties usually in HasProperties
+              const kUp = k.toUpperCase();
+              if (["TYPE", "EXPRESSID", "OWNERHISTORY", "NAME", "GLOBALID", "_CATEGORY", "_GUID", "_LOCALID"].includes(kUp)) continue;
 
-              const subRow = createPropertyRow(k, item[k], indent + 1);
+              if (kUp === "HASPROPERTIES") {
+                if (Array.isArray(item[k])) {
+                  item[k].forEach((prop: any) => {
+                    if (prop.Name && prop.NominalValue) {
+                      const propRow = createPropertyRow(prop.Name.value || prop.Name, prop.NominalValue, indent + 0.5);
+                      if (propRow) container.appendChild(propRow);
+                    } else {
+                      const subRow = createPropertyRow(k, item[k], indent + 0.5);
+                      if (subRow) container.appendChild(subRow);
+                    }
+                  });
+                }
+                continue;
+              }
+
+              const subRow = createPropertyRow(k, item[k], indent + 0.5);
               if (subRow) container.appendChild(subRow);
             }
           }
@@ -116,45 +150,27 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     return container;
   };
 
-  const highlighter = components.get(OBF.Highlighter);
+  const highligher = components.get(OBF.Highlighter);
 
   const fetchProperties = async (model: any, id: number) => {
     try {
-      // Priority 1: Use getItemsData if available (for PSets)
       if (model.getItemsData) {
         try {
-          // getItemsData returns [attrs]
           const result = await model.getItemsData([id], itemsDataConfig);
-          if (result && result.length > 0) {
-            return result[0]; // Return the first result (the object with props)
-          }
-        } catch (err) {
-          console.warn("getItemsData failed, falling back", err);
-        }
+          if (result && result.length > 0) return result[0];
+        } catch (err) { console.warn("getItemsData failed", err); }
       }
-
-      // Fallback
-      if (model.getProperties) {
-        return await model.getProperties(id);
-      } else if (model.getItem) {
-        return await model.getItem(id);
-      } else if (model.properties && model.properties[id]) {
-        return model.properties[id];
-      }
-    } catch (e) {
-      console.error("Error fetching properties", e);
-    }
+      if (model.getProperties) return await model.getProperties(id);
+    } catch (e) { console.error("Error fetching properties", e); }
     return null;
   };
 
   const updateTableDirectly = async (modelIdMap: { [id: string]: Set<number> }) => {
     const container = document.getElementById("bim-props-dynamic-container");
     if (!container) return;
-
     container.innerHTML = "";
 
     let hasSelection = false;
-
     for (const fragID of Object.keys(modelIdMap)) {
       const fragments = components.get(OBC.FragmentsManager);
       const model = fragments.list.get(fragID);
@@ -170,20 +186,17 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
             if (el) container.appendChild(el);
           };
 
-          // Header info
           if (props.GlobalId) addProp("Guid", props.GlobalId);
           if (props.Name) addProp("Name", props.Name);
           if (props.ObjectType) addProp("Type", props.ObjectType);
 
-          // Loop all others
-          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation", "_localId"];
+          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];
           for (const key in props) {
-            if (ignored.includes(key)) continue;
-            if (key.startsWith("_")) {
-              if (key === "_category") addProp("Category", props[key]);
-              continue;
-            }
-            if (key === "MODEL") continue;
+            const keyUpper = key.toUpperCase();
+            if (ignored.map(i => i.toUpperCase()).includes(keyUpper)) continue;
+            if (key.startsWith("_")) continue;
+            if (keyUpper.startsWith("_")) continue;
+            if (keyUpper === "MODEL") continue;
 
             const val = props[key];
             if (val === null || val === undefined) continue;
@@ -205,11 +218,11 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     }
   };
 
-  highlighter.events.select.onHighlight.add((modelIdMap) => {
+  highligher.events.select.onHighlight.add((modelIdMap) => {
     updateTableDirectly(modelIdMap);
   });
 
-  highlighter.events.select.onClear.add(() => {
+  highligher.events.select.onClear.add(() => {
     updateTableDirectly({});
   });
 
@@ -228,11 +241,9 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     });
   };
 
-  // Manual implementation of the panel
   return BUI.html`
     <div class="custom-panel custom-panel--fixed" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; background: white; border-radius: 1rem; box-sizing: border-box;">
       
-      <!-- Fixed Header: FORCE LEFT ALIGN -->
       <div class="custom-panel__header" style="flex-shrink: 0; padding: 1rem; border-bottom: 1px solid var(--bim-ui_bg-contrast-20); display: flex; align-items: center; justify-content: flex-start !important; gap: 0.75rem;">
         <span class="custom-panel__header-icon" style="display: flex; color: var(--bim-ui_bg-contrast-100);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -240,14 +251,11 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         <span class="custom-panel__label" style="font-weight: 600; color: var(--bim-ui_bg-contrast-100); flex: 1; text-align: left;">Eigenschappen</span>
       </div>
 
-      <!-- Scrollable Content -->
       <div class="custom-panel__content" style="flex: 1; overflow-y: auto; padding: 1rem; min-height: 0;">
-        <!-- Search Input -->
         <div style="display: flex; gap: 0.375rem; margin-bottom: 0.75rem; width: 100%; box-sizing: border-box;">
           ${customInput({ placeholder: "Zoeken...", onInput: search, style: "flex: 1; min-width: 0;" })}
         </div>
         
-        <!-- Custom Table Container - Manual DOM -->
         <div id="bim-props-dynamic-container" style="display: flex; flex-direction: column; gap: 0.25rem; width: 100%; max-width: 100%;">
           <div style="padding: 1rem; color: #9ca3af; text-align: center;">Selecteer een element om eigenschappen te zien</div>
         </div>
