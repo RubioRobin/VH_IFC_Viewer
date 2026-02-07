@@ -1,11 +1,7 @@
-
 import * as BUI from "@thatopen/ui";
-import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
-import * as BUI_OBC from "@thatopen/ui-obc";
-import * as WEBIFC from "web-ifc";
-import { customInput } from "../components/custom-input";
-import { customPanel } from "../components/custom-panel";
+import * as OBC from "@thatopen/components";
+import { customInput } from "../../components/custom-input";
 
 export interface ElementsDataPanelState {
   components: OBC.Components;
@@ -16,27 +12,34 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 > = (state) => {
   const { components } = state;
 
-  // STATE: Store current properties to display
-  let currentProperties: { key: string; value: any }[] = [];
+  // HELPER: Create a row element using vanilla JS
+  const createPropertyRow = (key: string, value: any) => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.flexDirection = "column";
+    row.style.borderBottom = "1px solid #f3f4f6";
+    row.style.padding = "0.5rem 0";
 
-  // Create a custom component for the table content
-  const [propertiesUI, updatePropertiesUI] = BUI.Component.create<any>(() => {
-    return BUI.html`
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        ${currentProperties.length === 0
-        ? BUI.html`<div style="padding: 1rem; color: #9ca3af; text-align: center;">Selecteer een element om eigenschappen te zien</div>`
-        : currentProperties.map(prop => BUI.html`
-              <div style="display: flex; flex-direction: column; border-bottom: 1px solid #f3f4f6; padding: 0.5rem 0;">
-                <span style="font-size: 0.75rem; color: #6b7280; font-weight: 500; text-transform: uppercase;">${prop.key}</span>
-                <span style="font-size: 0.875rem; color: #111827; overflow-wrap: anywhere; word-break: break-all; white-space: normal; line-height: 1.4;">
-                  ${prop.value || "-"}
-                </span>
-              </div>
-            `)
-      }
-      </div>
-    `;
-  }, {}); // FIX: Pass empty initial state to prevent "object is not iterable" errors
+    const label = document.createElement("span");
+    label.style.fontSize = "0.75rem";
+    label.style.color = "#6b7280";
+    label.style.fontWeight = "500";
+    label.style.textTransform = "uppercase";
+    label.textContent = key;
+
+    const val = document.createElement("span");
+    val.style.fontSize = "0.875rem";
+    val.style.color = "#111827";
+    val.style.overflowWrap = "anywhere";
+    val.style.wordBreak = "break-all";
+    val.style.whiteSpace = "normal";
+    val.style.lineHeight = "1.4";
+    val.textContent = value ?? "-";
+
+    row.appendChild(label);
+    row.appendChild(val);
+    return row;
+  };
 
   const highlighter = components.get(OBF.Highlighter);
 
@@ -56,9 +59,13 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     return null;
   };
 
-  highlighter.events.select.onHighlight.add(async (modelIdMap) => {
-    currentProperties = []; // Clear previous
-    updatePropertiesUI({});
+  const updateTableDirectly = async (modelIdMap: { [id: string]: Set<number> }) => {
+    const container = document.getElementById("bim-props-dynamic-container");
+    if (!container) return; // Should exist if panel is rendered
+
+    container.innerHTML = ""; // Clear current
+
+    let hasSelection = false;
 
     for (const fragID of Object.keys(modelIdMap)) {
       const fragments = components.get(OBC.FragmentsManager);
@@ -67,38 +74,58 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
       const ids = Array.from(modelIdMap[fragID]);
       for (const id of ids) {
+        hasSelection = true;
         const props = await fetchProperties(model, id);
         if (props) {
           // Basic Attributes
-          if (props.Name) currentProperties.push({ key: "Name", value: props.Name.value || props.Name });
-          if (props.GlobalId) currentProperties.push({ key: "GlobalId", value: props.GlobalId.value || props.GlobalId });
-          if (props.ObjectType) currentProperties.push({ key: "Type", value: props.ObjectType.value || props.ObjectType });
+          if (props.Name) container.appendChild(createPropertyRow("Name", props.Name.value || props.Name));
+          if (props.GlobalId) container.appendChild(createPropertyRow("GlobalId", props.GlobalId.value || props.GlobalId));
+          if (props.ObjectType) container.appendChild(createPropertyRow("Type", props.ObjectType.value || props.ObjectType));
 
-          // Iterate all other keys for a basic dump (excluding heavy objects)
-          // Ideally we filter this list. For now, showing raw attributes is better than broken UI.
+          // Loop others
           for (const key in props) {
             if (["Name", "GlobalId", "ObjectType", "OwnerHistory", "expressID"].includes(key)) continue;
             const val = props[key];
             if (val && (typeof val === 'string' || typeof val === 'number' || val.value)) {
-              currentProperties.push({ key: key, value: val.value || val });
+              container.appendChild(createPropertyRow(key, val.value || val));
             }
           }
         }
       }
     }
-    updatePropertiesUI({});
+
+    if (!hasSelection) {
+      const placeholder = document.createElement("div");
+      placeholder.style.padding = "1rem";
+      placeholder.style.color = "#9ca3af";
+      placeholder.style.textAlign = "center";
+      placeholder.textContent = "Selecteer een element om eigenschappen te zien";
+      container.appendChild(placeholder);
+    }
+  };
+
+  highlighter.events.select.onHighlight.add((modelIdMap) => {
+    updateTableDirectly(modelIdMap);
   });
 
   highlighter.events.select.onClear.add(() => {
-    currentProperties = [];
-    updatePropertiesUI({});
+    updateTableDirectly({});
   });
 
   const search = (e: Event) => {
-    // TODO: Implement client-side filtering of currentProperties if needed
     const input = e.target as HTMLInputElement;
-    const query = input.value.toLowerCase();
-    // Simple filter logic could be added here
+    const container = document.getElementById("bim-props-dynamic-container");
+    if (!container) return;
+
+    const filter = input.value.toLowerCase();
+    Array.from(container.children).forEach((child: any) => {
+      if (child.textContent.toLowerCase().includes(filter) || child.textContent === "Selecteer een element om eigenschappen te zien") {
+        child.style.display = "flex";
+      } else {
+        if (child.textContent !== "Selecteer een element om eigenschappen te zien")
+          child.style.display = "none";
+      }
+    });
   };
 
   // Manual implementation of the panel to ensure strict control over layout and scrolling
@@ -120,9 +147,9 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
           ${customInput({ placeholder: "Zoeken...", onInput: search, style: "flex: 1; min-width: 0;" })}
         </div>
         
-        <!-- Custom Table Area -->
-        <div style="width: 100%; max-width: 100%;">
-          ${propertiesUI}
+        <!-- Custom Table Container - Manual DOM -->
+        <div id="bim-props-dynamic-container" style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 100%;">
+          <div style="padding: 1rem; color: #9ca3af; text-align: center;">Selecteer een element om eigenschappen te zien</div>
         </div>
       </div>
     </div>
