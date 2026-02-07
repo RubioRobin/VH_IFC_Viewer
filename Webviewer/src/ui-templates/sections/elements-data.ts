@@ -12,16 +12,53 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 > = (state) => {
   const { components } = state;
 
+  // HELPER: Recursively format values to avoid [object Object]
+  const formatValue = (val: any): string => {
+    if (val === null || val === undefined) return "-";
+
+    // Handle Primitive Types directly
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      return String(val);
+    }
+
+    // Handle Objects
+    if (typeof val === 'object') {
+      // If it has a 'value' property (standard web-ifc wrapper)
+      if (val.value !== undefined) {
+        // Check if it is a type 5 (null)
+        if (val.type === 5) return "-";
+        return formatValue(val.value);
+      }
+
+      // If it's an array
+      if (Array.isArray(val)) {
+        return val.map(v => formatValue(v)).join(", ");
+      }
+
+      // If it's a minimal object (keys like type, value)
+      // Fallback: JSON stringify but cleaner
+      try {
+        return JSON.stringify(val, (k, v) => {
+          if (k === "type") return undefined; // Hide internal type codes
+          return v;
+        }).replace(/["{}]/g, "").replace(/,/g, ", ");
+      } catch {
+        return String(val);
+      }
+    }
+    return String(val);
+  };
+
   // HELPER: Create a row element using vanilla JS
   const createPropertyRow = (key: string, value: any) => {
+    const startValue = formatValue(value);
+    if (startValue === "-" || startValue === "") return null; // Skip empty rows
+
     const row = document.createElement("div");
     row.style.display = "flex";
-    row.style.flexDirection = "column"; // Keep column for safe wrapping
+    row.style.flexDirection = "column";
     row.style.borderBottom = "1px solid #f3f4f6";
     row.style.padding = "0.5rem 0";
-
-    // Optional: Switch to Row if screen is wide enough? 
-    // Stick to column to ensure nothing gets cut off as per user request.
 
     const label = document.createElement("span");
     label.style.fontSize = "0.75rem";
@@ -35,20 +72,10 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
     val.style.overflowWrap = "anywhere";
-    val.style.wordBreak = "break-word"; // Better for normal text
+    val.style.wordBreak = "break-word";
     val.style.whiteSpace = "normal";
     val.style.lineHeight = "1.5";
-
-    // Handle objects (like {type: 1, value: "..."})
-    let displayValue = "-";
-    if (value !== null && value !== undefined) {
-      if (typeof value === 'object' && value.value) {
-        displayValue = String(value.value);
-      } else {
-        displayValue = String(value);
-      }
-    }
-    val.textContent = displayValue;
+    val.textContent = startValue;
 
     row.appendChild(label);
     row.appendChild(val);
@@ -92,7 +119,10 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         const props = await fetchProperties(model, id);
         if (props) {
           // Priority Fields
-          const addProp = (k: string, v: any) => container.appendChild(createPropertyRow(k, v));
+          const addProp = (k: string, v: any) => {
+            const el = createPropertyRow(k, v);
+            if (el) container.appendChild(el);
+          };
 
           if (props.GlobalId) addProp("Guid", props.GlobalId);
           if (props.Name) addProp("Name", props.Name);
@@ -103,9 +133,11 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
           const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];
           for (const key in props) {
             if (ignored.includes(key)) continue;
+            if (key.startsWith("_")) continue; // Skip internal props like _LOCALID
+            if (key === "MODEL") continue; // Skip Model ref
+
             const val = props[key];
-            // Skip complex objects or nulls that don't look like values
-            if (val === null || val === undefined) continue;
+            // Skip functions
             if (typeof val === 'function') continue;
 
             addProp(key, val);
