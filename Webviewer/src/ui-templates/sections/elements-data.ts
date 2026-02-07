@@ -39,12 +39,18 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         [part="cell"]:nth-child(1) {
           text-align: left !important;
           justify-content: flex-start !important;
+          white-space: normal !important;
+          word-break: break-all !important;
+          overflow-wrap: anywhere !important;
         }
         /* Second Cell: Right Align */
         [part="cell"]:nth-child(2) {
           text-align: right !important;
           justify-content: flex-end !important;
           flex: 1 !important;
+          white-space: normal !important;
+          word-break: break-all !important;
+          overflow-wrap: anywhere !important;
         }
       `;
       propsTable.shadowRoot.appendChild(style);
@@ -126,7 +132,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     <div class="custom-panel custom-panel--fixed" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; background: white; border-radius: 1rem; box-sizing: border-box;">
       
       <!-- Fixed Header -->
-      <div class="custom-panel__header" style="flex-shrink: 0; padding: 1rem; border-bottom: 1px solid var(--bim-ui_bg-contrast-20); display: flex; align-items: center; gap: 0.75rem; font-weight: 600; color: var(--bim-ui_bg-contrast-100);">
+      <div class="custom-panel__header" style="flex-shrink: 0; padding: 1rem; border-bottom: 1px solid var(--bim-ui_bg-contrast-20); display: flex; align-items: center; justify-content: flex-start; gap: 0.75rem; font-weight: 600; color: var(--bim-ui_bg-contrast-100);">
         <span class="custom-panel__header-icon" style="display: flex;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         </span>
@@ -138,7 +144,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         <div style="display: flex; gap: 0.375rem; margin-bottom: 0.75rem; width: 100%; box-sizing: border-box;">
           ${customInput({ placeholder: "Zoeken...", onInput: search, style: "flex: 1; min-width: 0;" })}
         </div>
-        <div style="width: 100%; max-width: 100%; overflow-x: auto;">
+        <div style="width: 100%; max-width: 100%; overflow-x: hidden;">
           ${propsTable}
         </div>
       </div>
