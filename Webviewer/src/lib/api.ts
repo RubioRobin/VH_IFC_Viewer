@@ -1,5 +1,5 @@
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://vh-ifc-backend.onrender.com';
     const res = await fetch(`${baseUrl}/api${endpoint}`, {
         ...options,
         credentials: 'include',
