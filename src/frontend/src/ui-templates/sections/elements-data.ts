@@ -72,7 +72,12 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     label.style.marginBottom = "0.25rem";
 
     let prettyKey = key;
-    if (keyUpper === "NOMINALVALUE") prettyKey = "Value";
+    if (keyUpper === "NOMINALVALUE") prettyKey = "Waarde"; // Value -> Waarde
+    else if (keyUpper === "NAME") prettyKey = "Naam";
+    else if (keyUpper === "DESCRIPTION") prettyKey = "Omschrijving";
+    else if (keyUpper === "TYPE") prettyKey = "Type";
+    else if (keyUpper === "GLOBALID") prettyKey = "Global ID";
+    else if (keyUpper === "TAG") prettyKey = "Tag";
     else if (keyUpper.startsWith("PSET_")) prettyKey = key.substring(5);
     else prettyKey = toTitleCase(key);
 
@@ -187,7 +192,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
           };
 
           if (props.GlobalId) addProp("Guid", props.GlobalId);
-          if (props.Name) addProp("Name", props.Name);
+          if (props.Name) addProp("Naam", props.Name);
           if (props.ObjectType) addProp("Type", props.ObjectType);
 
           const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];

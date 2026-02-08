@@ -218,7 +218,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       `,
     });
     */
-    alert("Meten menu temporarily disabled due to UI library update.");
+    alert("Meetmenu tijdelijk uitgeschakeld vanwege update.");
   };
 
   return BUI.html`

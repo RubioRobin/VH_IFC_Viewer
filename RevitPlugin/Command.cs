@@ -16,7 +16,7 @@ namespace VH_IFC_QR
     public class GenerateQRCommand : IExternalCommand
     {
         // Backend URL configuration - Default fallback
-        private const string DefaultBackendUrl = "https://archegonial-unprotrusive-carolee.ngrok-free.dev";
+        private const string DefaultBackendUrl = "https://vh-ifc-backend.onrender.com";
         // Hardcoded project ID for MVP (User can change this or we implement a selector later)
         private const string ProjectId = "default-project-id"; 
 
@@ -103,10 +103,20 @@ namespace VH_IFC_QR
                 // We'll use a simple Wait cursor
                 System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
 
+
                 bool success = false;
+                string errorDetails = "";
                 try 
                 {
                     success = Task.Run(async () => await ProcessUploadAndQr(backendUrl, doc.Title, tempIfcPath, ifcGuid, qrImagePath)).GetAwaiter().GetResult();
+                }
+                catch (Exception uploadEx)
+                {
+                    errorDetails = $"FOUT: {uploadEx.Message}\n\nType: {uploadEx.GetType().Name}\n\nStack:\n{uploadEx.StackTrace?.Substring(0, Math.Min(300, uploadEx.StackTrace?.Length ?? 0))}";
+                    if (uploadEx.InnerException != null)
+                    {
+                        errorDetails += $"\n\nInner Exception: {uploadEx.InnerException.Message}";
+                    }
                 }
                 finally
                 {
@@ -115,7 +125,14 @@ namespace VH_IFC_QR
 
                 if (!success)
                 {
-                     TaskDialog.Show("Error", "De verbinding met de server is mislukt of duurde te lang.\nControleer of de Backend en Ngrok aanstaan.");
+                     if (!string.IsNullOrEmpty(errorDetails))
+                     {
+                         TaskDialog.Show("Error Details", errorDetails);
+                     }
+                     else
+                     {
+                         TaskDialog.Show("Error", "Upload failed maar geen exception details beschikbaar.");
+                     }
                      return Result.Failed;
                 }
 
@@ -188,18 +205,44 @@ namespace VH_IFC_QR
             using (var handler = new HttpClientHandler { CookieContainer = cookieContainer, UseCookies = true })
             using (var client = new HttpClient(handler))
             {
-                client.Timeout = TimeSpan.FromSeconds(60); // Give it a minute for large files
+                client.Timeout = TimeSpan.FromSeconds(120); // Extended for Render cold start (60s wake + 60s processing)
                 
-                // A. Create/Get Project
-                string projectId = await GetOrCreateProject(client, backendUrl, "Revit Exports").ConfigureAwait(false);
-                if (string.IsNullOrEmpty(projectId)) return false;
+                try
+                {
+                    // A. Create/Get Project
+                    string projectId = await GetOrCreateProject(client, backendUrl, "Revit Exports").ConfigureAwait(false);
+                    if (string.IsNullOrEmpty(projectId))
+                    {
+                        TaskDialog.Show("Debug", "STAP 1 GEFAALD: GetOrCreateProject returned null");
+                        return false;
+                    }
+                    TaskDialog.Show("Debug", $"STAP 1 OK: Project ID = {projectId}");
 
-                // B. Upload File
-                string fileId = await UploadFile(client, backendUrl, projectId, ifcPath).ConfigureAwait(false);
-                if (string.IsNullOrEmpty(fileId)) return false;
+                    // B. Upload File
+                    string fileId = await UploadFile(client, backendUrl, projectId, ifcPath).ConfigureAwait(false);
+                    if (string.IsNullOrEmpty(fileId))
+                    {
+                        TaskDialog.Show("Debug", "STAP 2 GEFAALD: UploadFile returned null");
+                        return false;
+                    }
+                    TaskDialog.Show("Debug", $"STAP 2 OK: File ID = {fileId}");
 
-                // C. Generate QR
-                return await GenerateAndDownloadQr(client, backendUrl, projectId, fileId, elementGuid, qrSavePath).ConfigureAwait(false);
+                    // C. Generate QR
+                    bool qrSuccess = await GenerateAndDownloadQr(client, backendUrl, projectId, fileId, elementGuid, qrSavePath).ConfigureAwait(false);
+                    if (!qrSuccess)
+                    {
+                        TaskDialog.Show("Debug", "STAP 3 GEFAALD: GenerateAndDownloadQr returned false");
+                        return false;
+                    }
+                    TaskDialog.Show("Debug", "STAP 3 OK: QR Generated");
+                    
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    TaskDialog.Show("ProcessUploadAndQr Exception", $"Error: {ex.Message}\n\nType: {ex.GetType().Name}");
+                    return false;
+                }
             }
         }
 
@@ -247,7 +290,13 @@ namespace VH_IFC_QR
                 JsonSerializer.Serialize(loginData), 
                 System.Text.Encoding.UTF8, "application/json");
             
-            await client.PostAsync($"{backendUrl}/api/auth/login", content);
+            var response = await client.PostAsync($"{backendUrl}/api/auth/login", content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Login failed: {response.StatusCode} - {errorBody}");
+            }
         }
 
         private async Task<string> UploadFile(HttpClient client, string backendUrl, string projectId, string filePath)

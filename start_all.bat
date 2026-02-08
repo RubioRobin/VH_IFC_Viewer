@@ -4,10 +4,10 @@ echo   VH IFC VIEWER - STARTUP SCRIPT
 echo ===================================================
 echo.
 echo 1. Starting Backend (Port 3001)...
-start "VH Backend" /D "Backend" cmd /k "npm start"
+start "VH Backend" /D "src\backend" cmd /k "npm start"
 
 echo 2. Starting Frontend (Port 5173)...
-start "VH Webviewer" /D "Webviewer" cmd /k "npm run dev"
+start "VH Webviewer" /D "src\frontend" cmd /k "npm run dev"
 
 echo.
 echo ===================================================

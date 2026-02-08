@@ -2,9 +2,9 @@
     "name": "bim-backend",
     "version": "1.0.0",
     "description": "Simple backend for IFC Viewer",
-    "main": "server.js",
+    "main": "app.js",
     "scripts": {
-        "start": "node server.js"
+        "start": "node app.js"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.95.3",
@@ -14,6 +14,7 @@
         "express": "^4.18.2",
         "express-session": "^1.18.0",
         "multer": "^1.4.5-lts.1",
+        "nanoid": "^3.3.7",
         "qrcode": "^1.5.3",
         "uuid": "^9.0.1"
     }
