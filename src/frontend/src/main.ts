@@ -274,9 +274,9 @@ const init = async () => {
       await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
     } catch (e) {
       console.error("Public Viewer Error:", e);
-      alert(`Fout: ${(e as any).message}`);
+      alert(`Fout: ${(e as any).message}\n\nDebug Info:\nID: ${publicId}\nPath: ${window.location.pathname}\nAPI: ${baseUrl}`);
       const loader = document.getElementById('initial-loading-overlay');
-      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${(e as any).message}</p></div>`;
+      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${(e as any).message}</p><small style="opacity:0.7">ID: ${publicId}</small></div>`;
     }
   } else if (modelName || fileId) {
     // Legacy / Admin Logic
@@ -301,7 +301,7 @@ const init = async () => {
       await ifcLoader.load(bytes, true, displayTitle.replace(".ifc", ""));
     } catch (e) {
       console.error("Load failed:", e);
-      alert(`Fout bij laden model: ${e}`);
+      alert(`Fout bij laden model: ${e}\n\nDebug Info:\nURL: ${modelUrl}\nPath: ${window.location.pathname}`);
       const loader = document.getElementById('initial-loading-overlay');
       if (loader) loader.remove();
     }
