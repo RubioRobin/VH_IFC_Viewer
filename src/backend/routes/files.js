@@ -61,21 +61,32 @@ router.post('/', vereisAuthenticatie, upload.single('ifcFile'), async (req, res)
     }
 });
 
-// Download redirect
+// Download redirect (Supports File ID OR Public Link ID)
 router.get('/:id/download', async (req, res) => {
     try {
-        const file = await db.getFileById(req.params.id);
-        if (!file) return res.status(404).json({ error: 'Bestand niet gevonden' });
+        let publicUrl;
 
-        const publicUrl = await db.getFileDownloadUrl(file.path);
+        // 1. Try as File ID
+        const file = await db.getFileById(req.params.id);
+        if (file) {
+            publicUrl = await db.getFileDownloadUrl(file.path);
+        } else {
+            // 2. Try as Public Link ID (Fallback)
+            const link = await db.getPublicLink(req.params.id);
+            if (link) {
+                publicUrl = await db.getFileDownloadUrl(link.files.path);
+            }
+        }
 
         if (publicUrl) {
             console.log(`[DOWNLOAD] Redirect naar: ${publicUrl}`);
             res.redirect(publicUrl);
         } else {
-            res.status(404).json({ error: 'Bestand niet gevonden in opslag' });
+            console.error(`[DOWNLOAD] 404 - ID niet gevonden: ${req.params.id}`);
+            res.status(404).json({ error: 'Bestand of Link niet gevonden' });
         }
     } catch (e) {
+        console.error(`[DOWNLOAD] Error processing ${req.params.id}:`, e);
         res.status(500).json({ error: e.message });
     }
 });
