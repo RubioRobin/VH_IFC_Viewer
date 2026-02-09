@@ -215,7 +215,7 @@ function renderProjectsTab() {
                             </div>
                         </div>
                         <div class="project-footer">
-                            <span class="project-date">Bijgewerkt: ${formatDate(project.updated_at)}</span>
+                            <span class="project-date">Bijgewerkt: ${formatDate(project.updated_at || project.created_at)}</span>
                             <div class="project-actions">
                                 <button class="btn-icon" onclick="window.editProject('${project.id}')" title="Bewerken">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

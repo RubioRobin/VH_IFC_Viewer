@@ -115,7 +115,9 @@ async function getAllProjects() {
 
         return data.map(p => ({
             ...p,
-            files: p.files || []
+            files: p.files || [],
+            file_count: (p.files || []).length,
+            total_size: (p.files || []).reduce((acc, f) => acc + (f.size || 0), 0)
         }));
     } catch (e) {
         console.error('getProjects error:', e);

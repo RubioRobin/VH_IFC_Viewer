@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Button } from '../components/ui/button';
-import { Plus, Folder, FileText, MoreVertical, Loader2 } from 'lucide-react';
+import { Plus, Folder, FileText, MoreVertical, Loader2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -17,6 +17,7 @@ interface Project {
     description: string;
     status: string;
     updated_at: string;
+    created_at: string;
     file_count: number;
     total_size: number;
 }
@@ -76,6 +77,20 @@ export function ProjectsPage() {
         }
     };
 
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation(); // Prevent card click
+        if (!confirm('Weet je zeker dat je dit project wilt verwijderen? Alle bestanden worden ook verwijderd.')) return;
+
+        try {
+            await fetchAPI(`/projects/${id}`, { method: 'DELETE' });
+            toast({ type: 'success', title: 'Verwijderd', message: 'Project verwijderd' });
+            setProjects(projects.filter(p => p.id !== id));
+        } catch (error) {
+            console.error('Delete failed', error);
+            toast({ type: 'error', title: 'Fout', message: 'Kon project niet verwijderen' });
+        }
+    };
+
     const formatBytes = (bytes: number) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -124,6 +139,16 @@ export function ProjectsPage() {
                                     }`}>
                                     {project.status}
                                 </span>
+                                    {project.status}
+                                </span>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                                    onClick={(e) => handleDelete(e, project.id)}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
                             </div>
                             <CardTitle className="mt-4 text-xl">{project.name}</CardTitle>
                         </CardHeader>
@@ -138,8 +163,8 @@ export function ProjectsPage() {
                                 <span>{formatBytes(project.total_size || 0)}</span>
                             </div>
                             <span>
-                                {project.updated_at
-                                    ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: nl })
+                                {project.updated_at || project.created_at
+                                    ? formatDistanceToNow(new Date(project.updated_at || project.created_at), { addSuffix: true, locale: nl })
                                     : 'Onbekend'
                                 }
                             </span>
@@ -194,6 +219,6 @@ export function ProjectsPage() {
                     </div>
                 </form>
             </Dialog>
-        </div>
+        </div >
     );
 }
