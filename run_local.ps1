@@ -2,8 +2,8 @@
 $ErrorActionPreference = "Stop"
 
 $scriptPath = $PSScriptRoot
-$backendPath = Join-Path $scriptPath "Backend"
-$viewerPath = Join-Path $scriptPath "Webviewer"
+$backendPath = Join-Path $scriptPath "src\backend"
+$viewerPath = Join-Path $scriptPath "src\frontend"
 
 Write-Host "--- VH IFC Viewer Local Setup ---" -ForegroundColor Cyan
 

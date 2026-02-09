@@ -3,30 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
-using System.Text.Json; // Using System.Text.Json for modern .NET
 
 namespace VH_IFC_QR
 {
     [Transaction(TransactionMode.Manual)]
     public class GenerateQRCommand : IExternalCommand
     {
-        // Backend URL configuration - Default fallback
-        private const string DefaultBackendUrl = "https://vh-ifc-backend.onrender.com";
-        // Hardcoded project ID for MVP (User can change this or we implement a selector later)
-        private const string ProjectId = "default-project-id"; 
+        // Base URL for the Viewer (Frontend)
+        private const string ViewerBaseUrl = "https://vh-ifc-viewer.vercel.app/";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
             Document doc = uidoc.Document;
-
-            // Load Backend URL from config file if exists
-            string backendUrl = GetConfiguredUrl();
 
             try
             {
@@ -53,6 +47,7 @@ namespace VH_IFC_QR
                 // 2. Show Selection UI
                 ElementId exportViewId = null;
                 ElementId targetSheetId = null;
+                string exportFolder = null;
 
                 using (var form = new SelectionForm(views3D, sheets))
                 {
@@ -62,30 +57,34 @@ namespace VH_IFC_QR
                     }
                     exportViewId = form.Selected3DViewId;
                     targetSheetId = form.SelectedSheetId;
+                    exportFolder = form.SelectedFolder;
+                }
+
+                if (string.IsNullOrWhiteSpace(exportFolder) || !Directory.Exists(exportFolder))
+                {
+                    TaskDialog.Show("Fout", "Ongeldige map geselecteerd.");
+                    return Result.Failed;
                 }
 
                 View3D exportView = doc.GetElement(exportViewId) as View3D;
                 ViewSheet targetSheet = doc.GetElement(targetSheetId) as ViewSheet;
 
-                // 3. Selection handling (Optional - for highlighting)
-                var selection = uidoc.Selection.GetElementIds();
-                string ifcGuid = null;
-                
-                if (selection.Count == 1)
-                {
-                    ElementId elementId = selection.First();
-                    Element element = doc.GetElement(elementId);
-                    ifcGuid = GetIfcGuid(element.UniqueId);
-                }
+                // 3. Generate File ID and Paths
+                Guid fileId = Guid.NewGuid();
+                // IMPORTANT: Filename format MUST include the GUID for the dashboard to recognize it!
+                string safeTitle = string.Join("_", doc.Title.Split(Path.GetInvalidFileNameChars()));
+                string ifcFilename = $"{safeTitle}_{fileId}.ifc";
+                string fullIfcPath = Path.Combine(exportFolder, ifcFilename);
+                string qrFilename = $"{safeTitle}_{fileId}_QR.png";
+                string fullQrPath = Path.Combine(exportFolder, qrFilename);
 
                 // 4. Export Selected 3D View to IFC
-                string tempIfcPath = Path.Combine(Path.GetTempPath(), $"{doc.Title}-{Guid.NewGuid()}.ifc");
                 bool exportSuccess = false;
 
                 using (Transaction t = new Transaction(doc, "Export IFC"))
                 {
                     t.Start();
-                    exportSuccess = ExportToIfc(doc, exportView, tempIfcPath);
+                    exportSuccess = ExportToIfc(doc, exportView, fullIfcPath);
                     t.Commit();
                 }
 
@@ -95,57 +94,36 @@ namespace VH_IFC_QR
                     return Result.Failed;
                 }
 
-                // 3. Upload IFC and Get QR
-                string qrImagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
-                
-                // Show a dialog to let the user know we are working (prevents "freeze" panic)
-                // Use a non-modal message if possible or just be fast.
-                // We'll use a simple Wait cursor
-                System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
-
-
-                bool success = false;
-                string errorDetails = "";
-                try 
+                // 5. Generate and Download QR Code (Locally)
+                string viewerUrl = $"{ViewerBaseUrl}?fileId={fileId}";
+                // Optional: selection handling
+                var selection = uidoc.Selection.GetElementIds();
+                if (selection.Count == 1)
                 {
-                    success = Task.Run(async () => await ProcessUploadAndQr(backendUrl, doc.Title, tempIfcPath, ifcGuid, qrImagePath)).GetAwaiter().GetResult();
+                    ElementId elementId = selection.First();
+                    Element element = doc.GetElement(elementId);
+                    string ifcGuid = GetIfcGuid(element.UniqueId);
+                    viewerUrl += $"&id={ifcGuid}";
                 }
-                catch (Exception uploadEx)
+
+                bool qrSuccess = DownloadQrImage(viewerUrl, fullQrPath);
+
+                if (!qrSuccess)
                 {
-                    errorDetails = $"FOUT: {uploadEx.Message}\n\nType: {uploadEx.GetType().Name}\n\nStack:\n{uploadEx.StackTrace?.Substring(0, Math.Min(300, uploadEx.StackTrace?.Length ?? 0))}";
-                    if (uploadEx.InnerException != null)
+                    TaskDialog.Show("Warning", "IFC Exported, but QR Code generation failed (Check Internet Connection).");
+                }
+                else
+                {
+                    // 6. Place QR in Revit on Target Sheet
+                    using (Transaction t = new Transaction(doc, "Place QR Code"))
                     {
-                        errorDetails += $"\n\nInner Exception: {uploadEx.InnerException.Message}";
+                        t.Start();
+                        PlaceQrImageOnView(doc, targetSheet, fullQrPath);
+                        t.Commit();
                     }
                 }
-                finally
-                {
-                    System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.Default;
-                }
 
-                if (!success)
-                {
-                     if (!string.IsNullOrEmpty(errorDetails))
-                     {
-                         TaskDialog.Show("Error Details", errorDetails);
-                     }
-                     else
-                     {
-                         TaskDialog.Show("Error", "Upload failed maar geen exception details beschikbaar.");
-                     }
-                     return Result.Failed;
-                }
-
-                // 6. Place QR in Revit on Target Sheet
-                using (Transaction t = new Transaction(doc, "Place QR Code"))
-                {
-                    t.Start();
-                    PlaceQrImageOnView(doc, targetSheet, qrImagePath);
-                    t.Commit();
-                }
-
-                string target = string.IsNullOrEmpty(ifcGuid) ? "the active View" : "the selected Element";
-                TaskDialog.Show("Success", $"QR Code generated for {target} and placed in Revit!");
+                TaskDialog.Show("Succes", $"Export Voltooid!\n\n1. IFC Bestand: {ifcFilename}\n2. QR Code geplaatst op sheet.\n\nBELANGRIJK: Upload dit specifieke bestand naar het Dashboard om de QR code te laten werken!");
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -155,27 +133,7 @@ namespace VH_IFC_QR
             }
         }
 
-        private string GetConfiguredUrl()
-        {
-            try
-            {
-                // Look for config.txt in the same folder as the assembly
-                string assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                string folder = Path.GetDirectoryName(assemblyPath);
-                string configPath = Path.Combine(folder, "config.txt");
 
-                if (File.Exists(configPath))
-                {
-                    string url = File.ReadAllText(configPath).Trim();
-                    if (Uri.IsWellFormedUriString(url, UriKind.Absolute))
-                    {
-                        return url;
-                    }
-                }
-            }
-            catch { /* Ignore read errors, use default */ }
-            return DefaultBackendUrl;
-        }
 
         private bool ExportToIfc(Document doc, View activeView, string outputPath)
         {
@@ -199,158 +157,32 @@ namespace VH_IFC_QR
             }
         }
 
-        private async Task<bool> ProcessUploadAndQr(string backendUrl, string modelName, string ifcPath, string elementGuid, string qrSavePath)
-        {
-            var cookieContainer = new System.Net.CookieContainer();
-            using (var handler = new HttpClientHandler { CookieContainer = cookieContainer, UseCookies = true })
-            using (var client = new HttpClient(handler))
-            {
-                client.Timeout = TimeSpan.FromSeconds(120); // Extended for Render cold start (60s wake + 60s processing)
-                
-                try
-                {
-                    // A. Create/Get Project
-                    string projectId = await GetOrCreateProject(client, backendUrl, "Revit Exports").ConfigureAwait(false);
-                    if (string.IsNullOrEmpty(projectId))
-                    {
-                        TaskDialog.Show("Debug", "STAP 1 GEFAALD: GetOrCreateProject returned null");
-                        return false;
-                    }
-                    TaskDialog.Show("Debug", $"STAP 1 OK: Project ID = {projectId}");
-
-                    // B. Upload File
-                    string fileId = await UploadFile(client, backendUrl, projectId, ifcPath).ConfigureAwait(false);
-                    if (string.IsNullOrEmpty(fileId))
-                    {
-                        TaskDialog.Show("Debug", "STAP 2 GEFAALD: UploadFile returned null");
-                        return false;
-                    }
-                    TaskDialog.Show("Debug", $"STAP 2 OK: File ID = {fileId}");
-
-                    // C. Generate QR
-                    bool qrSuccess = await GenerateAndDownloadQr(client, backendUrl, projectId, fileId, elementGuid, qrSavePath).ConfigureAwait(false);
-                    if (!qrSuccess)
-                    {
-                        TaskDialog.Show("Debug", "STAP 3 GEFAALD: GenerateAndDownloadQr returned false");
-                        return false;
-                    }
-                    TaskDialog.Show("Debug", "STAP 3 OK: QR Generated");
-                    
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    TaskDialog.Show("ProcessUploadAndQr Exception", $"Error: {ex.Message}\n\nType: {ex.GetType().Name}");
-                    return false;
-                }
-            }
-        }
-
-        private async Task<string> GetOrCreateProject(HttpClient client, string backendUrl, string projectName)
-        {
-            try {
-                // Login first
-                await Login(client, backendUrl).ConfigureAwait(false); 
-                
-                // List projects
-                var response = await client.GetAsync($"{backendUrl}/api/projects").ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode) return null;
-
-                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                using (var doc = JsonDocument.Parse(content))
-                {
-                    if (doc.RootElement.GetArrayLength() > 0)
-                    {
-                        return doc.RootElement[0].GetProperty("id").GetString();
-                    }
-                }
-
-                // If no project, create one
-                var createContent = new StringContent(
-                    JsonSerializer.Serialize(new { name = projectName }), 
-                    System.Text.Encoding.UTF8, "application/json");
-                
-                var createData = await client.PostAsync($"{backendUrl}/api/projects", createContent).ConfigureAwait(false);
-                if (createData.IsSuccessStatusCode)
-                {
-                    var created = await createData.Content.ReadAsStringAsync().ConfigureAwait(false);
-                     using (var doc = JsonDocument.Parse(created))
-                    {
-                        return doc.RootElement.GetProperty("id").GetString();
-                    }
-                }
-                return null;
-            } catch { return null; }
-        }
-
-        private async Task Login(HttpClient client, string backendUrl)
-        {
-            var loginData = new { username = "admin", password = "admin123" };
-            var content = new StringContent(
-                JsonSerializer.Serialize(loginData), 
-                System.Text.Encoding.UTF8, "application/json");
-            
-            var response = await client.PostAsync($"{backendUrl}/api/auth/login", content);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Login failed: {response.StatusCode} - {errorBody}");
-            }
-        }
-
-        private async Task<string> UploadFile(HttpClient client, string backendUrl, string projectId, string filePath)
+        private bool DownloadQrImage(string url, string savePath)
         {
             try
             {
-                using (var content = new MultipartFormDataContent())
-                {
-                    var fileStream = File.OpenRead(filePath);
-                    var fileContent = new StreamContent(fileStream);
-                    fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                    content.Add(fileContent, "file", Path.GetFileName(filePath));
+                string encodedUrl = System.Net.WebUtility.UrlEncode(url);
+                string qrApiUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encodedUrl}";
 
-                    var response = await client.PostAsync($"{backendUrl}/api/projects/{projectId}/upload", content).ConfigureAwait(false);
+                using (var client = new HttpClient())
+                {
+                    var response = client.GetAsync(qrApiUrl).Result;
                     if (response.IsSuccessStatusCode)
                     {
-                        var resString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        using (var doc = JsonDocument.Parse(resString))
-                        {
-                            return doc.RootElement.GetProperty("id").GetString();
-                        }
+                        var bytes = response.Content.ReadAsByteArrayAsync().Result;
+                        File.WriteAllBytes(savePath, bytes);
+                        return true;
                     }
-                    return null;
                 }
+                return false;
             }
-            catch { return null; }
-        }
-
-        private async Task<bool> GenerateAndDownloadQr(HttpClient client, string backendUrl, string projectId, string fileId, string elementId, string savePath)
-        {
-            try
+            catch
             {
-                var reqData = new { project_id = projectId, file_id = fileId, element_id = elementId };
-                var content = new StringContent(
-                     JsonSerializer.Serialize(reqData),
-                     System.Text.Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}/api/qr/generate", content).ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode) return false;
-
-                var jsonStr = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                string qrImageUrlRelative;
-                using (var doc = JsonDocument.Parse(jsonStr))
-                {
-                    qrImageUrlRelative = doc.RootElement.GetProperty("qr_image_url").GetString();
-                }
-
-                // Download image
-                var imgBytes = await client.GetByteArrayAsync($"{backendUrl}{qrImageUrlRelative}").ConfigureAwait(false);
-                File.WriteAllBytes(savePath, imgBytes);
-                return true;
+                return false;
             }
-            catch { return false; }
         }
+
+
 
         private void PlaceQrImageOnView(Document doc, View targetView, string imagePath)
         {

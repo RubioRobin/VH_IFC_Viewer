@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "start": "node Backend/server.js",
-        "install-backend": "npm install --prefix Backend"
+        "start": "node src/backend/app.js",
+        "install-backend": "npm install --prefix src/backend"
     }
 }

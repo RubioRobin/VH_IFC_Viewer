@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="QRCoder" Version="1.6.0" />
+
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.*" ExcludeAssets="runtime" />
   </ItemGroup>
 

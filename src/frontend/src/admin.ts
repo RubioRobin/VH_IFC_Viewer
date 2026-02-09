@@ -600,6 +600,19 @@ function render() {
         if (!file) return;
 
         const formData = new FormData();
+
+        // Check for pre-linked ID in filename (Project_GUID.ifc)
+        const uuidMatch = file.name.match(/_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.ifc$/i);
+        if (uuidMatch) {
+            const fileId = uuidMatch[1];
+            formData.append('id', fileId);
+            console.log("Pre-linked ID found:", fileId);
+
+            // Show toast or info
+            const progressText = document.getElementById('progress-text')!;
+            progressText.textContent = "Pre-linked ID gevonden! Koppelen...";
+        }
+
         formData.append('file', file);
 
         const progressDiv = document.getElementById('upload-progress')!;

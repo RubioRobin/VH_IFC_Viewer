@@ -14,9 +14,13 @@ namespace VH_IFC_QR
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox txtFolder;
+        private System.Windows.Forms.Button btnBrowse;
 
         public ElementId Selected3DViewId { get; private set; }
         public ElementId SelectedSheetId { get; private set; }
+        public string SelectedFolder { get { return txtFolder.Text; } }
 
         private List<View3D> _views;
         private List<ViewSheet> _sheets;
@@ -40,6 +44,20 @@ namespace VH_IFC_QR
             // Default selections
             if (_views.Count > 0) combo3DViews.SelectedIndex = 0;
             if (_sheets.Count > 0) comboSheets.SelectedIndex = 0;
+            
+            // Default folder: Desktop
+            txtFolder.Text = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        }
+
+        private void btnBrowse_Click(object sender, EventArgs e)
+        {
+            using (var fbd = new FolderBrowserDialog())
+            {
+                if (fbd.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                {
+                    txtFolder.Text = fbd.SelectedPath;
+                }
+            }
         }
 
         private void btnOk_Click(object sender, EventArgs e)
@@ -58,6 +76,9 @@ namespace VH_IFC_QR
             this.btnCancel = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtFolder = new System.Windows.Forms.TextBox();
+            this.btnBrowse = new System.Windows.Forms.Button();
             this.SuspendLayout();
             
             // label1
@@ -81,27 +102,46 @@ namespace VH_IFC_QR
             this.comboSheets.FormattingEnabled = true;
             this.comboSheets.Location = new System.Drawing.Point(20, 110);
             this.comboSheets.Size = new System.Drawing.Size(340, 25);
+
+            // label3
+            this.label3.Location = new System.Drawing.Point(20, 150);
+            this.label3.Size = new System.Drawing.Size(250, 20);
+            this.label3.Text = "Export Map:";
+
+            // txtFolder
+            this.txtFolder.Location = new System.Drawing.Point(20, 175);
+            this.txtFolder.Size = new System.Drawing.Size(255, 25);
+            this.txtFolder.ReadOnly = true;
+
+            // btnBrowse
+            this.btnBrowse.Location = new System.Drawing.Point(285, 173);
+            this.btnBrowse.Size = new System.Drawing.Size(75, 28);
+            this.btnBrowse.Text = "Kies...";
+            this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             
             // btnOk
-            this.btnOk.Location = new System.Drawing.Point(180, 160);
+            this.btnOk.Location = new System.Drawing.Point(180, 220);
             this.btnOk.Size = new System.Drawing.Size(85, 30);
             this.btnOk.Text = "Start";
             this.btnOk.UseVisualStyleBackColor = true;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
             
             // btnCancel
-            this.btnCancel.Location = new System.Drawing.Point(275, 160);
+            this.btnCancel.Location = new System.Drawing.Point(275, 220);
             this.btnCancel.Size = new System.Drawing.Size(85, 30);
             this.btnCancel.Text = "Annuleren";
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.DialogResult = DialogResult.Cancel;
             
             // SelectionForm
-            this.ClientSize = new System.Drawing.Size(390, 210);
+            this.ClientSize = new System.Drawing.Size(390, 270);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.combo3DViews);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.comboSheets);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtFolder);
+            this.Controls.Add(this.btnBrowse);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.btnCancel);
             this.Name = "SelectionForm";

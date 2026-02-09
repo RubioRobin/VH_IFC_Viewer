@@ -79,8 +79,13 @@ router.post('/:id/upload', vereisAuthenticatie, upload.single('file'), async (re
         const { v4: uuidv4 } = require('uuid');
         const path = require('path');
 
+        // Check for pre-defined ID (from Revit Plugin)
+        const fileId = (req.body.id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(req.body.id)) 
+            ? req.body.id 
+            : uuidv4();
+
         const newFile = await db.createFile(
-            uuidv4(),
+            fileId,
             req.params.id,
             req.file.filename,
             req.file.originalname,
