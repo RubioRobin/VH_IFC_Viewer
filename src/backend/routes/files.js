@@ -74,7 +74,15 @@ router.get('/:id/download', async (req, res) => {
             // 2. Try as Public Link ID (Fallback)
             const link = await db.getPublicLink(req.params.id);
             if (link) {
-                publicUrl = await db.getFileDownloadUrl(link.files.path);
+                console.log(`[DOWNLOAD] Link gevonden:`, JSON.stringify(link));
+                // Handle Supabase foreign key response (could be object or array)
+                const fileData = Array.isArray(link.files) ? link.files[0] : link.files;
+
+                if (fileData && fileData.path) {
+                    publicUrl = await db.getFileDownloadUrl(fileData.path);
+                } else {
+                    console.error('[DOWNLOAD] Link gevonden maar geen bestand gekoppeld:', link);
+                }
             }
         }
 
