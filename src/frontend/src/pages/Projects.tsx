@@ -133,22 +133,22 @@ export function ProjectsPage() {
                                 <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                                     <Folder className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${project.status === 'active'
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                    {project.status}
-                                </span>
-                                    {project.status}
-                                </span>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                                    onClick={(e) => handleDelete(e, project.id)}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex gap-2 items-start">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${project.status === 'active'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                        : 'bg-gray-100 text-gray-700'
+                                        }`}>
+                                        {project.status}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-50 -mt-1"
+                                        onClick={(e) => handleDelete(e, project.id)}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
                             <CardTitle className="mt-4 text-xl">{project.name}</CardTitle>
                         </CardHeader>

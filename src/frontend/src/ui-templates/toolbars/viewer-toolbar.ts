@@ -192,7 +192,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     btn.active = true;
   };
 
-  const onMeasurementsClick = (e: MouseEvent) => {
+  const onMeasurementsClick = (e: any) => {
     // ContextMenu API changed/missing, temporarily disabled to fix build
     /*
     const parent = e.target as HTMLElement;

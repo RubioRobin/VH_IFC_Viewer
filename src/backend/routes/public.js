@@ -5,18 +5,29 @@ const router = express.Router();
 // Publieke IFC Download Route
 router.get('/ifc/:publicId', async (req, res) => {
     try {
-        const link = await db.getPublicLink(req.params.publicId);
-        if (!link) return res.status(404).json({ error: 'Ongeldige of verlopen link' });
+        let modelUrl, filename;
 
-        if (link.expires_at && new Date(link.expires_at) < new Date()) {
-            return res.status(410).json({ error: 'Link is verlopen' });
+        const link = await db.getPublicLink(req.params.publicId);
+
+        if (link) {
+            // Logic for Public Link
+            if (link.expires_at && new Date(link.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Link is verlopen' });
+            }
+            modelUrl = await db.getFileDownloadUrl(link.files.path);
+            filename = link.files.original_name;
+        } else {
+            // FALLBACK: Try direct File ID (for Legacy/Admin QR codes)
+            const file = await db.getFileById(req.params.publicId);
+            if (!file) return res.status(404).json({ error: 'Ongeldige link of bestand niet gevonden' });
+
+            modelUrl = await db.getFileDownloadUrl(file.path);
+            filename = file.original_name;
         }
 
-        const downloadUrl = await db.getFileDownloadUrl(link.files.path);
-
         res.json({
-            modelUrl: downloadUrl,
-            filename: link.files.original_name
+            modelUrl: modelUrl,
+            filename: filename
         });
     } catch (e) {
         console.error('[PUBLIC] Fout:', e);

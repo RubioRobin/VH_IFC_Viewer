@@ -46,13 +46,18 @@ router.post('/generate', async (req, res) => {
     }
 
     try {
-        const qrId = uuidv4();
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const publicUrl = `${frontendUrl}/v/${file_id}?element=${element_id}`; // Direct link to viewer with element
+        // Create Public Link (Active)
+        const publicLink = await db.createPublicLink(project_id, file_id);
+        const publicId = publicLink.public_id;
 
-        // OR better: Link to a "Resolve" endpoint that redirects?
-        // Current requirement: "Viewer moet openen en focussen".
-        // The URL encoded in QR code.
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        // Use publicId instead of file_id
+        const publicUrl = `${frontendUrl}/v/${publicId}?element=${element_id}`;
+
+        /*
+        // LEGACY URL (Direct File ID)
+        // const publicUrl = `${frontendUrl}/v/${file_id}?element=${element_id}`;
+        */
 
         const filePath = path.join(qrDir, `${qrId}.png`);
 

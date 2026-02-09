@@ -274,9 +274,9 @@ const init = async () => {
       await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
     } catch (e) {
       console.error("Public Viewer Error:", e);
-      alert(`Fout: ${e.message}`);
+      alert(`Fout: ${(e as any).message}`);
       const loader = document.getElementById('initial-loading-overlay');
-      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${e.message}</p></div>`;
+      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${(e as any).message}</p></div>`;
     }
   } else if (modelName || fileId) {
     // Legacy / Admin Logic
