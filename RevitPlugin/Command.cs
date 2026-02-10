@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http;
+using System.Net.Http.Json; // Requires .NET 5+
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
@@ -14,8 +16,13 @@ namespace VH_IFC_QR
     [Transaction(TransactionMode.Manual)]
     public class GenerateQRCommand : IExternalCommand
     {
-        // Base URL for the Viewer (Frontend)
-        private const string ViewerBaseUrl = "https://vh-ifc-viewer.vercel.app/";
+        // Production Configuration
+        private const string ApiBaseUrl = "https://vh-ifc-viewer-m783.onrender.com"; // Updated to production URL
+        // WARNING: IN PRODUCTION, THIS KEY SHOULD BE SECURELY STORED OR RETRIEVED!
+        private const string AdminApiKey = "8205df224312077ca34a0f846ba6b945200dd83980b"; 
+        
+        // Target Project ID (For now hardcoded or could be selected)
+        private const string TargetProjectId = "2e12255a-d922-4c85-98ad-56c0d8638b94";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -69,18 +76,14 @@ namespace VH_IFC_QR
                 View3D exportView = doc.GetElement(exportViewId) as View3D;
                 ViewSheet targetSheet = doc.GetElement(targetSheetId) as ViewSheet;
 
-                // 3. Generate File ID and Paths
-                Guid fileId = Guid.NewGuid();
-                // IMPORTANT: Filename format MUST include the GUID for the dashboard to recognize it!
+                // 3. Generate Filename (locally) to use for export
+                // We'll let the backend generate the Model ID, but we need a temp file locally.
                 string safeTitle = string.Join("_", doc.Title.Split(Path.GetInvalidFileNameChars()));
-                string ifcFilename = $"{safeTitle}_{fileId}.ifc";
+                string ifcFilename = $"{safeTitle}_TempExport.ifc";
                 string fullIfcPath = Path.Combine(exportFolder, ifcFilename);
-                string qrFilename = $"{safeTitle}_{fileId}_QR.png";
-                string fullQrPath = Path.Combine(exportFolder, qrFilename);
 
                 // 4. Export Selected 3D View to IFC
                 bool exportSuccess = false;
-
                 using (Transaction t = new Transaction(doc, "Export IFC"))
                 {
                     t.Start();
@@ -94,36 +97,42 @@ namespace VH_IFC_QR
                     return Result.Failed;
                 }
 
-                // 5. Generate and Download QR Code (Locally)
-                string viewerUrl = $"{ViewerBaseUrl}?fileId={fileId}";
-                // Optional: selection handling
-                var selection = uidoc.Selection.GetElementIds();
-                if (selection.Count == 1)
+                // 5. Upload to Backend (Signed URL Flow)
+                // Using Task.Run to run async method synchronously in Revit context
+                string qrImagePath = null;
+                try 
                 {
-                    ElementId elementId = selection.First();
-                    Element element = doc.GetElement(elementId);
-                    string ifcGuid = GetIfcGuid(element.UniqueId);
-                    viewerUrl += $"&id={ifcGuid}";
+                     qrImagePath = Task.Run(async () => await UploadIfcAndGetQR(fullIfcPath, TargetProjectId, exportFolder)).Result;
+                }
+                catch (AggregateException ae)
+                {
+                     foreach (var e in ae.InnerExceptions)
+                     {
+                         TaskDialog.Show("Upload Error", $"{e.Message}\n{e.StackTrace}");
+                     }
+                     return Result.Failed;
+                }
+                catch (Exception ex)
+                {
+                    TaskDialog.Show("Upload Error", $"General Error: {ex.Message}");
+                    return Result.Failed;
                 }
 
-                bool qrSuccess = DownloadQrImage(viewerUrl, fullQrPath);
-
-                if (!qrSuccess)
+                if (string.IsNullOrEmpty(qrImagePath) || !File.Exists(qrImagePath))
                 {
-                    TaskDialog.Show("Warning", "IFC Exported, but QR Code generation failed (Check Internet Connection).");
-                }
-                else
-                {
-                    // 6. Place QR in Revit on Target Sheet
-                    using (Transaction t = new Transaction(doc, "Place QR Code"))
-                    {
-                        t.Start();
-                        PlaceQrImageOnView(doc, targetSheet, fullQrPath);
-                        t.Commit();
-                    }
+                     TaskDialog.Show("Error", "Failed to retrieve QR code image.");
+                     return Result.Failed;
                 }
 
-                TaskDialog.Show("Succes", $"Export Voltooid!\n\n1. IFC Bestand: {ifcFilename}\n2. QR Code geplaatst op sheet.\n\nBELANGRIJK: Upload dit specifieke bestand naar het Dashboard om de QR code te laten werken!");
+                // 6. Place QR in Revit on Target Sheet
+                using (Transaction t = new Transaction(doc, "Place QR Code"))
+                {
+                    t.Start();
+                    PlaceQrImageOnView(doc, targetSheet, qrImagePath);
+                    t.Commit();
+                }
+
+                TaskDialog.Show("Succes", $"Upload Voltooid!\n\n1. IFC Geupload naar Dashboard.\n2. QR Code geplaatst op sheet: {targetSheet.Name}");
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -133,18 +142,15 @@ namespace VH_IFC_QR
             }
         }
 
-
-
         private bool ExportToIfc(Document doc, View activeView, string outputPath)
         {
             try
             {
                 IFCExportOptions options = new IFCExportOptions();
-                options.FileVersion = IFCVersion.IFC2x3; // Standard compatibility
-                options.FilterViewId = activeView.Id; // Export only this view
+                options.FileVersion = IFCVersion.IFC2x3; 
+                options.FilterViewId = activeView.Id; 
                 options.ExportBaseQuantities = true;
                 
-                // Split path into directory and filename
                 string dir = Path.GetDirectoryName(outputPath);
                 string filename = Path.GetFileName(outputPath);
 
@@ -157,32 +163,76 @@ namespace VH_IFC_QR
             }
         }
 
-        private bool DownloadQrImage(string url, string savePath)
+        private async Task<string> UploadIfcAndGetQR(string ifcFilePath, string projectId, string outputFolder)
         {
-            try
+            using (var client = new HttpClient())
             {
-                string encodedUrl = System.Net.WebUtility.UrlEncode(url);
-                string qrApiUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encodedUrl}";
-
-                using (var client = new HttpClient())
+                client.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AdminApiKey);
+                
+                // Step 1: Initialize upload
+                var initRequest = new
                 {
-                    var response = client.GetAsync(qrApiUrl).Result;
-                    if (response.IsSuccessStatusCode)
+                    projectId = projectId,
+                    fileName = Path.GetFileName(ifcFilePath),
+                    fileSize = new FileInfo(ifcFilePath).Length
+                };
+                
+                var initResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}/api/upload/init", initRequest);
+                if (!initResponse.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Init failed: {initResponse.StatusCode} - {await initResponse.Content.ReadAsStringAsync()}");
+                }
+                
+                var initData = await initResponse.Content.ReadFromJsonAsync<JsonElement>();
+                string signedUploadUrl = initData.GetProperty("signedUploadUrl").GetString();
+                string modelId = initData.GetProperty("modelId").GetString();
+                string revisionId = initData.GetProperty("revisionId").GetString();
+                
+                // Step 2: Upload IFC directly to Supabase
+                using (var fileStream = File.OpenRead(ifcFilePath))
+                {
+                    var fileContent = new StreamContent(fileStream);
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                    
+                    var uploadResponse = await client.PutAsync(signedUploadUrl, fileContent);
+                    if (!uploadResponse.IsSuccessStatusCode)
                     {
-                        var bytes = response.Content.ReadAsByteArrayAsync().Result;
-                        File.WriteAllBytes(savePath, bytes);
-                        return true;
+                         throw new Exception($"Upload failed: {uploadResponse.StatusCode}");
                     }
                 }
-                return false;
-            }
-            catch
-            {
-                return false;
+                
+                // Step 3: Complete upload and generate QR
+                var completeRequest = new
+                {
+                    modelId = modelId,
+                    revisionId = revisionId
+                };
+                
+                var completeResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}/api/upload/complete", completeRequest);
+                if (!completeResponse.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Complete failed: {completeResponse.StatusCode}");
+                }
+                
+                var completeData = await completeResponse.Content.ReadFromJsonAsync<JsonElement>();
+                string qrDownloadUrl = completeData.GetProperty("qrDownloadUrl").GetString();
+                
+                // Step 4: Download QR code
+                var qrResponse = await client.GetAsync($"{ApiBaseUrl}{qrDownloadUrl}");
+                if (!qrResponse.IsSuccessStatusCode)
+                    throw new Exception("Failed to download QR code image");
+
+                var qrBytes = await qrResponse.Content.ReadAsByteArrayAsync();
+                
+                // Save QR to output folder
+                string qrFilename = $"{Path.GetFileNameWithoutExtension(ifcFilePath)}_QR.png";
+                string qrPath = Path.Combine(outputFolder, qrFilename);
+                File.WriteAllBytes(qrPath, qrBytes);
+                
+                return qrPath;
             }
         }
-
-
 
         private void PlaceQrImageOnView(Document doc, View targetView, string imagePath)
         {
@@ -195,43 +245,6 @@ namespace VH_IFC_QR
             ImageInstance.Create(doc, targetView, imageType.Id, new ImagePlacementOptions(center, BoxPlacement.Center));
         }
 
-        private string GetIfcGuid(string uniqueId)
-        {
-            if (uniqueId.Length < 36) return uniqueId;
-            if (Guid.TryParse(uniqueId.Substring(0, 36), out Guid guid))
-            {
-                return CreateIfcGuid(guid);
-            }
-            return uniqueId;
-        }
-
-        // Standard IFC GUID Implementation (matches previous)
-        private static string CreateIfcGuid(Guid guid)
-        {
-             byte[] b = guid.ToByteArray();
-             uint d1 = BitConverter.ToUInt32(b, 0);
-             ushort d2 = BitConverter.ToUInt16(b, 4);
-             ushort d3 = BitConverter.ToUInt16(b, 6);
-             return InternalToIfcGuid(d1, d2, d3, b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
-        }
-
-        private static string InternalToIfcGuid(uint d1, ushort d2, ushort d3, byte b0, byte b1, byte b2, byte b3, byte b4, byte b5, byte b6, byte b7)
-        {
-            char[] base64Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
-                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 
-                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 
-                '_', '$' };
-            char[] str = new char[22];
-            uint[] num = new uint[6];
-            uint n = 2, pos = 0;
-            num[0] = (uint)(d1 / 16777216); num[1] = (uint)(d1 % 16777216);
-            num[2] = (uint)(d2 * 256 + d3 / 256); num[3] = (uint)((d3 % 256) * 65536 + b0 * 256 + b1);
-            num[4] = (uint)(b2 * 65536 + b3 * 256 + b4); num[5] = (uint)(b5 * 65536 + b6 * 256 + b7);
-            for (int i = 0; i < 6; i++) { InternalToString(num[i], str, n, ref pos, base64Chars); n = 4; }
-            return new string(str);
-        }
-        private static void InternalToString(uint num, char[] str, uint n, ref uint pos, char[] chars) {
-            uint act = num; for (uint i = 0; i < n; i++) { str[pos++] = chars[(int)(act % 64)]; act /= 64; }
-        }
+        // Removed legacy GetIfcGuid helper as it's not needed for the new flow
     }
 }

@@ -11,7 +11,7 @@ async function testUploadInit() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                projectId: 'test-project-1',
+                projectId: '2e12255a-d922-4c85-98ad-56c0d8638b94',
                 fileName: 'test.ifc',
                 fileSize: 1000000
             })
