@@ -2,6 +2,8 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const { vereisAuthenticatie } = require('./auth');
+const { upload } = require('./files'); // Importeer upload config van files.js
+const fs = require('fs');
 const router = express.Router();
 
 // Haal alle projecten op
@@ -173,8 +175,8 @@ router.post('/:id/models/:modelId/revisions/:revisionId/upload', vereisAuthentic
 });
 
 // --- FILE ROUTES (Legacy / Simple Upload) ---
-const { upload } = require('./files'); // Importeer upload config van files.js
-const fs = require('fs');
+// const { upload } = require('./files'); // Moved to top
+// const fs = require('fs'); // Moved to top
 
 // Haal bestanden van project op
 router.get('/:id/files', vereisAuthenticatie, async (req, res) => {
