@@ -2,13 +2,36 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 
+const { getShareByShareId } = require('../services/database-helpers');
+const { generateSignedDownloadUrl } = require('../services/supabase-admin');
+
 // Publieke IFC Download Route
 router.get('/ifc/:publicId', async (req, res) => {
     try {
         let modelUrl, filename;
 
-        const link = await db.getPublicLink(req.params.publicId);
+        // 1. Try New Share System (for Revit Plugin & Manual Uploads)
+        const share = await getShareByShareId(req.params.publicId);
+        if (share) {
+            if (share.expires_at && new Date(share.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Link is verlopen' });
+            }
+            if (!share.revision || share.revision.status !== 'ready') {
+                return res.status(503).json({ error: 'Model is nog niet klaar', status: share.revision?.status });
+            }
 
+            modelUrl = await generateSignedDownloadUrl(
+                'ifc-private',
+                share.revision.storage_path,
+                900 // 15 minutes
+            );
+            filename = share.revision.file_name;
+
+            return res.json({ modelUrl, filename });
+        }
+
+        // 2. Try Legacy Public Link
+        const link = await db.getPublicLink(req.params.publicId);
         if (link) {
             // Logic for Public Link
             if (link.expires_at && new Date(link.expires_at) < new Date()) {
@@ -17,7 +40,7 @@ router.get('/ifc/:publicId', async (req, res) => {
             modelUrl = await db.getFileDownloadUrl(link.files.path);
             filename = link.files.original_name;
         } else {
-            // FALLBACK: Try direct File ID (for Legacy/Admin QR codes)
+            // 3. Fallback: Try direct File ID (for Legacy/Admin QR codes)
             const file = await db.getFileById(req.params.publicId);
             if (!file) return res.status(404).json({ error: 'Ongeldige link of bestand niet gevonden' });
 
