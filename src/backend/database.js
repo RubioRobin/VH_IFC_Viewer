@@ -466,6 +466,67 @@ module.exports = {
     getStatistics,
     getFileDownloadUrl, // Exported for server.js to redirect downloads
 
+    // --- NEW HELPERS FOR MANUAL UPLOAD FLOW ---
+
+    getModelsByProjectId: async (projectId) => {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('models')
+            .select(`
+                *,
+                revisions (*)
+            `)
+            .eq('project_id', projectId)
+            .order('created_at', { ascending: false });
+
+        if (error) return [];
+
+        return data.map(model => ({
+            ...model,
+            revisions: (model.revisions || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        }));
+    },
+
+    getRevisionById: async (revisionId) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('revisions').select('*').eq('id', revisionId).single();
+        if (error) return null;
+        return data;
+    },
+
+    updateRevisionStatus: async (revisionId, status) => {
+        if (!supabase) return null;
+        const updates = { status };
+        if (status === 'uploaded') updates.uploaded_at = new Date().toISOString();
+        if (status === 'ready') updates.completed_at = new Date().toISOString();
+
+        const { data, error } = await supabase.from('revisions').update(updates).eq('id', revisionId).select().single();
+        if (error) throw error;
+        return data;
+    },
+
+    getShareByRevisionId: async (revisionId) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('shares').select('*').eq('revision_id', revisionId).single();
+        if (error) return null;
+        return data;
+    },
+
+    createShare: async (data) => {
+        if (!supabase) return null;
+        const newShare = {
+            id: data.id || uuidv4(), // ensure uuid is imported
+            revision_id: data.revisionId,
+            share_id: data.shareId,
+            view_state: data.viewState || null,
+            qr_storage_path: data.qrStoragePath || null,
+            expires_at: data.expiresAt || null
+        };
+        const { data: created, error } = await supabase.from('shares').insert([newShare]).select().single();
+        if (error) throw error;
+        return created;
+    },
+
     // New Manual Upload Helper
     uploadRevisionFile: async (projectId, modelId, revisionId, filePath, originalName, fileSize) => {
         if (!supabase) throw new Error("Supabase not initialized");
