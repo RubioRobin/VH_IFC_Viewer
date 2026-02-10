@@ -153,7 +153,7 @@ router.post('/complete', requireAdminApiKey, async (req, res) => {
             return res.json({
                 status: 'ready',
                 shareUrl: existingShare ? generateShareUrl(existingShare.share_id) : null,
-                qrDownloadUrl: existingShare ? `/api/models/${modelId}/revisions/${revisionId}/qrcode?format=png` : null
+                qrDownloadUrl: existingShare ? `/api/upload/models/${modelId}/revisions/${revisionId}/qrcode?format=png` : null
             });
         }
 
@@ -186,7 +186,7 @@ router.post('/complete', requireAdminApiKey, async (req, res) => {
         res.json({
             status: 'ready',
             shareUrl,
-            qrDownloadUrl: `/api/models/${modelId}/revisions/${revisionId}/qrcode?format=png`,
+            qrDownloadUrl: `/api/upload/models/${modelId}/revisions/${revisionId}/qrcode?format=png`,
             qrPublicUrl // Direct public URL (for reference)
         });
 

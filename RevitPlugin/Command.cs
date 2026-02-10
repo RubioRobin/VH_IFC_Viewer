@@ -17,7 +17,7 @@ namespace VH_IFC_QR
     public class GenerateQRCommand : IExternalCommand
     {
         // Production Configuration
-        private const string ApiBaseUrl = "https://vh-ifc-viewer-m783.onrender.com"; // Updated to production URL
+        private const string ApiBaseUrl = "https://vh-ifc-backend.onrender.com"; // Updated to production URL
         // WARNING: IN PRODUCTION, THIS KEY SHOULD BE SECURELY STORED OR RETRIEVED!
         private const string AdminApiKey = "8205df224312077ca34a0f846ba6b945200dd83980b"; 
         
@@ -190,6 +190,8 @@ namespace VH_IFC_QR
                 string revisionId = initData.GetProperty("revisionId").GetString();
                 
                 // Step 2: Upload IFC directly to Supabase
+                // Step 2: Upload IFC directly to Supabase - SKIPPED per user request (Manual upload later)
+                /* 
                 using (var fileStream = File.OpenRead(ifcFilePath))
                 {
                     var fileContent = new StreamContent(fileStream);
@@ -201,6 +203,7 @@ namespace VH_IFC_QR
                          throw new Exception($"Upload failed: {uploadResponse.StatusCode}");
                     }
                 }
+                */
                 
                 // Step 3: Complete upload and generate QR
                 var completeRequest = new
