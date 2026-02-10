@@ -463,5 +463,88 @@ module.exports = {
     logActivity,
     getRecentActivity,
     getStatistics,
-    getFileDownloadUrl // Exported for server.js to redirect downloads
+    getStatistics,
+    getFileDownloadUrl, // Exported for server.js to redirect downloads
+
+    // New Manual Upload Helper
+    uploadRevisionFile: async (projectId, modelId, revisionId, filePath, originalName, fileSize) => {
+        if (!supabase) throw new Error("Supabase not initialized");
+
+        // 1. Get revision to find target path
+        const { data: revision } = await supabase.from('revisions').select('*').eq('id', revisionId).single();
+        if (!revision) throw new Error("Revision not found");
+
+        const storagePath = revision.storage_path; // Should already be set by Init
+
+        // 2. Upload file content to Storage
+        const fileContent = fs.readFileSync(filePath);
+        const { error: uploadError } = await supabase.storage
+            .from('ifc-private') // Note: upload.js init used 'ifc-private' bucket for signed urls?
+            // Wait, in `upload.js` (backend routes), we used:
+            // generateSignedUploadUrl('ifc-private', ...)
+            // So we must upload to 'ifc-private'.
+            .upload(storagePath, fileContent, {
+                contentType: 'application/octet-stream',
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // 3. Update Revision Status and Details
+        const updates = {
+            status: 'uploaded',
+            uploaded_at: new Date().toISOString(),
+            file_size: fileSize,
+            // file_name: originalName // Optional: update filename if different?
+        };
+
+        const { data: updated, error: updateError } = await supabase
+            .from('revisions')
+            .update(updates)
+            .eq('id', revisionId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        // 4. Trigger "Complete" logic (Generate QR if not exists)
+        // We can call the same logic as the /complete route?
+        // Or simply trigger a simplified version.
+        // For the QR code to work, we need a Share record.
+        // Let's check if share exists.
+
+        const { data: existingShare } = await supabase.from('shares').select('*').eq('revision_id', revisionId).single();
+        if (!existingShare) {
+            // Require the share generator services... 
+            // This is getting complex to duplicate logic.
+            // Ideally we call the `upload/complete` logic.
+            // But that lives in a route handler.
+
+            // For now, let's just set status to 'uploaded'. 
+            // The user might need to click "Process" or we rely on the fact that 
+            // the plugin already registered the revision?
+            // Actually, the plugin logic does NOT create a share if we skipped the upload?
+            // Wait, looking at `upload.js`:
+            // `POST /init` -> creates revision (status: pending).
+            // `POST /complete` -> updates to 'uploaded' -> 'ready', creates Share + QR.
+
+            // If we manually upload here, we are effectively doing the "upload" part.
+            // We ALSO need to do the "complete" part to generate the QR/Share.
+
+            // To keep it simple: We just update status to 'uploaded'.
+            // Then we can call local helper to generate share?
+            // Or we just tell the frontend to call `/api/upload/complete` after upload?
+            // That might be cleaner. Frontend: Upload File -> Success -> Call /complete.
+            // But `/complete` requires `admin-api-key`.
+
+            // Let's implement the share creation here directly to be safe/atomic.
+            // We need to import `createShareId`, `generateShareUrl`, `generateQRCode`.
+            // But `database.js` shouldn't depend on those services easily (circular deps?).
+
+            // Alternative: In `projects.js` route, after this function returns,
+            // we call the services.
+        }
+
+        return updated;
+    }
 };

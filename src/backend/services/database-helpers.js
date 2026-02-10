@@ -73,6 +73,30 @@ async function getOrCreateModel(projectId, modelName) {
     return await createModel(projectId, modelName);
 }
 
+/**
+ * Get all models for a project with their revisions
+ * @param {string} projectId 
+ * @returns {Promise<array>}
+ */
+async function getModelsByProjectId(projectId) {
+    const { data, error } = await supabaseAdmin
+        .from('models')
+        .select(`
+            *,
+            revisions (*)
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+    if (error) return [];
+
+    // Sort revisions by created_at desc
+    return data.map(model => ({
+        ...model,
+        revisions: (model.revisions || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    }));
+}
+
 // ============================================================================
 // REVISIONS
 // ============================================================================
@@ -260,6 +284,7 @@ module.exports = {
     createModel,
     getModelById,
     getOrCreateModel,
+    getModelsByProjectId,
 
     // Revisions
     createRevision,

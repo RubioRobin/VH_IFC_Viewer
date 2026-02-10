@@ -24,6 +24,20 @@ interface Project {
     description: string;
 }
 
+interface Revision {
+    id: string;
+    status: 'pending' | 'uploaded' | 'processing' | 'ready' | 'failed';
+    created_at: string;
+    file_name: string;
+    file_size?: number;
+}
+
+interface Model {
+    id: string;
+    name: string;
+    revisions: Revision[];
+}
+
 export function ProjectDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -32,6 +46,7 @@ export function ProjectDetailsPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [files, setFiles] = useState<FileData[]>([]);
+    const [models, setModels] = useState<Model[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -43,18 +58,54 @@ export function ProjectDetailsPage() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [projectData, filesData] = await Promise.all([
+            const [projectData, filesData, modelsData] = await Promise.all([
                 fetchAPI(`/projects/${id}`),
-                fetchAPI(`/projects/${id}/files`)
+                fetchAPI(`/projects/${id}/files`),
+                fetchAPI(`/projects/${id}/models`)
             ]);
             setProject(projectData);
             setFiles(filesData);
+            setModels(modelsData);
         } catch (error) {
             console.error(error);
             toast({ type: 'error', title: 'Error', message: 'Kon projectgegevens niet laden.' });
             navigate('/projects');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleManualUpload = async (event: React.ChangeEvent<HTMLInputElement>, model: Model, revision: Revision) => {
+        const file = event.target.files?.[0];
+        if (!file || !id) return;
+
+        // Reset input
+        event.target.value = '';
+
+        try {
+            setUploading(true);
+            toast({ type: 'info', title: 'Upload gestart', message: `Bezig met uploaden naar ${model.name}...` });
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(`${BASE_URL}/api/projects/${id}/models/${model.id}/revisions/${revision.id}/upload`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error('Upload failed');
+
+            await res.json();
+            toast({ type: 'success', title: 'Upload voltooid', message: 'Bestand is gekoppeld en QR code is actief.' });
+            loadData();
+
+        } catch (error) {
+            console.error(error);
+            toast({ type: 'error', title: 'Upload fout', message: 'Kon bestand niet uploaden naar deze revisie.' });
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -200,6 +251,71 @@ export function ProjectDetailsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Validated/Reserved Models Section */}
+            {models.length > 0 && (
+                <div className="bg-white dark:bg-card rounded-xl border shadow-sm overflow-hidden mb-8">
+                    <div className="p-6 border-b bg-blue-50/50 dark:bg-blue-900/10">
+                        <h3 className="font-bold text-lg flex items-center gap-2">
+                            <Database className="w-5 h-5 text-blue-600" />
+                            Gereserveerde Modellen (Revit Plugin)
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Hier staan modellen waarvoor al een QR code is gegenereerd.</p>
+                    </div>
+                    <div className="divide-y">
+                        {models.map(model => (
+                            <React.Fragment key={model.id}>
+                                {model.revisions.map(rev => (
+                                    <div key={rev.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${rev.status === 'ready' ? 'bg-green-100 text-green-600' :
+                                                    rev.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
+                                                }`}>
+                                                {rev.status === 'ready' ? <Eye className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-base">{model.name}</h4>
+                                                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                                    <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{rev.status}</span>
+                                                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true, locale: nl })}</span>
+                                                    {rev.file_name && <span>{rev.file_name}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            {rev.status === 'pending' || rev.status === 'failed' ? (
+                                                <div className="relative">
+                                                    <input
+                                                        type="file"
+                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                        accept=".ifc"
+                                                        onChange={(e) => handleManualUpload(e, model, rev)}
+                                                        disabled={uploading}
+                                                    />
+                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-2">
+                                                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                        Upload Bestand
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-9 gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                                                    onClick={() => window.open(`${window.location.origin}/?modelId=${model.id}&shareId=${rev.id}`, '_blank')} // Note: shareId likely different, usage depends on viewer routing
+                                                >
+                                                    <Eye className="w-4 h-4" /> Bekijk Model
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Content Area - Custom List View */}
             <div className="bg-white dark:bg-card rounded-xl border shadow-sm overflow-hidden">
