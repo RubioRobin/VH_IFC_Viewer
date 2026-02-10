@@ -21,8 +21,8 @@ namespace VH_IFC_QR
         // WARNING: IN PRODUCTION, THIS KEY SHOULD BE SECURELY STORED OR RETRIEVED!
         private const string AdminApiKey = "8205df224312077ca34a0f846ba6b945200dd83980b"; 
         
-        // Target Project ID (For now hardcoded or could be selected)
-        private const string TargetProjectId = "2e12255a-d922-4c85-98ad-56c0d8638b94";
+        // Target Project ID is now selected via UI
+        // private const string TargetProjectId = "2e12255a-d922-4c85-98ad-56c0d8638b94";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -55,6 +55,7 @@ namespace VH_IFC_QR
                 ElementId exportViewId = null;
                 ElementId targetSheetId = null;
                 string exportFolder = null;
+                string targetProjectId = null; // Defined here
 
                 using (var form = new SelectionForm(views3D, sheets))
                 {
@@ -65,6 +66,13 @@ namespace VH_IFC_QR
                     exportViewId = form.Selected3DViewId;
                     targetSheetId = form.SelectedSheetId;
                     exportFolder = form.SelectedFolder;
+                    targetProjectId = form.SelectedProjectId;
+
+                    if (string.IsNullOrWhiteSpace(targetProjectId))
+                    {
+                         TaskDialog.Show("Fout", "Geen Project ID opgegeven.");
+                         return Result.Failed;
+                    }
                 }
 
                 if (string.IsNullOrWhiteSpace(exportFolder) || !Directory.Exists(exportFolder))
@@ -102,7 +110,7 @@ namespace VH_IFC_QR
                 string qrImagePath = null;
                 try 
                 {
-                     qrImagePath = Task.Run(async () => await UploadIfcAndGetQR(fullIfcPath, TargetProjectId, exportFolder)).Result;
+                     qrImagePath = Task.Run(async () => await UploadIfcAndGetQR(fullIfcPath, targetProjectId, exportFolder)).Result;
                 }
                 catch (AggregateException ae)
                 {
