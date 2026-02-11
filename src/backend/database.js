@@ -189,13 +189,8 @@ async function createProject(id, name, description, status) {
         id: id || uuidv4(),
         name,
         description,
-        // status field might be missing in DB if I didn't add it. 
-        // My schema didn't have status. I should add it or ignore it.
-        // Let's ignore it for now or store in description?
-        // Actually, let's just insert what matches schema.
+        status: status || 'actief'
     };
-
-    // Schema: id, name, description, created_at.
 
     const { data, error } = await supabase
         .from('projects')
@@ -208,6 +203,23 @@ async function createProject(id, name, description, status) {
     await logActivity(newProject.id, 'Admin', 'create_project', `Project "${name}" created`);
 
     return { ...data, files: [] };
+}
+
+async function updateProjectStatus(projectId, status) {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('projects')
+        .update({ status })
+        .eq('id', projectId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    await logActivity(projectId, 'Admin', 'update_project_status', `Status changed to "${status}"`);
+
+    return data;
 }
 
 // Matches server.js: db.updateProject(id, body)
@@ -572,6 +584,7 @@ module.exports = {
     createProject,
     getProjectById,
     updateProject,
+    updateProjectStatus,
     deleteProject,
 
     getFilesByProjectId,

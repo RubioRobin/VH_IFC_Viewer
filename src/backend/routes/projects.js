@@ -49,6 +49,24 @@ router.put('/:id', vereisAuthenticatie, async (req, res) => {
     }
 });
 
+// Update project status
+router.patch('/:id/status', vereisAuthenticatie, async (req, res) => {
+    const { status } = req.body;
+    const allowedStatuses = ['actief', 'in-uitvoering', 'on-hold', 'planning', 'afgerond'];
+
+    if (!status || !allowedStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Ongeldige status' });
+    }
+
+    try {
+        const updated = await db.updateProjectStatus(req.params.id, status);
+        if (updated) res.json(updated);
+        else res.status(404).json({ error: "Project niet gevonden" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Verwijder project
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {

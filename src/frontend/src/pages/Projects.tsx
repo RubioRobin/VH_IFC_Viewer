@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Button } from '../components/ui/button';
-import { Plus, Folder, FileText, MoreVertical, Loader2, Trash2, Calendar } from 'lucide-react';
+import { Plus, Folder, FileText, MoreVertical, Loader2, Trash2, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -12,16 +12,26 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 
+type ProjectStatus = 'actief' | 'in-uitvoering' | 'on-hold' | 'planning' | 'afgerond';
+
 interface Project {
     id: string;
     name: string;
     description: string;
-    status: string;
+    status: ProjectStatus;
     updated_at: string;
     created_at: string;
     file_count: number;
     total_size: number;
 }
+
+const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string }> = {
+    'actief': { label: 'Actief', color: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+    'in-uitvoering': { label: 'In Uitvoering', color: 'bg-orange-50 text-orange-700 border border-orange-200' },
+    'on-hold': { label: 'On Hold', color: 'bg-red-50 text-red-700 border border-red-200' },
+    'planning': { label: 'Planning', color: 'bg-blue-50 text-blue-700 border border-blue-200' },
+    'afgerond': { label: 'Afgerond', color: 'bg-slate-100 text-slate-700 border border-slate-200' },
+};
 
 export function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -32,6 +42,7 @@ export function ProjectsPage() {
     const [newDesc, setNewDesc] = useState('');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+    const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
 
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -63,7 +74,7 @@ export function ProjectsPage() {
                 body: JSON.stringify({
                     name: newName,
                     description: newDesc,
-                    status: 'active'
+                    status: 'actief'
                 })
             });
 
@@ -96,6 +107,26 @@ export function ProjectsPage() {
         } catch (error) {
             console.error('Delete failed', error);
             toast({ type: 'error', title: 'Fout', message: 'Kon project niet verwijderen' });
+        }
+    };
+
+    const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
+        try {
+            await fetchAPI(`/projects/${projectId}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            // Update local state
+            setProjects(projects.map(p =>
+                p.id === projectId ? { ...p, status: newStatus } : p
+            ));
+
+            setStatusDropdownOpen(null);
+            toast({ type: 'success', title: 'Succes', message: 'Status bijgewerkt!' });
+        } catch (error: any) {
+            console.error(error);
+            toast({ type: 'error', title: 'Fout', message: 'Kon status niet bijwerken' });
         }
     };
 
@@ -146,12 +177,40 @@ export function ProjectsPage() {
                                     <Folder className="w-7 h-7 text-primary" />
                                 </div>
                                 <div className="flex gap-2 items-start">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${project.status === 'active'
-                                        ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-slate-100 text-slate-600'
-                                        }`}>
-                                        {project.status}
-                                    </span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setStatusDropdownOpen(statusDropdownOpen === project.id ? null : project.id);
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${STATUS_CONFIG[project.status].color} hover:shadow-md`}
+                                        >
+                                            {STATUS_CONFIG[project.status].label}
+                                            <ChevronDown className="w-3 h-3" />
+                                        </button>
+
+                                        {statusDropdownOpen === project.id && (
+                                            <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 min-w-[160px]">
+                                                {(Object.keys(STATUS_CONFIG) as ProjectStatus[]).map((status) => (
+                                                    <button
+                                                        key={status}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStatusChange(project.id, status);
+                                                        }}
+                                                        className={`w-full px-4 py-2 text-left text-sm font-semibold transition-colors ${project.status === status
+                                                                ? 'bg-slate-50'
+                                                                : 'hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <span className={`inline-block px-2 py-1 rounded-md text-xs ${STATUS_CONFIG[status].color}`}>
+                                                            {STATUS_CONFIG[status].label}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                     <Button
                                         variant="ghost"
                                         size="icon"
