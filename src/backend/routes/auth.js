@@ -61,7 +61,13 @@ router.get('/me', vereisAuthenticatie, async (req, res) => {
 
         const user = await db.getUserById(userId);
         if (user) {
-            res.json({ id: user.id, username: user.username, role: user.role || 'admin' });
+            res.json({
+                id: user.id,
+                username: user.username,
+                role: user.role || 'admin',
+                email: user.email,
+                avatar_url: user.avatar_url
+            });
         } else {
             res.status(401).json({ error: 'Sessie ongeldig (gebruiker niet gevonden)' });
         }
