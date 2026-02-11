@@ -105,7 +105,7 @@ async function createUser(username, password, role = 'user') {
     if (!supabase) throw new Error('Database not initialized');
 
     // Hash the password
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert the new user
