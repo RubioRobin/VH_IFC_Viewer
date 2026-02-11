@@ -216,6 +216,6 @@ export function UsersPage() {
                 variant="destructive"
                 confirmText="Verwijderen"
             />
-        </div>
+        </motion.div>
     );
 }
