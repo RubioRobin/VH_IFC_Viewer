@@ -160,6 +160,7 @@ export function ProfilePage() {
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     placeholder="Laat leeg om niet te wijzigen"
+                                    autoComplete="new-password"
                                 />
                             </div>
 
@@ -171,6 +172,7 @@ export function ProfilePage() {
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Herhaal nieuw wachtwoord"
                                     disabled={!newPassword}
+                                    autoComplete="new-password"
                                 />
                             </div>
                         </div>
