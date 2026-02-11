@@ -475,7 +475,7 @@ async function getStatistics() {
     const { count: activeProjects } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+        .eq('status', 'actief');
 
     // Get total files count
     const { count: totalFiles } = await supabase
