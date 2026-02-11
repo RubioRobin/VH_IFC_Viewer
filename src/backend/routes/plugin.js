@@ -78,6 +78,16 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, asyn
         // Create a pending version record
         const version = await db.createModelVersion(modelId, storagePath, fileSize, checksumSha256);
 
+        // SYNC: Also register in the 'files' table so it shows up in the project dashboard
+        try {
+            const { data: model } = await db.supabase.from('models').select('project_id').eq('id', modelId).single();
+            if (model) {
+                await db.createFile(null, model.project_id, fileName, storagePath, fileSize);
+            }
+        } catch (syncError) {
+            console.warn('Dashboard sync failed (non-critical):', syncError.message);
+        }
+
         res.json({
             versionId: version.id,
             uploadUrl: uploadInfo.signedUrl,

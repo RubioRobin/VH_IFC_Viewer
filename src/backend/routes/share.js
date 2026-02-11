@@ -25,9 +25,9 @@ router.get('/:token', async (req, res) => {
         }
 
         res.json({
-            modelName: model.name,
+            filename: model.name,
             projectName: project.name,
-            ifcSignedUrl: ifcSignedUrl,
+            modelUrl: ifcSignedUrl,
             expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 mins matching DB helper
         });
 

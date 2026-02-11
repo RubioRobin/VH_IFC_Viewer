@@ -475,7 +475,7 @@ async function getModelsByProjectId(projectId) {
     try {
         const { data, error } = await supabase
             .from('models')
-            .select(`*, revisions (*)`)
+            .select(`*, model_versions (*)`)
             .eq('project_id', projectId)
             .order('created_at', { ascending: false });
 
