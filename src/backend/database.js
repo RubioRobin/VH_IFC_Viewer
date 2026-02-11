@@ -224,27 +224,7 @@ async function getFileById(id) {
 const fs = require('fs');
 const path = require('path');
 
-async function uploadFileToStorage(filePath, destinationPath, contentType) {
-    if (!supabase) return null;
-    try {
-        const fileContent = fs.readFileSync(filePath);
-        const { data, error } = await supabase.storage
-            .from('ifc-models')
-            .upload(destinationPath, fileContent, {
-                contentType: contentType || 'application/octet-stream',
-                upsert: true
-            });
 
-        if (error) {
-            console.error('Storage Upload Error:', error);
-            throw error;
-        }
-        return data; // { path: "..." }
-    } catch (e) {
-        console.error('Upload wrapper error:', e);
-        return null;
-    }
-}
 
 async function getFileDownloadUrl(storagePath) {
     if (!supabase) return null;
@@ -262,42 +242,7 @@ async function getFileDownloadUrl(storagePath) {
     return data.signedUrl;
 }
 
-// Matches server.js: db.createFile(id, projectId, filename, originalname, size, type)
-async function createFile(id, projectId, filename, originalname, size, type, tempFilePath) {
-    if (!supabase) return null;
 
-    // 1. Upload to Supabase Storage
-    const storagePath = `${projectId}/${filename}`;
-    // If tempFilePath is provided (from server.js multer), upload it.
-    // If not provided (legacy/mock), skip upload or fail.
-
-    if (tempFilePath) {
-        console.log(`Uploading ${tempFilePath} to Storage: ${storagePath}`);
-        const uploadResult = await uploadFileToStorage(tempFilePath, storagePath, type);
-        if (!uploadResult) {
-            console.error('Failed to upload file to storage');
-            throw new Error('Storage upload failed');
-        }
-    }
-
-    // 2. Insert metadata into DB
-    const newFile = {
-        id: id || uuidv4(),
-        project_id: projectId,
-        filename: filename,
-        original_name: originalname,
-        // Store storage path instead of local path
-        path: storagePath,
-        size: size,
-        type: type
-    };
-
-    const { data, error } = await supabase.from('files').insert([newFile]).select().single();
-    if (error) throw error;
-
-    await logActivity(projectId, 'Admin', 'upload_file', `File "${originalname}" uploaded`);
-    return data;
-}
 
 // Matches server.js: db.deleteFile(id)
 async function deleteFile(id) {
@@ -448,7 +393,7 @@ module.exports = {
 
     getFilesByProjectId,
     getAllFiles,
-    createFile,
+
     getFileById,
     deleteFile,
 
@@ -466,146 +411,5 @@ module.exports = {
     getStatistics,
     getFileDownloadUrl, // Exported for server.js to redirect downloads
 
-    // --- NEW HELPERS FOR MANUAL UPLOAD FLOW ---
 
-    getModelsByProjectId: async (projectId) => {
-        if (!supabase) return [];
-        const { data, error } = await supabase
-            .from('models')
-            .select(`
-                *,
-                revisions (*)
-            `)
-            .eq('project_id', projectId)
-            .order('created_at', { ascending: false });
-
-        if (error) return [];
-
-        return data.map(model => ({
-            ...model,
-            revisions: (model.revisions || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        }));
-    },
-
-    getRevisionById: async (revisionId) => {
-        if (!supabase) return null;
-        const { data, error } = await supabase.from('revisions').select('*').eq('id', revisionId).single();
-        if (error) return null;
-        return data;
-    },
-
-    updateRevisionStatus: async (revisionId, status) => {
-        if (!supabase) return null;
-        const updates = { status };
-        if (status === 'uploaded') updates.uploaded_at = new Date().toISOString();
-        if (status === 'ready') updates.completed_at = new Date().toISOString();
-
-        const { data, error } = await supabase.from('revisions').update(updates).eq('id', revisionId).select().single();
-        if (error) throw error;
-        return data;
-    },
-
-    getShareByRevisionId: async (revisionId) => {
-        if (!supabase) return null;
-        const { data, error } = await supabase.from('shares').select('*').eq('revision_id', revisionId).single();
-        if (error) return null;
-        return data;
-    },
-
-    createShare: async (data) => {
-        if (!supabase) return null;
-        const newShare = {
-            id: data.id || uuidv4(), // ensure uuid is imported
-            revision_id: data.revisionId,
-            share_id: data.shareId,
-            view_state: data.viewState || null,
-            qr_storage_path: data.qrStoragePath || null,
-            expires_at: data.expiresAt || null
-        };
-        const { data: created, error } = await supabase.from('shares').insert([newShare]).select().single();
-        if (error) throw error;
-        return created;
-    },
-
-    // New Manual Upload Helper
-    uploadRevisionFile: async (projectId, modelId, revisionId, filePath, originalName, fileSize) => {
-        if (!supabase) throw new Error("Supabase not initialized");
-
-        // 1. Get revision to find target path
-        const { data: revision } = await supabase.from('revisions').select('*').eq('id', revisionId).single();
-        if (!revision) throw new Error("Revision not found");
-
-        const storagePath = revision.storage_path; // Should already be set by Init
-
-        // 2. Upload file content to Storage
-        const fileContent = fs.readFileSync(filePath);
-        const { error: uploadError } = await supabase.storage
-            .from('ifc-private') // Note: upload.js init used 'ifc-private' bucket for signed urls?
-            // Wait, in `upload.js` (backend routes), we used:
-            // generateSignedUploadUrl('ifc-private', ...)
-            // So we must upload to 'ifc-private'.
-            .upload(storagePath, fileContent, {
-                contentType: 'application/octet-stream',
-                upsert: true
-            });
-
-        if (uploadError) throw uploadError;
-
-        // 3. Update Revision Status and Details
-        const updates = {
-            status: 'uploaded',
-            uploaded_at: new Date().toISOString(),
-            file_size: fileSize,
-            // file_name: originalName // Optional: update filename if different?
-        };
-
-        const { data: updated, error: updateError } = await supabase
-            .from('revisions')
-            .update(updates)
-            .eq('id', revisionId)
-            .select()
-            .single();
-
-        if (updateError) throw updateError;
-
-        // 4. Trigger "Complete" logic (Generate QR if not exists)
-        // We can call the same logic as the /complete route?
-        // Or simply trigger a simplified version.
-        // For the QR code to work, we need a Share record.
-        // Let's check if share exists.
-
-        const { data: existingShare } = await supabase.from('shares').select('*').eq('revision_id', revisionId).single();
-        if (!existingShare) {
-            // Require the share generator services... 
-            // This is getting complex to duplicate logic.
-            // Ideally we call the `upload/complete` logic.
-            // But that lives in a route handler.
-
-            // For now, let's just set status to 'uploaded'. 
-            // The user might need to click "Process" or we rely on the fact that 
-            // the plugin already registered the revision?
-            // Actually, the plugin logic does NOT create a share if we skipped the upload?
-            // Wait, looking at `upload.js`:
-            // `POST /init` -> creates revision (status: pending).
-            // `POST /complete` -> updates to 'uploaded' -> 'ready', creates Share + QR.
-
-            // If we manually upload here, we are effectively doing the "upload" part.
-            // We ALSO need to do the "complete" part to generate the QR/Share.
-
-            // To keep it simple: We just update status to 'uploaded'.
-            // Then we can call local helper to generate share?
-            // Or we just tell the frontend to call `/api/upload/complete` after upload?
-            // That might be cleaner. Frontend: Upload File -> Success -> Call /complete.
-            // But `/complete` requires `admin-api-key`.
-
-            // Let's implement the share creation here directly to be safe/atomic.
-            // We need to import `createShareId`, `generateShareUrl`, `generateQRCode`.
-            // But `database.js` shouldn't depend on those services easily (circular deps?).
-
-            // Alternative: In `projects.js` route, after this function returns,
-            // we call the services.
-        }
-
-        return updated;
-    }
 };

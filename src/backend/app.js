@@ -20,9 +20,7 @@ const adminRouter = require('./routes/admin');
 const statsRouter = require('./routes/stats');
 const debugRouter = require('./routes/debug');
 
-// NEW: Signed upload flow routes
-const uploadRouter = require('./routes/upload');
-const viewerRouter = require('./routes/viewer');
+
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -76,11 +74,9 @@ app.use('/api/qr', qrRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', statsRouter);
-app.use('/api/debug', debugRouter);
 
-// NEW: Signed upload flow routes
-app.use('/api/upload', uploadRouter);
-app.use('/api/viewer', viewerRouter); // Public viewer endpoint
+
+
 
 // Static Files (Tijdelijk voor backward compatibility als er nog harde links zijn)
 const uploadsDir = path.join(__dirname, 'uploads');

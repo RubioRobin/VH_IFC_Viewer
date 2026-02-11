@@ -602,180 +602,109 @@ function render() {
 
         if (!file) return;
 
-        const formData = new FormData();
-
-        // Check for pre-linked ID in filename (Project_GUID.ifc)
-        const uuidMatch = file.name.match(/_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.ifc$/i);
-        if (uuidMatch) {
-            const fileId = uuidMatch[1];
-            formData.append('id', fileId);
-            console.log("Pre-linked ID found:", fileId);
-
-            // Show toast or info
-            const progressText = document.getElementById('progress-text')!;
-            progressText.textContent = "Pre-linked ID gevonden! Koppelen...";
-        }
-
-        formData.append('file', file);
-
         const progressDiv = document.getElementById('upload-progress')!;
         const progressFill = document.getElementById('progress-fill')!;
         const progressText = document.getElementById('progress-text')!;
         progressDiv.style.display = 'block';
+        progressText.textContent = "Laden...";
 
-        const xhr = new XMLHttpRequest();
+        try {
+            // 1. Get Upload Link (Ticket or New Reservation)
+            let uploadUrl, storagePath, fileId;
 
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                progressFill.style.width = percent + '%';
-                progressText.textContent = percent + '%';
-            }
-        });
+            // Check for pre-linked ID in filename (Project_GUID.ifc)
+            // Regex: anything_UUID.ifc
+            const uuidMatch = file.name.match(/_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.ifc$/i);
 
-        xhr.addEventListener('load', async () => {
-            if (xhr.status === 201) {
-                closeModal();
-                await fetchFiles();
-                render();
+            if (uuidMatch) {
+                fileId = uuidMatch[1];
+                console.log("Pre-linked ID found:", fileId);
+                progressText.textContent = "Pre-linked ID gevonden. Link ophalen...";
+
+                // Get ticket for existing ID
+                const res = await fetch(`${API_URL}/api/upload/ticket`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ projectId, fileId, fileName: file.name })
+                });
+                if (!res.ok) throw new Error('Kon geen upload link ophalen');
+                const data = await res.json();
+                uploadUrl = data.uploadUrl;
+                storagePath = data.storagePath;
+
             } else {
-                alert('Upload mislukt');
+                progressText.textContent = "Nieuwe upload reserveren...";
+                // New reservation
+                const res = await fetch(`${API_URL}/api/upload/reserve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ projectId, fileName: file.name })
+                });
+                if (!res.ok) throw new Error('Reserveren mislukt');
+                const data = await res.json();
+                uploadUrl = data.uploadUrl;
+                storagePath = data.storagePath;
+                fileId = data.fileId;
             }
-        });
 
-        xhr.open('POST', `${API_URL}/api/projects/${projectId}/upload`);
-        xhr.withCredentials = true;
-        xhr.send(formData);
-    });
-};
+            // 2. Direct Upload to Supabase
+            progressText.textContent = "Uploaden naar Cloud...";
 
-(window as any).deleteFile = async (id: string) => {
-    if (!confirm('Weet je zeker dat je dit bestand wilt verwijderen?')) return;
+            const xhr = new XMLHttpRequest();
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = percent + '%';
+                    progressText.textContent = `Uploaden: ${percent}%`;
+                }
+            });
 
-    await fetch(`${API_URL}/api/files/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-    });
+            await new Promise((resolve, reject) => {
+                xhr.open('PUT', uploadUrl);
+                xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(true);
+                    else reject(new Error('Upload mislukt: ' + xhr.statusText));
+                };
+                xhr.onerror = () => reject(new Error('Netwerkfout tijdens upload'));
+                xhr.send(file);
+            });
 
-    await fetchFiles();
-    render();
-};
+            // 3. Confirm
+            progressText.textContent = "Verwerken...";
+            const confirmRes = await fetch(`${API_URL}/api/upload/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    fileId,
+                    projectId,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    storagePath
+                })
+            });
 
-(window as any).viewInViewer = (file: IFCFile) => {
-    // Open viewer in new window
-    const viewerWindow = window.open('http://localhost:5173/', '_blank');
+            if (!confirmRes.ok) throw new Error('Bevestigen mislukt');
 
-    if (!viewerWindow) {
-        alert('Kon viewer niet openen. Controleer of pop-ups zijn toegestaan.');
-        return;
-    }
+            closeModal();
+            await fetchFiles();
+            render();
 
-    const filename = file.filepath.split(/[\\/]/).pop();
-    const fileUrl = `http://localhost:3000/models/${filename}`;
-    let modelSent = false;
-
-    // Handler for when viewer is ready
-    const messageHandler = (event: MessageEvent) => {
-        // Check origin security
-        if (event.origin !== 'http://localhost:5173') return;
-
-        if (event.data.type === 'VIEWER_READY' && !modelSent) {
-            modelSent = true;
-            // Viewer is ready! Send the model immediately
-            viewerWindow.postMessage({
-                type: 'LOAD_MODEL',
-                url: fileUrl,
-                name: file.filename
-            }, 'http://localhost:5173');
-
-            // Cleanup listener
-            window.removeEventListener('message', messageHandler);
+        } catch (error: any) {
+            console.error(error);
+            alert('Fout: ' + error.message);
+            progressDiv.style.display = 'none';
         }
-    };
-
-    // Listen for the ready signal
-    window.addEventListener('message', messageHandler);
-
-    // Fallback: IF for some reason the ready signal is missed or slow, send after 1s
-    setTimeout(() => {
-        if (!modelSent) {
-            modelSent = true;
-            viewerWindow.postMessage({
-                type: 'LOAD_MODEL',
-                url: fileUrl,
-                name: file.filename
-            }, 'http://localhost:5173');
-            window.removeEventListener('message', messageHandler);
-        }
-    }, 1000);
-};
-
-// QR actions
-(window as any).showGenerateQRModal = async () => {
-    await fetchProjects();
-    await fetchFiles();
-
-    showModal('QR Code Genereren', `
-        <form id="qr-form">
-            <div class="form-group">
-                <label for="qr-project">Project *</label>
-                <select id="qr-project" required>
-                    <option value="">Selecteer project...</option>
-                    ${projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="qr-file">IFC Bestand *</label>
-                <select id="qr-file" required>
-                    <option value="">Selecteer eerst een project...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="qr-element">Element ID (GlobalId) *</label>
-                <input type="text" id="qr-element" placeholder="2O2Fr$t4X7Zf8NOew3FLOH" required />
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="window.closeModal()">Annuleren</button>
-                <button type="submit" class="btn-primary">Genereren</button>
-            </div>
-        </form>
-    `, async (e: Event) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const projectId = (form.querySelector('#qr-project') as HTMLSelectElement).value;
-        const fileId = (form.querySelector('#qr-file') as HTMLSelectElement).value;
-        const elementId = (form.querySelector('#qr-element') as HTMLInputElement).value;
-
-        await fetch(`${API_URL}/api/qr/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ project_id: projectId, file_id: fileId, element_id: elementId })
-        });
-
-        closeModal();
-        await fetchQRCodes();
-        render();
-    });
-
-    // Update file dropdown when project changes
-    const projectSelect = document.getElementById('qr-project') as HTMLSelectElement;
-    const fileSelect = document.getElementById('qr-file') as HTMLSelectElement;
-
-    projectSelect.addEventListener('change', () => {
-        const projectId = projectSelect.value;
-        const projectFiles = files.filter(f => f.project_id === projectId);
-
-        fileSelect.innerHTML = projectFiles.length > 0
-            ? projectFiles.map(f => `<option value="${f.id}">${f.filename}</option>`).join('')
-            : '<option value="">Geen bestanden in dit project</option>';
     });
 };
 
 (window as any).showReserveQRModal = async () => {
     await fetchProjects();
 
-    showModal('QR Code Reserveren (Pre-Generate)', `
+    showModal('QR Code Reserveren', `
         <form id="reserve-qr-form">
             <div class="form-group">
                 <label for="reserve-project">Project *</label>
@@ -785,73 +714,79 @@ function render() {
                 </select>
             </div>
             <div class="form-group">
-                <label for="reserve-model">Model Naam *</label>
-                <input type="text" id="reserve-model" placeholder="bijv. Constructie_V1" required />
-                <small class="form-hint">Zorg dat deze naam exact overeenkomt met de toekomstige upload naam. (Of gebruik de later toegekende bestandsnaam)</small>
+                <label for="reserve-filename">Toekomstige bestandsnaam *</label>
+                <input type="text" id="reserve-filename" placeholder="bijv. Constructie_V1.ifc" required />
             </div>
-            <div class="form-group">
-                <label for="reserve-view">View Naam (Optioneel)</label>
-                <input type="text" id="reserve-view" placeholder="bijv. 3D_Overzicht" />
-            </div>
-            <div id="reserve-result" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 4px;">
-                <p style="margin-bottom: 0.5rem; color: #4ade80;">QR Code Gereserveerd!</p>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <img id="result-qr-img" src="" style="width: 100px; height: 100px; background: white; padding: 5px;" />
-                    <div>
-                        <p><strong>Share ID:</strong> <span id="result-share-id"></span></p>
-                        <a id="result-download" href="#" download class="btn-secondary" style="font-size: 0.8rem;">Download PNG</a>
+            
+            <div id="reserve-result" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.1); border-radius: 4px;">
+                <p style="margin-bottom: 0.5rem; color: #4ade80; font-weight: bold;">Gereserveerd!</p>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <img id="result-qr-img" src="" style="width: 120px; height: 120px; background: white; padding: 5px; border-radius: 4px;" />
+                    <div style="flex: 1;">
+                        <p style="font-size: 0.9em; margin-bottom: 5px;"><strong>Bestandsnaam moet worden:</strong></p>
+                        <code id="result-filename" style="display: block; padding: 4px; background: #000; color: #eee; border-radius: 3px; word-break: break-all;"></code>
+                        <p style="font-size: 0.8em; margin-top: 5px; color: #aaa;">Hernoem je bestand exact zo v-r uploaden.</p>
+                        <a id="result-download" href="#" download target="_blank" class="btn-secondary" style="margin-top: 10px; display: inline-block; font-size: 0.8rem;">Download QR</a>
                     </div>
                 </div>
             </div>
+
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" onclick="window.closeModal()">Sluiten</button>
-                <button type="submit" class="btn-primary">Genereren</button>
+                <button type="submit" class="btn-primary">Genereer</button>
             </div>
         </form>
     `, async (e: Event) => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
         const projectId = (form.querySelector('#reserve-project') as HTMLSelectElement).value;
-        const modelName = (form.querySelector('#reserve-model') as HTMLInputElement).value;
-        const viewName = (form.querySelector('#reserve-view') as HTMLInputElement).value;
+        const fileName = (form.querySelector('#reserve-filename') as HTMLInputElement).value;
 
         try {
-            const response = await fetch(`${API_URL}/api/qr/pre-generate`, {
+            const res = await fetch(`${API_URL}/api/upload/reserve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ projectId, modelName, viewName })
+                body: JSON.stringify({ projectId, fileName })
             });
 
-            const data = await response.json();
+            if (!res.ok) throw new Error('Reserveren mislukt');
+            const data = await res.json();
 
-            if (data.error) throw new Error(data.error);
-
-            // Show result in modal instead of closing
             const resultDiv = document.getElementById('reserve-result')!;
             const qrImg = document.getElementById('result-qr-img') as HTMLImageElement;
-            const shareIdSpan = document.getElementById('result-share-id')!;
+            const filenameCode = document.getElementById('result-filename')!;
             const downloadLink = document.getElementById('result-download') as HTMLAnchorElement;
 
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.webUrl)}`;
+
+            // Construct new filename with ID
+            // Assuming data.storagePath contains the format projectId/uuid_cleanName
+            // We just want to show "uuid_cleanName" or similar.
+            // data.webUrl contains the ID.
+            const fileId = data.fileId;
+            const ext = fileName.split('.').pop() || 'ifc';
+            const base = fileName.replace('.' + ext, '');
+            const safeBase = base.replace(/[^a-zA-Z0-9_\-]/g, '_');
+            const targetName = `${safeBase}_${fileId}.${ext}`;
+
             resultDiv.style.display = 'block';
-            qrImg.src = data.qrUrl.startsWith('http') ? data.qrUrl : `${API_URL}${data.qrUrl}`;
-            shareIdSpan.textContent = data.shareId;
-            downloadLink.href = qrImg.src;
+            qrImg.src = qrUrl;
+            filenameCode.textContent = targetName;
+            downloadLink.href = qrUrl;
 
-            // Refresh list in background
-            await fetchQRCodes();
-            render(); // Re-render to show new QR in list behind modal
-
-        } catch (error) {
-            alert('Fout bij reserveren: ' + (error as Error).message);
+        } catch (error: any) {
+            alert('Fout: ' + error.message);
         }
     });
 };
 
+
 (window as any).deleteQR = async (id: string) => {
     if (!confirm('Weet je zeker dat je deze QR code wilt verwijderen?')) return;
 
-    await fetch(`${API_URL}/api/qr/${id}`, {
+    await fetch(`${API_URL} /api/qr / ${id} `, {
         method: 'DELETE',
         credentials: 'include'
     });
@@ -864,18 +799,18 @@ function render() {
 function showModal(title: string, content: string, onSubmit?: (e: Event) => void) {
     const modalContainer = document.getElementById('modal-container')!;
     modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="window.closeModal()">
-            <div class="modal glass-panel" onclick="event.stopPropagation()">
-                <div class="modal-header">
-                    <h2>${title}</h2>
-                    <button class="modal-close" onclick="window.closeModal()">×</button>
-                </div>
-                <div class="modal-body">
-                    ${content}
-                </div>
-            </div>
-        </div>
-    `;
+    < div class="modal-overlay" onclick = "window.closeModal()" >
+        <div class="modal glass-panel" onclick = "event.stopPropagation()" >
+            <div class="modal-header" >
+                <h2>${title} </h2>
+                    < button class="modal-close" onclick = "window.closeModal()" >×</button>
+                        </div>
+                        < div class="modal-body" >
+                            ${content}
+</div>
+    </div>
+    </div>
+        `;
 
     if (onSubmit) {
         const form = modalContainer.querySelector('form');

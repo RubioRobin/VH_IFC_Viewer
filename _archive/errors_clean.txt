@@ -1,7 +1,0 @@
-src/ui-templates/grids/viewport.ts(7,6): error TS6196: 'ViewportGridElements' is declared but never used.
-src/ui-templates/grids/viewport.ts(9,6): error TS6196: 'ViewportGridLayouts' is declared but never used.
-src/ui-templates/sections/elements-data.ts(5,1): error TS6133: 'appIcons' is declared but its value is never read.
-src/ui-templates/toolbars/viewer-toolbar.ts(120,9): error TS6133: 'onApplyColor' is declared but its value is never read.
-src/ui-templates/toolbars/viewer-toolbar.ts(167,9): error TS6133: 'onLengthMeasurement' is declared but its value is never read.
-src/ui-templates/toolbars/viewer-toolbar.ts(173,9): error TS6133: 'onAreaMeasurement' is declared but its value is never read.
-

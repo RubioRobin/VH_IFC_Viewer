@@ -1,5 +1,5 @@
 const express = require('express');
-const multer = require('multer');
+
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
@@ -8,19 +8,7 @@ const { vereisAuthenticatie } = require('./auth');
 
 const router = express.Router();
 
-// Upload Configuratie
-const uploadsDir = path.join(__dirname, '..', 'uploads'); // Relative to routes folder
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-const upload = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, uploadsDir),
-        filename: (req, file, cb) => {
-            const cleanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-            cb(null, `${uuidv4()}-${cleanName}`);
-        }
-    })
-});
 
 // Haal alle bestanden op (Admin of Project specifiek)
 router.get('/', vereisAuthenticatie, async (req, res) => {
@@ -37,29 +25,7 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
     }
 });
 
-// Upload Bestand (Direct endpoint)
-router.post('/', vereisAuthenticatie, upload.single('ifcFile'), async (req, res) => {
-    try {
-        console.log(`[UPLOAD] Start upload`);
-        if (!req.file) return res.status(400).json({ error: 'Geen bestand ontvangen' });
 
-        const { projectId } = req.body;
-        console.log(`[UPLOAD] Bestand: ${req.file.originalname} voor Project: ${projectId}`);
-
-        const newFile = await db.createFile(null, projectId, req.file.filename, req.file.originalname, req.file.size, 'ifc', req.file.path);
-
-        // Verwijder temp bestand
-        fs.unlink(req.file.path, (err) => {
-            if (err) console.error('Fout bij opruimen temp bestand:', err);
-        });
-
-        console.log(`[UPLOAD] Succes: ${newFile.id}`);
-        res.json(newFile);
-    } catch (e) {
-        console.error(`[UPLOAD] Fout:`, e);
-        res.status(500).json({ error: e.message });
-    }
-});
 
 // Download redirect (Supports File ID OR Public Link ID)
 router.get('/:id/download', async (req, res) => {
@@ -114,4 +80,4 @@ router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     }
 });
 
-module.exports = { router, upload }; 
+module.exports = { router }; 

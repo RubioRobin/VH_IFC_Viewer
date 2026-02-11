@@ -19,10 +19,10 @@ namespace VH_IFC_QR
             RibbonPanel panel = application.CreateRibbonPanel(tabName, "Tools");
 
             string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
-            PushButtonData buttonData = new PushButtonData("cmdGenerateQR",
-                "Generate QR", thisAssemblyPath, "VH_IFC_QR.GenerateQRCommand");
+            PushButtonData buttonData = new PushButtonData("cmdExportIFC",
+                "Export IFC", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
             
-            buttonData.ToolTip = "Generate QR code for the selected element linking to the web viewer.";
+            buttonData.ToolTip = "Export current view to IFC locally.";
 
             PushButton pushButton = panel.AddItem(buttonData) as PushButton;
 

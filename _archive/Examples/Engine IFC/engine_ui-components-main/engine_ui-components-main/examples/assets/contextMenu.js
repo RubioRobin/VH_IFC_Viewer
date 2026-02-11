@@ -1,1 +1,0 @@
-import"./lit-html-CgQwCkHV.js";import{M as i}from"./index-BZZnLag4.js";import"./ref-B0YVjWyu.js";i.init();const e=document.getElementById("context-container");e==null||e.addEventListener("click",()=>{const t=e.querySelector("bim-context-menu");t&&(t.visible=!t.visible)});
