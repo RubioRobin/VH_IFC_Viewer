@@ -23,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('admin-app')!).render(
                         <Route index element={<Dashboard />} />
                         <Route path="projects" element={<ProjectsPage />} />
                         <Route path="projects/:id" element={<ProjectDetailsPage />} />
+                        <Route path="users" element={<UsersPage />} />
                         <Route path="qr" element={<QRCodesPage />} />
                         <Route path="settings" element={<SettingsPage />} />
                         {/* Fallback */}

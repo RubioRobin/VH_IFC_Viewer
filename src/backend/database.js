@@ -101,6 +101,12 @@ async function getAllUsers() {
     return data || [];
 }
 
+async function deleteUser(id) {
+    if (!supabase) return;
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw error;
+}
+
 // --- PROJECTS ---
 // Matches server.js: db.getAllProjects()
 async function getAllProjects() {
@@ -439,6 +445,7 @@ module.exports = {
     initDatabase,
     getUserByUsername,
     getAllUsers,
+    deleteUser,
     getAllProjects,     // server.js calls this
     getProjects: getAllProjects, // Alias just in case
     createProject,

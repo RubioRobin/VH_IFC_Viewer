@@ -17,6 +17,7 @@ const { router: filesRouter } = require('./routes/files');
 const uploadRouter = require('./routes/upload'); // Add this
 const qrRouter = require('./routes/qr');
 const publicRouter = require('./routes/public');
+const usersRouter = require('./routes/users');
 const adminRouter = require('./routes/admin');
 const statsRouter = require('./routes/stats');
 const debugRouter = require('./routes/debug');
@@ -93,6 +94,7 @@ app.use('/api/files', filesRouter);
 app.use('/api/upload', uploadRouter); // Add this
 app.use('/api/qr', qrRouter);
 app.use('/api/public', publicRouter);
+app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', statsRouter);
 
