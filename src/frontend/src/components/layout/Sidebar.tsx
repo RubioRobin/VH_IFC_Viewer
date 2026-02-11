@@ -21,13 +21,45 @@ const NAV_ITEMS = [
 
 export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }: SidebarProps) {
     const sidebarVariants = {
-        expanded: { width: 280 },
-        collapsed: { width: 80 },
+        expanded: {
+            width: 280,
+            transition: {
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                mass: 0.8
+            }
+        },
+        collapsed: {
+            width: 80,
+            transition: {
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                mass: 0.8
+            }
+        },
     };
 
     const navItemVariants = {
-        open: { opacity: 1, x: 0, display: 'block' },
-        closed: { opacity: 0, x: -10, transitionEnd: { display: 'none' } },
+        open: {
+            opacity: 1,
+            x: 0,
+            display: 'block',
+            transition: {
+                opacity: { duration: 0.2, delay: 0.1 },
+                x: { type: "spring", stiffness: 300, damping: 25 }
+            }
+        },
+        closed: {
+            opacity: 0,
+            x: -10,
+            transitionEnd: { display: 'none' },
+            transition: {
+                opacity: { duration: 0.15 },
+                x: { type: "spring", stiffness: 300, damping: 25 }
+            }
+        },
     };
 
     return (
@@ -39,6 +71,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 0.5 }}
                         exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                         onClick={closeMobile}
                         className="fixed inset-0 z-40 bg-black/80 lg:hidden"
                     />
@@ -55,11 +88,18 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                         : expanded ? 'expanded' : 'collapsed'
                 }
                 variants={sidebarVariants}
+                transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8
+                }}
                 // Force fixed on mobile, relative sticky on desktop
                 className={cn(
-                    "fixed top-0 left-0 z-50 h-screen border-r bg-sidebar text-sidebar-foreground shadow-xl lg:sticky lg:shadow-none transition-all duration-300 ease-in-out",
+                    "fixed top-0 left-0 z-50 h-screen border-r bg-sidebar text-sidebar-foreground shadow-xl lg:sticky lg:shadow-none will-change-transform",
                     // Mobile classes handled by motion/fixed
                 )}
+                style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
             >
                 <div className="flex flex-col h-full">
                     {/* Header */}
