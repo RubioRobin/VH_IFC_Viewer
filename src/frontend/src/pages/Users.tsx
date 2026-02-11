@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DataTable, Column } from '../components/dashboard/DataTable';
 import { Button } from '../components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { Dialog } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 import { fetchAPI } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -21,6 +23,11 @@ export function UsersPage() {
     const { toast } = useToast();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [newUsername, setNewUsername] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [newRole, setNewRole] = useState('user');
 
     const loadUsers = async () => {
         try {
@@ -55,6 +62,35 @@ export function UsersPage() {
             } catch (err) {
                 toast({ type: 'error', title: 'Niet verwijderd', message: 'Er is iets misgegaan.' });
             }
+        }
+    };
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newUsername.trim() || !newPassword.trim()) return;
+
+        setCreating(true);
+        try {
+            const newUser = await fetchAPI('/users', {
+                method: 'POST',
+                body: JSON.stringify({
+                    username: newUsername,
+                    password: newPassword,
+                    role: newRole
+                })
+            });
+
+            toast({ type: 'success', title: 'Succes', message: 'Gebruiker aangemaakt!' });
+            setData([newUser, ...data]);
+            setCreateDialogOpen(false);
+            setNewUsername('');
+            setNewPassword('');
+            setNewRole('user');
+        } catch (error: any) {
+            console.error(error);
+            toast({ type: 'error', title: 'Fout', message: error.message || 'Kon gebruiker niet aanmaken' });
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -117,6 +153,53 @@ export function UsersPage() {
                 columns={columns}
                 searchKey="username"
             />
+
+            <Dialog
+                isOpen={createDialogOpen}
+                onClose={() => setCreateDialogOpen(false)}
+                title="Nieuwe Gebruiker"
+                footer={
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>Annuleren</Button>
+                        <Button onClick={handleCreateUser} disabled={creating || !newUsername || !newPassword} className="bg-primary hover:bg-primary/90">
+                            {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Aanmaken
+                        </Button>
+                    </div>
+                }
+            >
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Gebruikersnaam</label>
+                        <Input
+                            placeholder="Bijv. jan.jansen"
+                            value={newUsername}
+                            onChange={(e) => setNewUsername(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Wachtwoord</label>
+                        <Input
+                            type="password"
+                            placeholder="••••••••"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Rol</label>
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value)}
+                        >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </form>
+            </Dialog>
 
             <ConfirmDialog
                 isOpen={deleteDialogOpen}
