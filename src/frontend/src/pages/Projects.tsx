@@ -197,9 +197,12 @@ export function ProjectsPage() {
                         onClick={() => navigate(`/projects/${project.id}`)}
                     >
                         <CardHeader className="pb-4 bg-gradient-to-br from-slate-50 to-white">
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start gap-4">
+                                <CardTitle className="text-xl font-bold text-slate-900 group-hover:text-primary transition-colors break-words leading-tight">
+                                    {project.name}
+                                </CardTitle>
 
-                                <div className="flex gap-2 items-start">
+                                <div className="flex gap-2 items-start shrink-0">
                                     <div className="relative">
                                         <button
                                             onClick={(e) => {
@@ -238,14 +241,13 @@ export function ProjectsPage() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50"
+                                        className="h-7 w-7 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50"
                                         onClick={(e) => handleDeleteClick(e, project)}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </div>
-                            <CardTitle className="mt-4 text-xl font-bold text-slate-900 group-hover:text-primary transition-colors">{project.name}</CardTitle>
                         </CardHeader>
                         <CardContent className="pb-4 text-sm text-slate-600">
                             <p className="line-clamp-2 leading-relaxed">{project.description || "Geen beschrijving"}</p>
