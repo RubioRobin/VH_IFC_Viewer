@@ -79,6 +79,103 @@ router.post('/generate', async (req, res) => {
     }
 });
 
+// Pre-generate QR Code (Reserve a link)
+router.post('/pre-generate', vereisAuthenticatie, async (req, res) => {
+    try {
+        const { projectId, modelName, viewName } = req.body;
+
+        if (!projectId || !modelName) {
+            return res.status(400).json({ error: 'Missing required fields: projectId, modelName' });
+        }
+
+        const {
+            getOrCreateModel,
+            createRevision,
+            createShare,
+            getShareByRevisionId,
+            getModelsByProjectId
+        } = require('../services/database-helpers');
+        const { createShareId, generateShareUrl } = require('../services/share-generator');
+        const { generateQRCode } = require('../services/qr-generator');
+
+        // 1. Get or Create Model
+        const model = await getOrCreateModel(projectId, modelName);
+
+        // 2. Check if ANY share already exists for this model
+        // We need to find the LATEST revision that has a share, or ANY revision.
+        // Actually, let's just check the latest revision first.
+        const models = await getModelsByProjectId(projectId);
+        const currentModel = models.find(m => m.id === model.id);
+
+        let existingShare = null;
+        if (currentModel && currentModel.revisions && currentModel.revisions.length > 0) {
+            // Check latest revision first
+            for (const rev of currentModel.revisions) {
+                const share = await getShareByRevisionId(rev.id);
+                if (share) {
+                    existingShare = share;
+                    break;
+                }
+            }
+        }
+
+        if (existingShare) {
+            return res.json({
+                status: 'existing',
+                shareId: existingShare.share_id,
+                shareUrl: generateShareUrl(existingShare.share_id),
+                qrUrl: `/api/qr-codes/${existingShare.share_id}.png`, // Assuming we serve by shareId now, or link to existing
+                modelName: model.name
+            });
+        }
+
+        // 3. Create Placeholder Revision
+        const revisionId = uuidv4();
+        // Use a dummy path for now, it will be updated on real upload OR we just use it for the share
+        const storagePath = `projects/${projectId}/models/${model.id}/placeholders/${revisionId}/placeholder.ifc`;
+
+        const revision = await createRevision({
+            modelId: model.id,
+            storagePath,
+            fileName: `${modelName}.ifc`,
+            fileSize: 0,
+            status: 'pending' // Important: Mark as pending
+        });
+
+        // 4. Create Share
+        // Generate a deterministic share ID if desired, but for now completely random is safer for collisions unless we have a robust slug system.
+        // User asked for "standardize based on viewname". 
+        // Let's try to make a readable slug IF it's unique.
+        // For now, let's stick to the secure random ID but ensure persistence. 
+        // We can add a "alias" column later if needed.
+        const shareId = createShareId();
+        const shareUrl = generateShareUrl(shareId);
+
+        // Generate QR
+        const { qrPublicUrl, qrStoragePath } = await generateQRCode(shareUrl, shareId, 'png');
+
+        await createShare({
+            revisionId: revision.id,
+            shareId,
+            viewState: viewName ? { viewName } : null,
+            qrStoragePath,
+            expiresAt: null
+        });
+
+        res.json({
+            status: 'created',
+            shareId,
+            shareUrl,
+            qrUrl: qrPublicUrl,
+            modelName: model.name
+        });
+
+    } catch (error) {
+        console.error('[QR PRE-GEN] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Delete QR
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {

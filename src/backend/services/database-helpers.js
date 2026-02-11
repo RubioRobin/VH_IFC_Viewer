@@ -279,6 +279,27 @@ async function getShareByRevisionId(revisionId) {
     return data;
 }
 
+/**
+ * Update share's revision ID (to point to a newer version)
+ * @param {string} shareId 
+ * @param {string} newRevisionId 
+ * @returns {Promise<object>}
+ */
+async function updateShareRevision(shareId, newRevisionId) {
+    // Updated to not use updated_at as it doesn't exist on shares table
+    const { data, error } = await supabaseAdmin
+        .from('shares')
+        .update({
+            revision_id: newRevisionId
+        })
+        .eq('share_id', shareId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
 module.exports = {
     // Models
     createModel,
@@ -295,5 +316,6 @@ module.exports = {
     // Shares
     createShare,
     getShareByShareId,
-    getShareByRevisionId
+    getShareByRevisionId,
+    updateShareRevision
 };

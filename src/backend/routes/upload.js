@@ -160,23 +160,70 @@ router.post('/complete', requireAdminApiKey, async (req, res) => {
         // Update status to uploaded
         await updateRevisionStatus(revisionId, 'uploaded');
 
-        // Generate share ID and URL
-        const shareId = createShareId();
-        const shareUrl = generateShareUrl(shareId);
+        // Check if there are ANY existing shares for this model from previous revisions
+        // We want to "move" the QR code to this new revision.
+        // We need to fetch models for this project or get previous revisions for this model.
+        // Let's get the model first. (We already have modelId)
+        // A better way is to query shares joined with revisions where model_id = modelId.
+        // But we don't have a direct helper for that.
+        // Let's iterate through previous revisions of this model.
 
-        console.log(`[UPLOAD COMPLETE] Generated share: ${shareId}`);
+        let existingShare = null;
+        let shareId, shareUrl, qrStoragePath;
 
-        // Generate QR code
-        const { qrPublicUrl, qrStoragePath } = await generateQRCode(shareUrl, shareId, 'png');
+        // Helper to find existing share
+        const { getModelsByProjectId, updateShareRevision } = require('../services/database-helpers');
+        const projectModels = await getModelsByProjectId(revision.model.project_id);
+        const thisModel = projectModels.find(m => m.id === modelId);
 
-        // Create share record
-        await createShare({
-            revisionId,
-            shareId,
-            viewState: req.body.viewState || null,
-            qrStoragePath,
-            expiresAt: null // No expiration by default
-        });
+        if (thisModel && thisModel.revisions) {
+            for (const rev of thisModel.revisions) {
+                // Skip the current revision
+                if (rev.id === revisionId) continue;
+
+                // Check if this revision has a share
+                const share = await getShareByRevisionId(rev.id);
+                if (share) {
+                    existingShare = share;
+                    break;
+                    // We found a share! We will steal it.
+                }
+            }
+        }
+
+        if (existingShare) {
+            console.log(`[UPLOAD COMPLETE] Found existing share ${existingShare.share_id} from prev revision ${existingShare.revision_id}. Updating to ${revisionId}`);
+
+            // Move share to new revision
+            await updateShareRevision(existingShare.share_id, revisionId);
+
+            shareId = existingShare.share_id;
+            shareUrl = generateShareUrl(shareId);
+            qrStoragePath = existingShare.qr_storage_path;
+
+            // If the previous revision was a placeholder (pending), we should probably delete it or mark it as replaced?
+            // But revisions table logs history, so maybe just leave it. 
+            // The share is moved, so the old revision is now "unshared".
+        } else {
+            // Generate NEW share ID and URL
+            shareId = createShareId();
+            shareUrl = generateShareUrl(shareId);
+
+            console.log(`[UPLOAD COMPLETE] Generated NEW share: ${shareId}`);
+
+            // Generate QR code
+            const qrResult = await generateQRCode(shareUrl, shareId, 'png'); // Renamed to avoid const redeclaration check if needed
+            qrStoragePath = qrResult.qrStoragePath;
+
+            // Create share record
+            await createShare({
+                revisionId,
+                shareId,
+                viewState: req.body.viewState || null,
+                qrStoragePath,
+                expiresAt: null // No expiration by default
+            });
+        }
 
         // Update revision status to ready
         await updateRevisionStatus(revisionId, 'ready');
@@ -186,8 +233,7 @@ router.post('/complete', requireAdminApiKey, async (req, res) => {
         res.json({
             status: 'ready',
             shareUrl,
-            qrDownloadUrl: `/api/upload/models/${modelId}/revisions/${revisionId}/qrcode?format=png`,
-            qrPublicUrl // Direct public URL (for reference)
+            qrDownloadUrl: `/api/upload/models/${modelId}/revisions/${revisionId}/qrcode?format=png`
         });
 
     } catch (error) {

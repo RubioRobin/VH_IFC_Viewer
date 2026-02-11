@@ -4,9 +4,24 @@ const db = require('../database');
 const router = express.Router();
 
 // Middleware voor authenticatie
+// Middleware voor authenticatie
 const vereisAuthenticatie = (req, res, next) => {
-    if (req.session && req.session.userId) next();
-    else res.status(401).json({ error: 'Authenticatie vereist' });
+    // 1. Session check
+    if (req.session && req.session.userId) return next();
+
+    // 2. API Key check (for scripts/testing)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        if (process.env.ADMIN_API_KEY && token === process.env.ADMIN_API_KEY) {
+            // Mock session for API access
+            if (!req.session) req.session = {};
+            req.session.userId = 'admin-api-user';
+            return next();
+        }
+    }
+
+    res.status(401).json({ error: 'Authenticatie vereist' });
 };
 
 // LOGIN Route

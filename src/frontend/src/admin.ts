@@ -369,7 +369,10 @@ function renderQRTab() {
             <div class="content-header">
                 <h2>QR Codes</h2>
                 <button class="btn-primary" onclick="window.showGenerateQRModal()">
-                    + QR Code Genereren
+                    + QR Code Koppelen
+                </button>
+                <button class="btn-primary" onclick="window.showReserveQRModal()">
+                    + QR Code Reserveren
                 </button>
             </div>
             
@@ -766,6 +769,82 @@ function render() {
         fileSelect.innerHTML = projectFiles.length > 0
             ? projectFiles.map(f => `<option value="${f.id}">${f.filename}</option>`).join('')
             : '<option value="">Geen bestanden in dit project</option>';
+    });
+};
+
+(window as any).showReserveQRModal = async () => {
+    await fetchProjects();
+
+    showModal('QR Code Reserveren (Pre-Generate)', `
+        <form id="reserve-qr-form">
+            <div class="form-group">
+                <label for="reserve-project">Project *</label>
+                <select id="reserve-project" required>
+                    <option value="">Selecteer project...</option>
+                    ${projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reserve-model">Model Naam *</label>
+                <input type="text" id="reserve-model" placeholder="bijv. Constructie_V1" required />
+                <small class="form-hint">Zorg dat deze naam exact overeenkomt met de toekomstige upload naam. (Of gebruik de later toegekende bestandsnaam)</small>
+            </div>
+            <div class="form-group">
+                <label for="reserve-view">View Naam (Optioneel)</label>
+                <input type="text" id="reserve-view" placeholder="bijv. 3D_Overzicht" />
+            </div>
+            <div id="reserve-result" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                <p style="margin-bottom: 0.5rem; color: #4ade80;">QR Code Gereserveerd!</p>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <img id="result-qr-img" src="" style="width: 100px; height: 100px; background: white; padding: 5px;" />
+                    <div>
+                        <p><strong>Share ID:</strong> <span id="result-share-id"></span></p>
+                        <a id="result-download" href="#" download class="btn-secondary" style="font-size: 0.8rem;">Download PNG</a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="window.closeModal()">Sluiten</button>
+                <button type="submit" class="btn-primary">Genereren</button>
+            </div>
+        </form>
+    `, async (e: Event) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const projectId = (form.querySelector('#reserve-project') as HTMLSelectElement).value;
+        const modelName = (form.querySelector('#reserve-model') as HTMLInputElement).value;
+        const viewName = (form.querySelector('#reserve-view') as HTMLInputElement).value;
+
+        try {
+            const response = await fetch(`${API_URL}/api/qr/pre-generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ projectId, modelName, viewName })
+            });
+
+            const data = await response.json();
+
+            if (data.error) throw new Error(data.error);
+
+            // Show result in modal instead of closing
+            const resultDiv = document.getElementById('reserve-result')!;
+            const qrImg = document.getElementById('result-qr-img') as HTMLImageElement;
+            const shareIdSpan = document.getElementById('result-share-id')!;
+            const downloadLink = document.getElementById('result-download') as HTMLAnchorElement;
+
+            resultDiv.style.display = 'block';
+            qrImg.src = data.qrUrl.startsWith('http') ? data.qrUrl : `${API_URL}${data.qrUrl}`;
+            shareIdSpan.textContent = data.shareId;
+            downloadLink.href = qrImg.src;
+
+            // Refresh list in background
+            await fetchQRCodes();
+            render(); // Re-render to show new QR in list behind modal
+
+        } catch (error) {
+            alert('Fout bij reserveren: ' + (error as Error).message);
+        }
     });
 };
 
