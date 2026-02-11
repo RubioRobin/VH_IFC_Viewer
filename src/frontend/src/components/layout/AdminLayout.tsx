@@ -7,7 +7,7 @@ export function AdminLayout() {
     const { expanded, toggleExpanded, isMobileOpen, toggleMobile, closeMobile } = useSidebarState();
 
     return (
-        <div className="min-h-screen flex bg-background">
+        <div className="h-screen overflow-hidden flex bg-background">
             <Sidebar
                 expanded={expanded}
                 toggleExpanded={toggleExpanded}
