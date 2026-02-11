@@ -1,6 +1,5 @@
-import { Menu, Search, Bell, Settings } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 
 interface TopbarProps {
     toggleMobile: () => void;
@@ -27,22 +26,6 @@ export function Topbar({ toggleMobile }: TopbarProps) {
 
             {/* Search & Actions */}
             <div className="flex flex-1 items-center justify-end gap-2 md:gap-4">
-                <div className="hidden md:flex relative w-full max-w-[300px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Zoeken..."
-                        className="w-full bg-background pl-8"
-                    />
-                </div>
-
-                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground">
-                    <Bell className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground">
-                    <Settings className="w-5 h-5" />
-                </Button>
-
                 {/* Mobile Profile Avater (simplified) */}
                 <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0 md:hidden">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="User" />
