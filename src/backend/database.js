@@ -293,8 +293,7 @@ async function createFile(id, projectId, filename, path, size) {
         project_id: projectId,
         filename: filename,
         path: path,
-        size: size,
-        upload_date: new Date().toISOString()
+        size: size
     };
 
     const { data, error } = await supabase.from('files').insert([newFile]).select().single();

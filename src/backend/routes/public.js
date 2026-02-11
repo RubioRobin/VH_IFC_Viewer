@@ -2,14 +2,12 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 
-
-
 // Publieke IFC Download Route
 router.get('/ifc/:publicId', async (req, res) => {
     try {
         let modelUrl, filename;
 
-        // 2. Try Legacy Public Link
+        // 1. Try Legacy Public Link
         const link = await db.getPublicLink(req.params.publicId);
         if (link) {
             // Logic for Public Link
@@ -17,14 +15,14 @@ router.get('/ifc/:publicId', async (req, res) => {
                 return res.status(410).json({ error: 'Link is verlopen' });
             }
             modelUrl = await db.getFileDownloadUrl(link.files.path);
-            filename = link.files.original_name;
+            filename = link.files.filename;
         } else {
-            // 3. Fallback: Try direct File ID (for Legacy/Admin QR codes)
+            // 2. Fallback: Try direct File ID
             const file = await db.getFileById(req.params.publicId);
             if (!file) return res.status(404).json({ error: 'Ongeldige link of bestand niet gevonden' });
 
             modelUrl = await db.getFileDownloadUrl(file.path);
-            filename = file.original_name;
+            filename = file.filename;
         }
 
         res.json({
