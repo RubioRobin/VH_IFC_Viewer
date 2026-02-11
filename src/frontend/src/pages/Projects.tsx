@@ -212,7 +212,10 @@ export function ProjectsPage() {
                                         </button>
 
                                         {statusDropdownOpen === project.id && (
-                                            <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 min-w-[160px]">
+                                            <div
+                                                className="absolute top-full right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 z-[100] min-w-[180px]"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 {(Object.keys(STATUS_CONFIG) as ProjectStatus[]).map((status) => (
                                                     <button
                                                         key={status}
