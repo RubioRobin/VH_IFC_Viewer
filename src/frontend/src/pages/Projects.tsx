@@ -228,9 +228,7 @@ export function ProjectsPage() {
                                                             : 'hover:bg-slate-50'
                                                             }`}
                                                     >
-                                                        <span className={`inline-block px-2 py-1 rounded-md text-xs ${STATUS_CONFIG[status].color}`}>
-                                                            {STATUS_CONFIG[status].label}
-                                                        </span>
+                                                        {STATUS_CONFIG[status].label}
                                                     </button>
                                                 ))}
                                             </div>
