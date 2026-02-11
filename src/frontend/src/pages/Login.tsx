@@ -69,10 +69,6 @@ export function LoginPage() {
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Inloggen'}
                     </Button>
                 </form>
-
-                <div className="mt-6 text-center text-xs text-muted-foreground">
-                    <p>Default: admin / admin123</p>
-                </div>
             </div>
         </div>
     );
