@@ -47,11 +47,7 @@ async function initDatabase() {
             console.error('Database init error:', e.message || e);
         }
     }
-    console.log('✅ Admin user created');
-} else {
-    console.error('Database init error:', e.message || e);
-}
-    }
+    console.log('✅ Admin user check complete');
 }
 
 // --- USERS ---
