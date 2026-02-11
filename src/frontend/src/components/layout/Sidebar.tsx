@@ -202,7 +202,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                                 </div>
                             )}
                             {expanded && (
-                                <Button variant="ghost" size="icon" className="shrink-0">
+                                <Button variant="ghost" size="icon" className="shrink-0" onClick={handleLogout}>
                                     <LogOut className="w-4 h-4 text-muted-foreground" />
                                 </Button>
                             )}
