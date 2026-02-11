@@ -133,7 +133,7 @@ export function Dashboard() {
                     </div>
                     <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">QR Codes</div>
                     <div className="text-4xl font-black text-slate-900 mt-2">{stats?.total_qr_codes || 0}</div>
-                    <div className="text-xs font-semibold text-slate-500 mt-3">Gegenereerd</div>
+                    <div className="text-xs font-semibold text-slate-500 mt-3">Keer gebruikt</div>
                 </div>
 
                 <div className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300">
