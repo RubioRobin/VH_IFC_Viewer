@@ -509,6 +509,7 @@ async function uploadRevisionFile(revisionId, fileData) {
 }
 
 module.exports = {
+    supabase,
     initDatabase,
     getUserByUsername,
     getAllUsers,
