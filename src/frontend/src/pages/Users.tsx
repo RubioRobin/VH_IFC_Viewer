@@ -138,7 +138,7 @@ export function UsersPage() {
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
         >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>

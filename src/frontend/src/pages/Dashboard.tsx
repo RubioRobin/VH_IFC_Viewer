@@ -88,7 +88,7 @@ export function Dashboard() {
             className="space-y-10 pb-10"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
         >
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">

@@ -176,7 +176,7 @@ export function ProjectsPage() {
             className="space-y-8 pb-10"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
         >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
