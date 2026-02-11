@@ -95,7 +95,7 @@ export function Dashboard() {
                     <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je BIM-modellen, projecten en live activiteit vanaf één plek.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="rounded-full px-6" onClick={() => navigate('/projects')}>
+                    <Button variant="default" className="rounded-2xl px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all" onClick={() => navigate('/projects')}>
                         Bekijk Projecten
                     </Button>
                 </div>
