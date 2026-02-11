@@ -126,18 +126,23 @@ export function UsersPage() {
         {
             key: 'id',
             label: 'Acties',
-            render: (u) => (
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => handleDeleteClick(u)}
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
-                </div>
-            )
+            render: (u) => {
+                const isLastUser = data.length <= 1;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isLastUser}
+                            className={`h-8 w-8 ${isLastUser ? 'text-muted-foreground opacity-50 cursor-not-allowed' : 'text-red-500 hover:text-red-600 hover:bg-red-50'}`}
+                            onClick={() => !isLastUser && handleDeleteClick(u)}
+                            title={isLastUser ? "Laatste gebruiker kan niet worden verwijderd" : "Verwijderen"}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                );
+            }
         }
     ];
 
