@@ -441,6 +441,45 @@ async function getPublicLink(publicId) {
     return data;
 }
 
+// --- MODELS & REVISIONS (New Architecture) ---
+async function getModelsByProjectId(projectId) {
+    if (!supabase) return [];
+    try {
+        const { data, error } = await supabase
+            .from('models')
+            .select(`*, revisions (*)`)
+            .eq('project_id', projectId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (e) {
+        console.error('getModelsByProjectId error:', e);
+        return [];
+    }
+}
+
+async function uploadRevisionFile(revisionId, fileData) {
+    if (!supabase) return null;
+    // This is a simplified version of the upload flow for manual revision attachment
+    // In production, we'd use signed URLs, but for this specific "Revision Upload" button
+    // we'll implement it as requested by the frontend.
+    const { data, error } = await supabase
+        .from('revisions')
+        .update({
+            status: 'ready',
+            file_name: fileData.filename,
+            file_size: fileData.size,
+            // path mapping etc.
+        })
+        .eq('id', revisionId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
 module.exports = {
     initDatabase,
     getUserByUsername,
@@ -468,6 +507,9 @@ module.exports = {
     // New Public Link Methods
     createPublicLink,
     getPublicLink,
+
+    getModelsByProjectId,
+    uploadRevisionFile,
 
     logActivity,
     getRecentActivity,
