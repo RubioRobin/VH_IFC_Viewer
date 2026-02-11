@@ -24,26 +24,15 @@ namespace VH_IFC_QR
 
                 // Test 1: Login
                 var loginSw = Stopwatch.StartNew();
-                // We use a manual check here to get more details
                 try {
-                    var payload = new { client_id = ClientId, client_secret = ClientSecret };
-                    var content = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(payload), System.Text.Encoding.UTF8, "application/json");
+                    bool loginOk = Task.Run(() => client.LoginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
+                    loginSw.Stop();
                     
-                    using (var httpClient = new System.Net.Http.HttpClient()) {
-                        httpClient.Timeout = TimeSpan.FromSeconds(60); // Lower timeout for diagnostic
-                        httpClient.DefaultRequestHeaders.Add("User-Agent", "VH-Revit-Diagnostic/1.0");
-                        
-                        var response = Task.Run(() => httpClient.PostAsync($"{BaseUrl}/api/plugin/login", content)).GetAwaiter().GetResult();
-                        loginSw.Stop();
-                        
-                        summary += $"- Login: {response.StatusCode} ({(int)response.StatusCode}) in {loginSw.ElapsedMilliseconds}ms\n";
-                        
-                        if (!response.IsSuccessStatusCode) {
-                            var body = Task.Run(() => response.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
-                            summary += $"  Fout Details: {body}\n";
-                            TaskDialog.Show("Diagnose Fout", summary + "\nDe server weigert de inlog. Controleer de backend logs.");
-                            return Result.Failed;
-                        }
+                    summary += $"- Login: {(loginOk ? "SUCCESS" : "FAILED")} in {loginSw.ElapsedMilliseconds}ms\n";
+                    
+                    if (!loginOk) {
+                        TaskDialog.Show("Diagnose Fout", summary + "\nDe server weigert de inlog. Controleer credentials (ClientId/Secret) of de backend logs.");
+                        return Result.Failed;
                     }
                 } catch (Exception ex) {
                     summary += $"- Login: EXCEPTION ({ex.Message})\n";

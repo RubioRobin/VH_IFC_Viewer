@@ -95,9 +95,14 @@ namespace VH_IFC_QR
                         form.UpdateStatus($"Stap 2: Gereed ({stepSw.ElapsedMilliseconds}ms)", 30);
 
                         stepSw.Restart();
-                        form.UpdateStatus("Stap 3/7: Backend sessie aanvragen...", 40);
-                        session = await client.CreateUploadSessionAsync(form.SelectedProjectId, form.ModelName, fileSize, checksum);
-                        form.UpdateStatus($"Stap 3: Gereed ({stepSw.ElapsedMilliseconds}ms)", 45);
+                        form.UpdateStatus("Stap 3.1/7: Model registreren...", 35);
+                        string modelId = await client.CreateModelAsync(form.SelectedProjectId, form.ModelName);
+                        form.UpdateStatus($"Stap 3.1: Gereed ({stepSw.ElapsedMilliseconds}ms)", 38);
+
+                        stepSw.Restart();
+                        form.UpdateStatus("Stap 3.2/7: Backend sessie aanvragen...", 40);
+                        session = await client.CreateUploadSessionAsync(modelId, form.ModelName, fileSize, checksum);
+                        form.UpdateStatus($"Stap 3.2: Gereed ({stepSw.ElapsedMilliseconds}ms)", 45);
 
                         stepSw.Restart();
                         form.UpdateStatus($"Stap 4/7: Upload naar Supabase ({(fileSize/1024.0/1024.0):F2} MB)...", 50);
@@ -106,17 +111,17 @@ namespace VH_IFC_QR
 
                         stepSw.Restart();
                         form.UpdateStatus("Stap 5/7: Registratie in backend...", 70);
-                        await client.CompleteVersionAsync(form.SelectedProjectId, session.versionId);
+                        await client.CompleteVersionAsync(modelId, session.versionId);
                         form.UpdateStatus($"Stap 5: Gereed ({stepSw.ElapsedMilliseconds}ms)", 75);
 
                         stepSw.Restart();
                         form.UpdateStatus("Stap 6/7: Deep-link genereren...", 80);
-                        share = await client.CreateShareAsync(form.SelectedProjectId, session.versionId);
+                        share = await client.CreateShareAsync(modelId, session.versionId);
                         form.UpdateStatus($"Stap 6: Gereed ({stepSw.ElapsedMilliseconds}ms)", 85);
 
                         stepSw.Restart();
                         form.UpdateStatus("Stap 7/7: QR asset aanmaken...", 90);
-                        qrUrl = await client.GenerateQRAsync(form.SelectedProjectId, session.versionId, share.viewerUrl, form.SelectedProjectId);
+                        qrUrl = await client.GenerateQRAsync(modelId, session.versionId, share.viewerUrl, form.SelectedProjectId);
                         form.UpdateStatus($"Stap 7: Gereed ({stepSw.ElapsedMilliseconds}ms)", 95);
                     }).GetAwaiter().GetResult();
 

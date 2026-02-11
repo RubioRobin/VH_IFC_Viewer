@@ -87,7 +87,11 @@ namespace VH_IFC_QR
             var payload = new { fileName, contentType = "application/octet-stream", fileSize, checksumSha256 = checksum };
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/upload-session", content).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Upload sessie mislukt ({(int)response.StatusCode}): {error}");
+            }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UploadSessionInfo>(result);
         }
@@ -99,20 +103,32 @@ namespace VH_IFC_QR
                 var content = new StreamContent(stream);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
                 var response = await _client.PutAsync(uploadUrl, content).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    throw new Exception($"Bestand uploaden mislukt ({(int)response.StatusCode}): {error}");
+                }
             }
         }
 
         public async Task CompleteVersionAsync(string modelId, string versionId)
         {
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/complete", null).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Versie voltooien mislukt ({(int)response.StatusCode}): {error}");
+            }
         }
 
         public async Task<ShareInfo> CreateShareAsync(string modelId, string versionId)
         {
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/share", null).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Share link maken mislukt ({(int)response.StatusCode}): {error}");
+            }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<ShareInfo>(result);
         }
@@ -122,7 +138,11 @@ namespace VH_IFC_QR
             var payload = new { viewerUrl, projectId };
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/qr", content).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"QR genereren mislukt ({(int)response.StatusCode}): {error}");
+            }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JObject.Parse(result)["qrUrl"].ToString();
         }
