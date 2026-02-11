@@ -1087,22 +1087,49 @@ bim-table [data-table-cell-value] {
     padding: 0.5rem !important;
     pointer-events: none;
     /* Ensure clicks pass through overlay area */
+    z-index: 50 !important;
+    /* Ensure it's on top */
+  }
+
+  .viewport-ui-bottom {
+    width: 100%;
+    overflow: hidden;
+    /* Container doesn't scroll, toolbar does */
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 1rem;
   }
 
   /* Force toolbar to be visible and scrollable */
+  /* Target BOTH bim-grid parent AND direct child in case functionality changes */
   bim-grid[floating],
-  bim-grid[floating]>bim-toolbar {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    overflow: auto !important;
-    /* Enable scrolling if content overflows */
+  bim-grid[floating]>bim-toolbar,
+  .viewport-ui-bottom bim-toolbar {
+    display: flex !important;
+    max-width: 95vw !important;
+    overflow-x: auto !important;
+    /* Enable horizontal scrolling */
     pointer-events: auto !important;
-    /* Re-enable clicks on the toolbar itself */
+
+    /* Style refinement for mobile */
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 2px !important;
+    margin-bottom: 0 !important;
+
+    /* Ensure it doesn't get pushed off screen */
+    flex-shrink: 0;
   }
 
-  /* Ensure the toolbar content wraps or scrolls */
+  /* Ensure the toolbar content is flexible */
   bim-toolbar-section {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
+    flex-wrap: nowrap !important;
+    /* Keep in one line for horizontal scroll */
+    justify-content: flex-start !important;
+    min-width: max-content;
+    /* Allow section to take needed space */
   }
 }
