@@ -20,30 +20,9 @@ router.get('/check-admin', async (req, res) => {
     }
 });
 
-// Force recreate admin user
+// Force recreate admin user - DISABLED for security
 router.post('/reset-admin', async (req, res) => {
-    try {
-        const bcrypt = require('bcryptjs');
-        const { createClient } = require('@supabase/supabase-js');
-        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-
-        // Delete existing admin
-        await supabase.from('users').delete().eq('username', 'admin');
-
-        // Create new admin
-        const { data, error } = await supabase.from('users').insert([{
-            id: 'admin-1',
-            username: 'admin',
-            password_hash: bcrypt.hashSync('admin123', 10),
-            role: 'admin'
-        }]).select().single();
-
-        if (error) throw error;
-
-        res.json({ success: true, user: { username: data.username, id: data.id } });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+    res.status(403).json({ error: 'This function is disabled for security reasons.' });
 });
 
 module.exports = router;

@@ -34,38 +34,23 @@ async function initDatabase() {
         // Note: single() returns error if 0 or >1 rows.
 
         if (!user) {
-            console.log('Creating admin user...');
-            await supabase.from('users').insert([{
-                id: 'admin-1',
-                username: 'admin',
-                password_hash: bcrypt.hashSync('admin123', 10),
-                role: 'admin'
-            }]);
-            console.log('✅ Admin user created');
+            console.log('Admin user not found. Please create one manually if needed.');
+            // Removed default admin creation for security
         } else {
             console.log('✅ Admin user matches found');
-            // FIX: Check for truncated hash or bad seed
-            if (!user.password_hash || user.password_hash.length < 50) {
-                console.log('⚠️  Admin password hash appears invalid/truncated. Fixing...');
-                const newHash = bcrypt.hashSync('admin123', 10);
-                await supabase.from('users').update({ password_hash: newHash }).eq('id', user.id);
-                console.log('✅ Admin password hash auto-repaired.');
-            }
         }
     } catch (e) {
         // If error code is 'PGRST116' (JSON object), it means 0 rows.
         if (e.code === 'PGRST116') {
-            console.log('Creating admin user (catch block)...');
-            await supabase.from('users').insert([{
-                id: 'admin-1',
-                username: 'admin',
-                password_hash: bcrypt.hashSync('admin123', 10),
-                role: 'admin'
-            }]);
-            console.log('✅ Admin user created');
+            console.log('Admin user not found (catch).');
         } else {
             console.error('Database init error:', e.message || e);
         }
+    }
+    console.log('✅ Admin user created');
+} else {
+    console.error('Database init error:', e.message || e);
+}
     }
 }
 

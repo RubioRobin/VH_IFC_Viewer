@@ -61,7 +61,7 @@ const loginHTML = `
         </form>
         
         <div class="login-footer">
-            <p>Standaard: admin / admin123</p>
+            <p></p>
         </div>
     </div>
 </div>
