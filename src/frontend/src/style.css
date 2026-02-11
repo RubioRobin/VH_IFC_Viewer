@@ -1043,4 +1043,46 @@ bim-table [data-table-cell-value] {
   100% {
     transform: rotate(360deg);
   }
-}
+
+  /* ========================================
+   MOBILE OPTIMIZATION
+   ======================================== */
+  @media (max-width: 768px) {
+
+    /* Hide side panels on mobile to maximize viewer space */
+    .app-side-panel {
+      display: none !important;
+    }
+
+    /* Reset grid layout for full screen */
+    .app-content {
+      display: block !important;
+      padding: 0 !important;
+      height: 100vh !important;
+      width: 100vw !important;
+      overflow: hidden !important;
+      background-color: black !important;
+      /* Dark background for immersive feel */
+    }
+
+    /* Maximize viewer container */
+    .app-viewer-container {
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+
+    /* Ensure viewport takes full space */
+    bim-viewport {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Adjust toolbar for mobile if necessary */
+    .viewport-ui-overlay {
+      padding: 0.5rem !important;
+    }
+  }
