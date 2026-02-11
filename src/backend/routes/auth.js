@@ -70,6 +70,28 @@ router.get('/me', vereisAuthenticatie, async (req, res) => {
     }
 });
 
+// UPDATE PROFILE Route
+router.put('/profile', vereisAuthenticatie, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { username, email, password, avatar_url } = req.body;
+
+        // Validations can be added here (e.g. check if username unique if changed)
+
+        const updatedUser = await db.updateUserProfile(userId, {
+            username,
+            email,
+            password,
+            avatar_url
+        });
+
+        res.json({ message: 'Profiel bijgewerkt', user: updatedUser });
+    } catch (e) {
+        console.error('Update profile error:', e);
+        res.status(500).json({ error: 'Kon profiel niet bijwerken' });
+    }
+});
+
 // LOGOUT Route
 router.post('/logout', (req, res) => {
     req.session.destroy(err => {

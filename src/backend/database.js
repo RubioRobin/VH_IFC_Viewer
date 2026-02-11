@@ -111,6 +111,30 @@ async function createUser(username, password, role = 'user') {
     return data;
 }
 
+async function updateUserProfile(id, { username, email, password, avatar_url }) {
+    if (!supabase) throw new Error('Database not initialized');
+
+    const updates = {};
+    if (username) updates.username = username;
+    if (email) updates.email = email;
+    if (avatar_url) updates.avatar_url = avatar_url;
+
+    if (password) {
+        const bcrypt = require('bcryptjs');
+        updates.password_hash = await bcrypt.hash(password, 10);
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', id)
+        .select('id, username, email, avatar_url, role')
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
 async function deleteUser(id) {
     if (!supabase) return;
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -667,5 +691,6 @@ module.exports = {
     // User management
     getAllUsers,
     createUser,
+    updateUserProfile,
     deleteUser
 };

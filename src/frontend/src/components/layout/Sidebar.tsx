@@ -17,9 +17,19 @@ const NAV_ITEMS = [
     { icon: FileText, label: 'Projecten', path: '/projects' },
 ];
 
+import { api } from '../../lib/api';
+import React, { useEffect, useState } from 'react';
+
+// ... existing imports
+
 export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }: SidebarProps) {
     const location = useLocation();
     const navigate = useNavigate();
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        api.checkAuth().then(setUser).catch(() => { });
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -201,18 +211,36 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                         </nav>
                     </div>
 
-                    {/* Footer */}
+                    {/* Footer - Clickable Profile */}
                     <div className="p-4 border-t border-sidebar-border">
                         <div className={cn("flex items-center gap-3", expanded ? "" : "justify-center")}>
-                            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="User" />
+                            <div
+                                className="relative group cursor-pointer"
+                                onClick={() => navigate('/profile')}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0 border border-transparent group-hover:border-primary transition-colors">
+                                    <img
+                                        src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
+                                        alt="User"
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
                             </div>
+
                             {expanded && (
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="text-sm font-medium truncate">Robin (Admin)</p>
-                                    <p className="text-xs text-muted-foreground truncate">robin@vh-engineering.nl</p>
+                                <div
+                                    className="flex-1 overflow-hidden cursor-pointer group"
+                                    onClick={() => navigate('/profile')}
+                                >
+                                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                                        {user?.username || 'Laden...'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {user?.email || 'Profiel bewerken'}
+                                    </p>
                                 </div>
                             )}
+
                             {expanded && (
                                 <Button variant="ghost" size="icon" className="shrink-0" onClick={handleLogout}>
                                     <LogOut className="w-4 h-4 text-muted-foreground" />
