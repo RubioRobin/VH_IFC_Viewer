@@ -68,8 +68,8 @@ export function UsersPage() {
                     title: 'Gebruiker verwijderd',
                     message: `${userToDelete.username} is succesvol verwijderd.`
                 });
-            } catch (err) {
-                toast({ type: 'error', title: 'Niet verwijderd', message: 'Er is iets misgegaan.' });
+            } catch (err: any) {
+                toast({ type: 'error', title: 'Niet verwijderd', message: err.message || 'Er is iets misgegaan.' });
             }
         }
     };
