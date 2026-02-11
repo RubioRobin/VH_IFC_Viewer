@@ -141,7 +141,7 @@ export function UsersPage() {
                 </div>
                 <Button
                     onClick={() => setCreateDialogOpen(true)}
-                    className="bg-primary hover:bg-primary/90 rounded-3xl px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                    className="bg-primary hover:bg-primary/90 px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
                 >
                     <Plus className="w-5 h-5 mr-2" />
                     Nieuwe Gebruiker

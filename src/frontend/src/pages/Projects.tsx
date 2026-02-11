@@ -128,7 +128,7 @@ export function ProjectsPage() {
                     <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Alle Projecten</h2>
                     <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je BIM-projecten en bijbehorende IFC-bestanden.</p>
                 </div>
-                <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 rounded-3xl px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
+                <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
                     <Plus className="w-5 h-5 mr-2" /> Nieuw Project
                 </Button>
             </div>
