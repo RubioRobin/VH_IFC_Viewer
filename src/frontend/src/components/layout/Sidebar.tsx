@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, ChevronLeft, ChevronRight, LogOut, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { Tooltip } from '../ui/tooltip';
 
 interface SidebarProps {
     expanded: boolean;
@@ -180,11 +179,9 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                                                 )}
                                             </>
                                         ) : (
-                                            <Tooltip content={item.label} side="right">
-                                                <div className="flex items-center justify-center w-full">
-                                                    <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-primary" : "")} />
-                                                </div>
-                                            </Tooltip>
+                                            <div className="flex items-center justify-center w-full">
+                                                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-primary" : "")} />
+                                            </div>
                                         )
                                     )}
                                 </NavLink>
