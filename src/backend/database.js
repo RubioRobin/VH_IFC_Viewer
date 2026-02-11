@@ -303,7 +303,8 @@ async function createFile(id, projectId, filename, path, size) {
     const newFile = {
         id: id || uuidv4(),
         project_id: projectId,
-        original_name: filename, // DB uses original_name
+        filename: filename,       // Provide both columns
+        original_name: filename,  // to satisfy NOT NULL constraints
         path: path,
         size: size
     };
@@ -325,9 +326,12 @@ async function updateFile(id, updates) {
     // Clean updates from non-existent columns based on schema audit
     const cleanUpdates = { ...updates };
     delete cleanUpdates.upload_date;
+
+    // If filename is provided, sync it with original_name for dual-column tables
     if (cleanUpdates.filename) {
         cleanUpdates.original_name = cleanUpdates.filename;
-        delete cleanUpdates.filename;
+    } else if (cleanUpdates.original_name) {
+        cleanUpdates.filename = cleanUpdates.original_name;
     }
 
     const { data, error } = await supabase
