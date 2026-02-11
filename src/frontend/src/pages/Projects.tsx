@@ -33,6 +33,16 @@ const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string }> = {
     'afgerond': { label: 'Afgerond', color: 'bg-slate-100 text-slate-700 border border-slate-200' },
 };
 
+// Helper function to safely get status config with fallback for legacy values
+const getStatusConfig = (status: string) => {
+    // Map legacy status values to new ones
+    if (status === 'active') return STATUS_CONFIG['actief'];
+    if (status === 'inactive') return STATUS_CONFIG['afgerond'];
+
+    // Return config if valid, otherwise default to 'actief'
+    return STATUS_CONFIG[status as ProjectStatus] || STATUS_CONFIG['actief'];
+};
+
 export function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -183,9 +193,9 @@ export function ProjectsPage() {
                                                 e.stopPropagation();
                                                 setStatusDropdownOpen(statusDropdownOpen === project.id ? null : project.id);
                                             }}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${STATUS_CONFIG[project.status].color} hover:shadow-md`}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${getStatusConfig(project.status).color} hover:shadow-md`}
                                         >
-                                            {STATUS_CONFIG[project.status].label}
+                                            {getStatusConfig(project.status).label}
                                             <ChevronDown className="w-3 h-3" />
                                         </button>
 
@@ -199,8 +209,8 @@ export function ProjectsPage() {
                                                             handleStatusChange(project.id, status);
                                                         }}
                                                         className={`w-full px-4 py-2 text-left text-sm font-semibold transition-colors ${project.status === status
-                                                                ? 'bg-slate-50'
-                                                                : 'hover:bg-slate-50'
+                                                            ? 'bg-slate-50'
+                                                            : 'hover:bg-slate-50'
                                                             }`}
                                                     >
                                                         <span className={`inline-block px-2 py-1 rounded-md text-xs ${STATUS_CONFIG[status].color}`}>
