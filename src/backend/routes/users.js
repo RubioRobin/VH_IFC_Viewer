@@ -33,9 +33,10 @@ router.post('/', vereisAuthenticatie, async (req, res) => {
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {
         // Check if user is 'admin'
-        const user = await db.getUserById(req.params.id);
-        if (user && user.username === 'admin') {
-            return res.status(403).json({ error: 'De hoofdgebruiker "admin" kan niet worden verwijderd.' });
+        // Check total user count to prevent lockout
+        const users = await db.getAllUsers();
+        if (users.length <= 1) {
+            return res.status(403).json({ error: 'Dit is de laatste gebruiker. Je kunt minimaal één gebruiker niet verwijderen.' });
         }
 
         await db.deleteUser(req.params.id);
