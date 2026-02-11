@@ -13,6 +13,22 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
     }
 });
 
+// Create a new user
+router.post('/', vereisAuthenticatie, async (req, res) => {
+    try {
+        const { username, password, role } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Gebruikersnaam en wachtwoord zijn verplicht.' });
+        }
+
+        const newUser = await db.createUser(username, password, role || 'user');
+        res.status(201).json(newUser);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Delete a user
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {

@@ -101,6 +101,28 @@ async function getAllUsers() {
     return data || [];
 }
 
+async function createUser(username, password, role = 'user') {
+    if (!supabase) throw new Error('Database not initialized');
+
+    // Hash the password
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert the new user
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{ username, password: hashedPassword, role }])
+        .select('id, username, role, created_at')
+        .single();
+
+    if (error) {
+        console.error('createUser error:', error);
+        throw new Error(error.message || 'Failed to create user');
+    }
+
+    return data;
+}
+
 async function deleteUser(id) {
     if (!supabase) return;
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -638,5 +660,10 @@ module.exports = {
         const { data, error } = await supabase.from('sheets_link').insert([{ model_version_id: versionId, revit_sheet_unique_id: sheetId, revit_view_unique_id: viewId, placement_info_json: placementInfo }]).select().single();
         if (error) throw error;
         return data;
-    }
+    },
+
+    // User management
+    getAllUsers,
+    createUser,
+    deleteUser
 };
