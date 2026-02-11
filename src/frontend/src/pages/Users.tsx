@@ -45,6 +45,14 @@ export function UsersPage() {
         loadUsers();
     }, []);
 
+    useEffect(() => {
+        if (createDialogOpen) {
+            setNewUsername('');
+            setNewPassword('');
+            setNewRole('user');
+        }
+    }, [createDialogOpen]);
+
     const handleDeleteClick = (user: User) => {
         setUserToDelete(user);
         setDeleteDialogOpen(true);
@@ -163,6 +171,14 @@ export function UsersPage() {
             <Dialog
                 isOpen={createDialogOpen}
                 onClose={() => setCreateDialogOpen(false)}
+                onOpenChange={(open) => {
+                    if (open) {
+                        setNewUsername('');
+                        setNewPassword('');
+                        setNewRole('user');
+                    }
+                    setCreateDialogOpen(open);
+                }}
                 title="Nieuwe Gebruiker"
                 footer={
                     <div className="flex gap-2">
