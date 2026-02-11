@@ -424,16 +424,47 @@ async function getRecentActivity(limit = 20) {
 
 // Matches server.js: db.getStatistics() (Dashboard)
 async function getStatistics() {
-    if (!supabase) return { projects: 0, files: 0, users: 1 };
+    if (!supabase) return {
+        total_projects: 0,
+        active_projects: 0,
+        total_files: 0,
+        total_storage: 0,
+        total_qr_codes: 0
+    };
 
-    const { count: projects } = await supabase.from('projects').select('*', { count: 'exact', head: true });
-    const { count: files } = await supabase.from('files').select('*', { count: 'exact', head: true });
-    // const { count: users } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    // Get total projects count
+    const { count: totalProjects } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true });
+
+    // Get active projects count
+    const { count: activeProjects } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+    // Get total files count
+    const { count: totalFiles } = await supabase
+        .from('files')
+        .select('*', { count: 'exact', head: true });
+
+    // Get total storage (sum of all file sizes)
+    const { data: filesData } = await supabase
+        .from('files')
+        .select('size');
+    const totalStorage = filesData?.reduce((sum, file) => sum + (file.size || 0), 0) || 0;
+
+    // Get QR code usage count (count of public_links which represent QR code scans)
+    const { count: qrCodeUsage } = await supabase
+        .from('public_links')
+        .select('*', { count: 'exact', head: true });
 
     return {
-        projects: projects || 0,
-        files: files || 0,
-        users: 1 // Hardcode or fetch
+        total_projects: totalProjects || 0,
+        active_projects: activeProjects || 0,
+        total_files: totalFiles || 0,
+        total_storage: totalStorage,
+        total_qr_codes: qrCodeUsage || 0
     };
 }
 
