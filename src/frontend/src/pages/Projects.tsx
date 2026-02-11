@@ -61,6 +61,18 @@ export function ProjectsPage() {
         loadProjects();
     }, []);
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (statusDropdownOpen) {
+                setStatusDropdownOpen(null);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [statusDropdownOpen]);
+
     const loadProjects = async () => {
         try {
             const data = await fetchAPI('/projects');
@@ -178,7 +190,7 @@ export function ProjectsPage() {
                 {projects.map((project) => (
                     <Card
                         key={project.id}
-                        className="hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-slate-200/60 rounded-2xl overflow-hidden"
+                        className="hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-slate-200/60 rounded-2xl"
                         onClick={() => navigate(`/projects/${project.id}`)}
                     >
                         <CardHeader className="pb-4 bg-gradient-to-br from-slate-50 to-white">
