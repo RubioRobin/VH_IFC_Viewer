@@ -13,8 +13,8 @@ interface SidebarProps {
 
 const NAV_ITEMS = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Gebruikers', path: '/users' },
     { icon: FileText, label: 'Projecten', path: '/projects' },
+    { icon: Users, label: 'Gebruikers', path: '/users' },
 ];
 
 import { api } from '../../lib/api';

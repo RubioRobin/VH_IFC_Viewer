@@ -246,16 +246,25 @@ export function ProjectDetailsPage() {
                                                 // Pattern: "Name_UUID.ext" or "Name_UUID.Name.ext"
                                                 let name = f.filename || '';
 
-                                                // Remove UUIDs (case insensitive)
+                                                // 1. Remove UUIDs (case insensitive)
                                                 name = name.replace(/_?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_?/g, '');
 
-                                                // Remove duplicate extensions or weird dot patterns if any (e.g. "Test..ifc" -> "Test.ifc")
+                                                // 2. Remove double dots
                                                 name = name.replace(/\.\.+/g, '.');
 
-                                                // If it ends with .Test.ifc or similar redundant naming patterns from the screenshot
-                                                // "Test_UUID.Test.ifc" -> "Test.ifc"
-                                                // Heuristic: if the name part appears twice?
-                                                // Let's stick to UUID removal first as that's the main culprit.
+                                                // 3. Fix "Name.Name.ext" pattern (e.g. "Test.Test.ifc" -> "Test.ifc")
+                                                // Split by dot
+                                                const parts = name.split('.');
+                                                if (parts.length >= 3) {
+                                                    const ext = parts.pop(); // ifc
+                                                    const lastPart = parts[parts.length - 1]; // Test
+                                                    const secondLastPart = parts[parts.length - 2]; // Test
+
+                                                    if (lastPart === secondLastPart) {
+                                                        parts.pop(); // Remove duplicate
+                                                    }
+                                                    name = [...parts, ext].join('.');
+                                                }
 
                                                 return name;
                                             })()}
