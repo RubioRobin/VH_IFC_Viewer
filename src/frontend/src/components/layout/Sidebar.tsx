@@ -18,6 +18,18 @@ const NAV_ITEMS = [
 ];
 
 export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }: SidebarProps) {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    };
+
     const sidebarVariants = {
         expanded: {
             width: 280,
