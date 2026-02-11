@@ -111,7 +111,7 @@ async function createUser(username, password, role = 'user') {
     // Insert the new user
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, password: hashedPassword, role }])
+        .insert([{ id: uuidv4(), username, password: hashedPassword, role }])
         .select('id, username, role, created_at')
         .single();
 
