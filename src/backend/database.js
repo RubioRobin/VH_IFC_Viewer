@@ -550,7 +550,24 @@ module.exports = {
     // NEW Revit Workflow Methods
     createModel: async (projectId, name, createdBy = 'plugin') => {
         if (!supabase) return null;
-        const { data, error } = await supabase.from('models').insert([{ project_id: projectId, name, created_by: createdBy }]).select().single();
+
+        // 1. Try to find existing model by name in this project
+        const { data: existing } = await supabase
+            .from('models')
+            .select('id')
+            .eq('project_id', projectId)
+            .eq('name', name)
+            .maybeSingle();
+
+        if (existing) return existing;
+
+        // 2. Create if not exists
+        const { data, error } = await supabase
+            .from('models')
+            .insert([{ project_id: projectId, name, created_by: createdBy }])
+            .select()
+            .single();
+
         if (error) throw error;
         return data;
     },
