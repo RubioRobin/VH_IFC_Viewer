@@ -8,9 +8,7 @@ import { UsersPage } from './pages/Users'
 import { ProjectsPage } from './pages/Projects'
 import { ProjectDetailsPage } from './pages/ProjectDetails'
 import { SettingsPage } from './pages/Settings'
-import { QRCodesPage } from './pages/QRCodes'
 import { ToastProvider } from './components/ui/toast'
-
 import { LoginPage } from './pages/Login'
 
 ReactDOM.createRoot(document.getElementById('admin-app')!).render(
@@ -24,7 +22,6 @@ ReactDOM.createRoot(document.getElementById('admin-app')!).render(
                         <Route path="projects" element={<ProjectsPage />} />
                         <Route path="projects/:id" element={<ProjectDetailsPage />} />
                         <Route path="users" element={<UsersPage />} />
-                        <Route path="qr" element={<QRCodesPage />} />
                         <Route path="settings" element={<SettingsPage />} />
                         {/* Fallback */}
                         <Route path="*" element={<Navigate to="/" replace />} />
