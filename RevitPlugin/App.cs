@@ -9,7 +9,7 @@ namespace VH_IFC_QR
     {
         public Result OnStartup(UIControlledApplication application)
         {
-            string tabName = "VH Engineering";
+            string tabName = "VH";
             try
             {
                 application.CreateRibbonTab(tabName);
@@ -22,9 +22,14 @@ namespace VH_IFC_QR
             PushButtonData buttonData = new PushButtonData("cmdExportIFC",
                 "Export IFC", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
             
-            buttonData.ToolTip = "Export current view to IFC locally.";
+            PushButtonData diagData = new PushButtonData("cmdDiagnostics",
+                "Test Verbinding", thisAssemblyPath, "VH_IFC_QR.DiagnosticCommand");
 
-            PushButton pushButton = panel.AddItem(buttonData) as PushButton;
+            buttonData.ToolTip = "Export current view to IFC locally.";
+            diagData.ToolTip = "Test de verbinding met de backend server.";
+
+            panel.AddItem(buttonData);
+            panel.AddItem(diagData);
 
             return Result.Succeeded;
         }

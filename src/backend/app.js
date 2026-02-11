@@ -21,6 +21,8 @@ const usersRouter = require('./routes/users');
 const adminRouter = require('./routes/admin');
 const statsRouter = require('./routes/stats');
 const debugRouter = require('./routes/debug');
+const pluginRouter = require('./routes/plugin');
+const shareRouter = require('./routes/share');
 
 
 
@@ -101,6 +103,8 @@ app.use('/api/public', publicRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', statsRouter);
+app.use('/api/plugin', pluginRouter);
+app.use('/api/share', shareRouter);
 
 
 

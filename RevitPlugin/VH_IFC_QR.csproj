@@ -13,6 +13,7 @@
   <ItemGroup>
 
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.*" ExcludeAssets="runtime" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <PropertyGroup Condition="$(Configuration.Contains('Debug'))">

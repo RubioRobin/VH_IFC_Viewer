@@ -252,8 +252,8 @@ const init = async () => {
   if (publicId) {
     console.log(`Initializing Public Viewer for ID: ${publicId}`);
     try {
-      // Fetch model info from Public API
-      const metaResponse = await fetch(`${baseUrl}/api/public/ifc/${publicId}`);
+      // Fetch model info from the new Public Share API
+      const metaResponse = await fetch(`${baseUrl}/api/share/${publicId}`);
 
       if (metaResponse.status === 404) throw new Error("Link ongeldig of verlopen");
       if (metaResponse.status === 410) throw new Error("Link is verlopen");

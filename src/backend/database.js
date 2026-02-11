@@ -250,7 +250,7 @@ async function getFileDownloadUrl(storagePath) {
     // Use Signed URL for private bucket access (15 minutes expiry)
     // This allows the frontend to download the file securely without a permanent public link.
     const { data, error } = await supabase.storage
-        .from('ifc-models')
+        .from('ifc-private')
         .createSignedUrl(storagePath, 60 * 15); // 15 mins
 
     if (error) {
@@ -265,7 +265,7 @@ async function createSignedUploadUrl(storagePath) {
     if (!supabase) return null;
     try {
         const { data, error } = await supabase.storage
-            .from('ifc-models')
+            .from('ifc-private')
             .createSignedUploadUrl(storagePath);
 
         if (error) throw error;
@@ -288,7 +288,7 @@ async function deleteFile(id) {
 
     // 2. Delete from Storage
     if (file.path) {
-        const { error } = await supabase.storage.from('ifc-models').remove([file.path]);
+        const { error } = await supabase.storage.from('ifc-private').remove([file.path]);
         if (error) console.error('Storage Delete Error:', error);
         else console.log('File deleted from storage:', file.path);
     }
@@ -547,5 +547,47 @@ module.exports = {
     getFileDownloadUrl, // Exported for server.js to redirect downloads
     createSignedUploadUrl,
 
-
+    // NEW Revit Workflow Methods
+    createModel: async (projectId, name, createdBy = 'plugin') => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('models').insert([{ project_id: projectId, name, created_by: createdBy }]).select().single();
+        if (error) throw error;
+        return data;
+    },
+    createModelVersion: async (modelId, storagePath, size, checksum) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('model_versions').insert([{ model_id: modelId, storage_path_ifc: storagePath, file_size: size, checksum_sha256: checksum }]).select().single();
+        if (error) throw error;
+        return data;
+    },
+    createShare: async (versionId, token) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('shares').insert([{ model_version_id: versionId, token }]).select().single();
+        if (error) throw error;
+        return data;
+    },
+    getShareByToken: async (token) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('shares').select('*, model_versions(*, models(*, projects(*)))').eq('token', token).eq('is_active', true).single();
+        if (error) return null;
+        return data;
+    },
+    createQRAsset: async (projectId, versionId, storagePath) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('qr_assets').insert([{ project_id: projectId, model_version_id: versionId, storage_path_png: storagePath }]).select().single();
+        if (error) throw error;
+        return data;
+    },
+    getQRAssetByVersion: async (versionId) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('qr_assets').select('*').eq('model_version_id', versionId).single();
+        if (error) return null;
+        return data;
+    },
+    linkSheet: async (versionId, sheetId, viewId, placementInfo) => {
+        if (!supabase) return null;
+        const { data, error } = await supabase.from('sheets_link').insert([{ model_version_id: versionId, revit_sheet_unique_id: sheetId, revit_view_unique_id: viewId, placement_info_json: placementInfo }]).select().single();
+        if (error) throw error;
+        return data;
+    }
 };
