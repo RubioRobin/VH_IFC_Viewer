@@ -11,6 +11,7 @@ import { Dialog } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { motion } from 'framer-motion';
 
 type ProjectStatus = 'actief' | 'in-uitvoering' | 'on-hold' | 'planning' | 'afgerond';
 
@@ -171,7 +172,12 @@ export function ProjectsPage() {
     }
 
     return (
-        <div className="space-y-8 pb-10">
+        <motion.div
+            className="space-y-8 pb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+        >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-primary font-bold text-sm tracking-wider uppercase mb-1">
@@ -325,6 +331,6 @@ export function ProjectsPage() {
                 variant="destructive"
                 confirmText="Verwijderen"
             />
-        </div >
+        </motion.div>
     );
 }

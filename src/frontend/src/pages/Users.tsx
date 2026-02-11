@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { fetchAPI } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { motion } from 'framer-motion';
 
 interface User {
     id: string;
@@ -133,7 +134,12 @@ export function UsersPage() {
     ];
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+        >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Gebruikers</h2>

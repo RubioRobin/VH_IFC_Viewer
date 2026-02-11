@@ -3,6 +3,7 @@ import { fetchAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { motion } from 'framer-motion';
 
 interface Stats {
     total_projects: number;
@@ -83,7 +84,12 @@ export function Dashboard() {
     }
 
     return (
-        <div className="space-y-10 pb-10">
+        <motion.div
+            className="space-y-10 pb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+        >
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -187,6 +193,6 @@ export function Dashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
