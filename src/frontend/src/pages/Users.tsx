@@ -186,13 +186,13 @@ export function UsersPage() {
                 }}
                 title="Nieuwe Gebruiker"
                 footer={
-                    <div className="flex gap-2">
-                        <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>Annuleren</Button>
-                        <Button onClick={handleCreateUser} disabled={creating || !newUsername || !newPassword} className="bg-primary hover:bg-primary/90">
+                    <>
+                        <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Annuleren</Button>
+                        <Button onClick={handleCreateUser} disabled={creating || !newUsername || !newPassword} className="bg-primary hover:bg-primary/90 min-w-[100px]">
                             {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Aanmaken
                         </Button>
-                    </div>
+                    </>
                 }
             >
                 <form onSubmit={handleCreateUser} className="space-y-4">

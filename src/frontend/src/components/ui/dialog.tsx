@@ -16,27 +16,31 @@ export function Dialog({ isOpen, onClose, title, children, footer }: DialogProps
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Content */}
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
+                    {/* Backdrop */}
+                    <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm transition-opacity" />
+
+                    {/* Content Container */}
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 0 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="w-full max-w-lg bg-background rounded-lg shadow-lg border pointer-events-auto"
+                            exit={{ opacity: 0, scale: 0.95, y: 0 }}
+                            className="w-full max-w-md bg-background rounded-xl shadow-2xl border flex flex-col overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex items-center justify-between p-6 border-b">
-                                <h2 className="text-lg font-semibold">{title}</h2>
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+                            <div className="flex items-center justify-between p-6 border-b bg-card">
+                                <h2 className="text-xl font-bold tracking-tight text-center w-full">{title}</h2>
+                                <Button variant="ghost" size="icon" onClick={onClose} className="absolute right-4 top-4 h-8 w-8 rounded-full hover:bg-muted">
                                     <X className="w-4 h-4" />
                                 </Button>
                             </div>
 
-                            <div className="p-6">
+                            <div className="p-6 space-y-4">
                                 {children}
                             </div>
 
                             {footer && (
-                                <div className="flex items-center justify-end gap-2 p-6 border-t bg-muted/20">
+                                <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-3 p-6 border-t bg-muted/10">
                                     {footer}
                                 </div>
                             )}
