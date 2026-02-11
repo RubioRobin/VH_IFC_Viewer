@@ -32,9 +32,10 @@ router.post('/', vereisAuthenticatie, async (req, res) => {
 // Delete a user
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {
-        // Prevent deleting self? Optional but good practice.
-        if (req.params.id === req.session.userId) {
-            return res.status(400).json({ error: 'Je kunt jezelf niet verwijderen.' });
+        // Check if user is 'admin'
+        const user = await db.getUserById(req.params.id);
+        if (user && user.username === 'admin') {
+            return res.status(403).json({ error: 'De hoofdgebruiker "admin" kan niet worden verwijderd.' });
         }
 
         await db.deleteUser(req.params.id);

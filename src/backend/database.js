@@ -71,6 +71,13 @@ async function getUserByUsername(username) {
     return data;
 }
 
+async function getUserById(id) {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+    if (error) return null;
+    return data;
+}
+
 async function getAllUsers() {
     if (!supabase) return [];
     // Select only safe fields
@@ -562,6 +569,7 @@ module.exports = {
     supabase,
     initDatabase,
     getUserByUsername,
+    getUserById,
     getAllUsers,
     deleteUser,
     getAllProjects,     // server.js calls this
