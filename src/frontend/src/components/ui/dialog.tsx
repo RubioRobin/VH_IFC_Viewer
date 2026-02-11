@@ -16,8 +16,7 @@ export function Dialog({ isOpen, onClose, title, children, footer }: DialogProps
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Backdrop */}
-                    <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm transition-opacity" />
+
 
                     {/* Content Container */}
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">

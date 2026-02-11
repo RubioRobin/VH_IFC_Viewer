@@ -240,7 +240,26 @@ export function ProjectDetailsPage() {
                                         <FileText className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-base group-hover:text-blue-600 transition-colors">{f.filename}</h4>
+                                        <h4 className="font-semibold text-base group-hover:text-blue-600 transition-colors">
+                                            {(() => {
+                                                // Clean filename: Remove UUIDs and clean up artifacts
+                                                // Pattern: "Name_UUID.ext" or "Name_UUID.Name.ext"
+                                                let name = f.filename || '';
+
+                                                // Remove UUIDs (case insensitive)
+                                                name = name.replace(/_?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_?/g, '');
+
+                                                // Remove duplicate extensions or weird dot patterns if any (e.g. "Test..ifc" -> "Test.ifc")
+                                                name = name.replace(/\.\.+/g, '.');
+
+                                                // If it ends with .Test.ifc or similar redundant naming patterns from the screenshot
+                                                // "Test_UUID.Test.ifc" -> "Test.ifc"
+                                                // Heuristic: if the name part appears twice?
+                                                // Let's stick to UUID removal first as that's the main culprit.
+
+                                                return name;
+                                            })()}
+                                        </h4>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                                             <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" /> {formatBytes(f.size)}</span>
                                             <span className="hidden sm:inline">•</span>
@@ -258,16 +277,7 @@ export function ProjectDetailsPage() {
                                     >
                                         <Eye className="w-4 h-4" /> Openen
                                     </Button>
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-9 w-9 text-muted-foreground hover:text-green-600"
-                                        title="Downloaden"
-                                        onClick={() => window.open(`${BASE_URL}/api/files/${f.id}/download`, '_blank')}
-                                    >
-                                        <Download className="w-4 h-4" />
-                                    </Button>
-                                    <div className="w-px h-6 bg-border mx-1"></div>
+
                                     <Button
                                         size="icon"
                                         variant="ghost"

@@ -180,10 +180,7 @@ export function ProjectsPage() {
         >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 text-primary font-bold text-sm tracking-wider uppercase mb-1">
-                        <Folder className="w-4 h-4" />
-                        <span>Projecten</span>
-                    </div>
+
                     <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Alle Projecten</h2>
                     <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je BIM-projecten en bijbehorende IFC-bestanden.</p>
                 </div>
