@@ -171,8 +171,8 @@ export function ProjectDetailsPage() {
                             <FileText className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">{project?.name}</h2>
-                            <p className="text-muted-foreground">{project?.description}</p>
+                            <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">{project?.name}</h2>
+                            <p className="text-slate-500 mt-1 max-w-2xl text-lg">{project?.description}</p>
                         </div>
                     </div>
                 </div>

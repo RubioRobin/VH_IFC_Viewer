@@ -87,8 +87,8 @@ export function ProfilePage() {
             transition={{ duration: 0.6, ease: "easeOut" }}
         >
             <div>
-                <h2 className="text-3xl font-bold tracking-tight">Mijn Profiel</h2>
-                <p className="text-muted-foreground">Beheer je accountinstellingen.</p>
+                <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Mijn Profiel</h2>
+                <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je accountinstellingen.</p>
             </div>
 
             <div className="bg-card rounded-lg border shadow-sm p-6 md:p-8">
