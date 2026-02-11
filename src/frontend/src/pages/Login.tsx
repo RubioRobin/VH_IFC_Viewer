@@ -38,9 +38,9 @@ export function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border">
+            <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-lg border">
                 <div className="text-center mb-8">
-                    <div className="w-12 h-12 bg-primary text-primary-foreground rounded-lg flex items-center justify-center mx-auto mb-4 text-xl font-bold">VH</div>
+                    <div className="w-12 h-12 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl font-bold">VH</div>
                     <h1 className="text-2xl font-bold">Admin Login</h1>
                     <p className="text-muted-foreground">Log in om het dashboard te openen.</p>
                 </div>
