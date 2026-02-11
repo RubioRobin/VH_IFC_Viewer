@@ -94,11 +94,6 @@ export function Dashboard() {
                     <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Overzicht</h2>
                     <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je BIM-modellen, projecten en live activiteit vanaf één plek.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="default" className="px-8 py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all" onClick={() => navigate('/projects')}>
-                        Bekijk Projecten
-                    </Button>
-                </div>
             </div>
 
             {/* Stats Grid */}
