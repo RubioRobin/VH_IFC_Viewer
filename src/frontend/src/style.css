@@ -1085,5 +1085,24 @@ bim-table [data-table-cell-value] {
   /* Adjust toolbar for mobile if necessary */
   .viewport-ui-overlay {
     padding: 0.5rem !important;
+    pointer-events: none;
+    /* Ensure clicks pass through overlay area */
+  }
+
+  /* Force toolbar to be visible and scrollable */
+  bim-grid[floating],
+  bim-grid[floating]>bim-toolbar {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    overflow: auto !important;
+    /* Enable scrolling if content overflows */
+    pointer-events: auto !important;
+    /* Re-enable clicks on the toolbar itself */
+  }
+
+  /* Ensure the toolbar content wraps or scrolls */
+  bim-toolbar-section {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
   }
 }
