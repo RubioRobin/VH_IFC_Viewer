@@ -242,6 +242,22 @@ async function getFileDownloadUrl(storagePath) {
     return data.signedUrl;
 }
 
+// Generate Signed Upload URL (PUT)
+async function createSignedUploadUrl(storagePath) {
+    if (!supabase) return null;
+    try {
+        const { data, error } = await supabase.storage
+            .from('ifc-models')
+            .createSignedUploadUrl(storagePath);
+
+        if (error) throw error;
+        return data; // { signedUrl, token, path }
+    } catch (e) {
+        console.error('Error creating upload URL:', e);
+        return null;
+    }
+}
+
 
 
 // Matches server.js: db.deleteFile(id)
@@ -261,6 +277,45 @@ async function deleteFile(id) {
 
     // 3. Delete from DB
     await supabase.from('files').delete().eq('id', id);
+}
+
+// Matches server.js: db.createFile(id, projectId, filename, path, size)
+async function createFile(id, projectId, filename, path, size) {
+    if (!supabase) return null;
+    const newFile = {
+        id: id || uuidv4(),
+        project_id: projectId,
+        filename: filename,
+        path: path,
+        size: size,
+        upload_date: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase.from('files').insert([newFile]).select().single();
+
+    if (error) {
+        console.error('createFile Error:', error);
+        throw error;
+    }
+
+    await logActivity(projectId, 'Admin', 'upload_file', `File "${filename}" uploaded`);
+    return data;
+}
+
+async function updateFile(id, updates) {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+        .from('files')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('updateFile Error:', error);
+        return null;
+    }
+    return data;
 }
 
 // --- QR CODES ---
@@ -395,6 +450,8 @@ module.exports = {
     getAllFiles,
 
     getFileById,
+    createFile,
+    updateFile,
     deleteFile,
 
     getAllQRCodes,
@@ -409,7 +466,9 @@ module.exports = {
     getRecentActivity,
     getStatistics,
     getStatistics,
+    getStatistics,
     getFileDownloadUrl, // Exported for server.js to redirect downloads
+    createSignedUploadUrl,
 
 
 };

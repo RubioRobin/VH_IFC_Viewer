@@ -1,6 +1,7 @@
+export const API_URL = import.meta.env.VITE_API_URL || 'https://vh-ifc-backend.onrender.com';
+
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://vh-ifc-backend.onrender.com';
-    const res = await fetch(`${baseUrl}/api${endpoint}`, {
+    const res = await fetch(`${API_URL}/api${endpoint}`, {
         ...options,
         credentials: 'include',
         headers: {
@@ -10,13 +11,35 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     });
 
     if (!res.ok) {
-        if (res.status === 401) {
-            window.location.hash = '/login';
+        if (res.status === 401 && !endpoint.includes('/auth/login')) {
+            // Redirect to login if unauthorized and not currently logging in
+            if (window.location.hash !== '#/login') {
+                window.location.hash = '/login';
+            }
             throw new Error("Unauthorized");
         }
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || `Request failed with status ${res.status}`);
+
+        let errorMessage = `Request failed with status ${res.status}`;
+        try {
+            const error = await res.json();
+            errorMessage = error.error || errorMessage;
+        } catch { }
+
+        throw new Error(errorMessage);
     }
+
+    // Handle 204 No Content
+    if (res.status === 204) return null;
 
     return res.json();
 }
+
+export const api = {
+    get: (endpoint: string) => fetchAPI(endpoint),
+    post: (endpoint: string, data: any) => fetchAPI(endpoint, { method: 'POST', body: JSON.stringify(data) }),
+    put: (endpoint: string, data: any) => fetchAPI(endpoint, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (endpoint: string) => fetchAPI(endpoint, { method: 'DELETE' }),
+
+    checkAuth: () => fetchAPI('/auth/me'),
+    logout: () => fetchAPI('/auth/logout', { method: 'POST' })
+};

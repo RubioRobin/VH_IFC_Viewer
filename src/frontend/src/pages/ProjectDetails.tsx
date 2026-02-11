@@ -113,8 +113,8 @@ export function ProjectDetailsPage() {
         const filesToUpload = event.target.files;
         if (!filesToUpload || filesToUpload.length === 0 || !id) return;
 
-        // Reset input immediately
         const fileList = Array.from(filesToUpload);
+        // Reset input
         event.target.value = '';
 
         setUploading(true);
@@ -125,18 +125,41 @@ export function ProjectDetailsPage() {
             toast({ type: 'info', title: 'Upload gestart', message: `${fileList.length} bestand(en) aan het uploaden...` });
 
             await Promise.all(fileList.map(async (file) => {
-                const formData = new FormData();
-                formData.append('file', file);
-
                 try {
-                    const res = await fetch(`${BASE_URL}/api/projects/${id}/upload`, {
+                    // 1. Get Ticket
+                    const ticketRes = await fetchAPI('/upload/ticket', {
                         method: 'POST',
-                        credentials: 'include',
-                        body: formData,
+                        body: JSON.stringify({
+                            projectId: id,
+                            fileName: file.name
+                        })
                     });
 
-                    if (!res.ok) throw new Error('Failed');
-                    await res.json();
+                    const { fileId, uploadUrl, storagePath } = ticketRes;
+
+                    // 2. Direct Upload to Supabase Storage
+                    const uploadRes = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': file.type || 'application/octet-stream'
+                        },
+                        body: file
+                    });
+
+                    if (!uploadRes.ok) throw new Error('Upload to storage failed');
+
+                    // 3. Confirm
+                    await fetchAPI('/upload/confirm', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            fileId,
+                            projectId: id,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            storagePath
+                        })
+                    });
+
                     successCount++;
                 } catch (err) {
                     console.error(`Failed to upload ${file.name}`, err);
@@ -154,7 +177,7 @@ export function ProjectDetailsPage() {
 
         } catch (error) {
             console.error(error);
-            toast({ type: 'error', title: 'Upload fout', message: 'Er ging iets mis.' });
+            toast({ type: 'error', title: 'Upload fout', message: 'Er ging iets mis tijdens het uploaden.' });
         } finally {
             setUploading(false);
         }
@@ -269,7 +292,7 @@ export function ProjectDetailsPage() {
                                     <div key={rev.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors gap-4">
                                         <div className="flex items-center gap-4">
                                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${rev.status === 'ready' ? 'bg-green-100 text-green-600' :
-                                                    rev.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
+                                                rev.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
                                                 }`}>
                                                 {rev.status === 'ready' ? <Eye className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
                                             </div>

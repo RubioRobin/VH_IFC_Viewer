@@ -59,6 +59,7 @@ router.post('/generate', async (req, res) => {
         // const publicUrl = `${frontendUrl}/v/${file_id}?element=${element_id}`;
         */
 
+        const qrId = uuidv4();
         const filePath = path.join(qrDir, `${qrId}.png`);
 
         await QRCode.toFile(filePath, publicUrl);

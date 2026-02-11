@@ -14,6 +14,7 @@ const db = require('./database');
 const { router: authRouter } = require('./routes/auth');
 const projectsRouter = require('./routes/projects');
 const { router: filesRouter } = require('./routes/files');
+const uploadRouter = require('./routes/upload'); // Add this
 const qrRouter = require('./routes/qr');
 const publicRouter = require('./routes/public');
 const adminRouter = require('./routes/admin');
@@ -22,6 +23,11 @@ const debugRouter = require('./routes/debug');
 
 
 
+const helmet = require('helmet');
+const xss = require('xss-clean');
+
+// ... (imports)
+
 const app = express();
 const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || '*';
@@ -29,10 +35,14 @@ const frontendUrl = process.env.FRONTEND_URL || '*';
 // --- CONFIG & HEALTH ---
 app.set('trust proxy', 1);
 
-console.log('--- Server Configuratie ---');
-console.log('FRONTEND_URL:', frontendUrl);
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('---------------------------');
+// --- SECURITY MIDDLEWARE ---
+app.use(helmet({
+    contentSecurityPolicy: false, // Allow inline scripts/styles for now to avoid breaking existing UI
+    crossOriginResourcePolicy: { policy: "cross-origin" } // Allow file downloads
+}));
+app.use(xss());
+
+// ... (logging)
 
 app.get('/', (req, res) => {
     res.send('VH IFC Viewer Backend is ONLINE! 🚀');
@@ -44,22 +54,32 @@ app.get('/api/health', (req, res) => {
 
 // --- MIDDLEWARE ---
 app.use(cors({
-    origin: frontendUrl === '*' ? true : [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [frontendUrl, 'http://localhost:5173', 'http://localhost:5174'];
+        if (frontendUrl === '*' || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Body limit against DoS
 
 app.use(session({
-    secret: 'bim-admin-secret-key',
+    secret: process.env.SESSION_SECRET || 'bim-admin-secret-key-CHANGE-THIS-IN-PROD',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: true,
+        secure: process.env.NODE_ENV === 'production', // Secure only in prod
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'none'
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
 }));
 
@@ -70,6 +90,7 @@ db.initDatabase().then(() => console.log('Database initialisatie gestart'));
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/upload', uploadRouter); // Add this
 app.use('/api/qr', qrRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/admin', adminRouter);

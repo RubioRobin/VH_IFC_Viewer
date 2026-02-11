@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
         const user = await db.getUserByUsername(username);
         console.log(`[LOGIN] Gebruiker gevonden:`, user ? 'JA' : 'NEE');
 
-        if (user && bcrypt.compareSync(password, user.password_hash)) {
+        if (user && await bcrypt.compare(password, user.password_hash)) {
             req.session.userId = user.id;
             console.log(`[LOGIN] Succes! Sessie ID: ${req.session.id}`);
             res.json({ message: 'OK', user: { id: user.id, username: user.username } });
@@ -47,7 +47,30 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// LOGOUT Route (Optioneel, voor de volledigheid)
+// CHECK AUTH Route (Backend-side verification for Frontend)
+router.get('/me', vereisAuthenticatie, async (req, res) => {
+    // If middleware passes, user is basically authenticated
+    // But we should fetch fresh user data to be safe/sure
+    try {
+        let userId = req.session.userId;
+
+        // Handle API Key mock user
+        if (userId === 'admin-api-user') {
+            return res.json({ id: 'admin-api', username: 'API Admin', role: 'admin' });
+        }
+
+        const user = await db.getUserById(userId);
+        if (user) {
+            res.json({ id: user.id, username: user.username, role: user.role || 'admin' });
+        } else {
+            res.status(401).json({ error: 'Sessie ongeldig (gebruiker niet gevonden)' });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// LOGOUT Route
 router.post('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) return res.status(500).json({ error: 'Uitloggen mislukt' });
