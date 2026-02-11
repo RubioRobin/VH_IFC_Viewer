@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
@@ -20,6 +21,8 @@ export function ProfilePage() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
+    const navigate = useNavigate();
+
     useEffect(() => {
         loadProfile();
     }, []);
@@ -32,7 +35,8 @@ export function ProfilePage() {
             setAvatarUrl(user.avatar_url || '');
         } catch (err) {
             console.error(err);
-            toast({ type: 'error', title: 'Fout', message: 'Kon profiel niet laden.' });
+            toast({ type: 'error', title: 'Sessie verlopen', message: 'Log opnieuw in.' });
+            navigate('/login');
         } finally {
             setLoading(false);
         }

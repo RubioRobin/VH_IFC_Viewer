@@ -78,15 +78,18 @@ app.use(cors({
 
 app.use(express.json({ limit: '10kb' })); // Body limit against DoS
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'bim-admin-secret-key-CHANGE-THIS-IN-PROD',
     resave: false,
     saveUninitialized: false,
+    proxy: true, // Required for Render/Heroku to trust the proxy for secure cookies
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Secure only in prod
+        secure: isProduction, // Secure needs HTTPS
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        sameSite: isProduction ? 'none' : 'lax' // 'none' required for cross-site (frontend <-> backend)
     }
 }));
 
