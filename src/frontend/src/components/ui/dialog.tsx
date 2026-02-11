@@ -24,7 +24,7 @@ export function Dialog({ isOpen, onClose, title, children, footer }: DialogProps
                             initial={{ opacity: 0, scale: 0.95, y: 0 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 0 }}
-                            className="w-full max-w-md bg-background rounded-xl shadow-2xl border flex flex-col overflow-hidden"
+                            className="relative w-full max-w-md bg-background rounded-xl shadow-2xl border flex flex-col overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between p-6 border-b bg-card">

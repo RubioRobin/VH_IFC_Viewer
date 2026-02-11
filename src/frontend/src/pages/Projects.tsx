@@ -108,7 +108,7 @@ export function ProjectsPage() {
             setNewDesc('');
         } catch (error) {
             console.error(error);
-            toast({ type: 'error', title: 'Fout', message: 'Kon project niet aanmaken' });
+            toast({ type: 'error', title: 'Fout', message: error instanceof Error ? error.message : 'Kon project niet aanmaken' });
         } finally {
             setCreating(false);
         }
@@ -198,9 +198,7 @@ export function ProjectsPage() {
                     >
                         <CardHeader className="pb-4 bg-gradient-to-br from-slate-50 to-white">
                             <div className="flex justify-between items-start">
-                                <div className="p-3 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-colors">
-                                    <Folder className="w-7 h-7 text-primary" />
-                                </div>
+
                                 <div className="flex gap-2 items-start">
                                     <div className="relative">
                                         <button

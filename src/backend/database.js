@@ -204,6 +204,17 @@ async function createProject(id, name, description, status) {
         status: status || 'actief'
     };
 
+    // Check for existing project with same name
+    const { data: existing } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', name)
+        .maybeSingle();
+
+    if (existing) {
+        throw new Error('Een project met deze naam bestaat al.');
+    }
+
     const { data, error } = await supabase
         .from('projects')
         .insert([newProject])
