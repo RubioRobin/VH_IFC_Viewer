@@ -121,7 +121,7 @@ async function getAllProjects() {
 
         return data.map(p => ({
             ...p,
-            files: p.files || [],
+            files: (p.files || []).map(mapFile),
             file_count: (p.files || []).length,
             total_size: (p.files || []).reduce((acc, f) => acc + (f.size || 0), 0)
         }));
@@ -129,6 +129,16 @@ async function getAllProjects() {
         console.error('getProjects error:', e);
         return [];
     }
+}
+
+// Helper to map DB columns to App fields
+function mapFile(f) {
+    if (!f) return null;
+    return {
+        ...f,
+        filename: f.filename || f.original_name,
+        upload_date: f.upload_date || f.created_at
+    };
 }
 
 // Matches server.js: db.getProjectById(id)
@@ -142,8 +152,10 @@ async function getProjectById(id) {
             .single();
 
         if (error) return null;
-        // Supabase returns files nested, which matches requirement, but let's ensure array
-        return { ...data, files: data.files || [] };
+        return {
+            ...data,
+            files: (data.files || []).map(mapFile)
+        };
     } catch (e) { return null; }
 }
 
@@ -206,7 +218,7 @@ async function deleteProject(id) {
 async function getFilesByProjectId(projectId) {
     if (!supabase) return [];
     const { data } = await supabase.from('files').select('*').eq('project_id', projectId);
-    return data || [];
+    return (data || []).map(mapFile);
 }
 
 // Matches server.js: db.getAllFiles() -> Was exported as null/empty in old code?
@@ -214,7 +226,7 @@ async function getFilesByProjectId(projectId) {
 async function getAllFiles() {
     if (!supabase) return [];
     const { data } = await supabase.from('files').select('*');
-    return data || [];
+    return (data || []).map(mapFile);
 }
 
 // Matches server.js: db.getFileById(id) -> Used for deletion
@@ -222,7 +234,7 @@ async function getFileById(id) {
     if (!supabase) return null;
     const { data, error } = await supabase.from('files').select('*').eq('id', id).single();
     if (error) return null;
-    return data;
+    return mapFile(data);
 }
 
 // --- STORAGE ---
@@ -291,7 +303,7 @@ async function createFile(id, projectId, filename, path, size) {
     const newFile = {
         id: id || uuidv4(),
         project_id: projectId,
-        filename: filename,
+        original_name: filename, // DB uses original_name
         path: path,
         size: size
     };
@@ -304,14 +316,23 @@ async function createFile(id, projectId, filename, path, size) {
     }
 
     await logActivity(projectId, 'Admin', 'upload_file', `File "${filename}" uploaded`);
-    return data;
+    return mapFile(data);
 }
 
 async function updateFile(id, updates) {
     if (!supabase) return null;
+
+    // Clean updates from non-existent columns based on schema audit
+    const cleanUpdates = { ...updates };
+    delete cleanUpdates.upload_date;
+    if (cleanUpdates.filename) {
+        cleanUpdates.original_name = cleanUpdates.filename;
+        delete cleanUpdates.filename;
+    }
+
     const { data, error } = await supabase
         .from('files')
-        .update(updates)
+        .update(cleanUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -320,7 +341,7 @@ async function updateFile(id, updates) {
         console.error('updateFile Error:', error);
         return null;
     }
-    return data;
+    return mapFile(data);
 }
 
 // --- QR CODES ---
