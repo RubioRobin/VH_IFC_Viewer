@@ -31,6 +31,10 @@ const xss = require('xss-clean');
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Trust Proxy for Render (important for secure cookies)
+app.set('trust proxy', 1);
+
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
 // --- CONFIG & HEALTH ---

@@ -300,11 +300,15 @@ async function deleteFile(id) {
 // Matches server.js: db.createFile(id, projectId, filename, path, size)
 async function createFile(id, projectId, filename, path, size) {
     if (!supabase) return null;
+
+    // Defensive check: Ensure we have a valid name
+    const finalName = filename || 'unnamed_file_' + Date.now();
+
     const newFile = {
         id: id || uuidv4(),
         project_id: projectId,
-        filename: filename,       // Provide both columns
-        original_name: filename,  // to satisfy NOT NULL constraints
+        filename: finalName,       // Provide both columns
+        original_name: finalName,  // to satisfy NOT NULL constraints
         path: path,
         size: size
     };
