@@ -65,7 +65,7 @@ export function LoginPage() {
                             disabled={isLoading}
                         />
                     </div>
-                    <Button type="submit" className="w-full rounded-2xl" disabled={isLoading}>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Inloggen'}
                     </Button>
                 </form>
