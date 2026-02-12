@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { QrCode, Plus, Trash2, Download, Copy, ExternalLink, Calendar, FileText } from 'lucide-react';
 import { Dialog } from '../components/ui/dialog';
 import { useToast } from '../components/ui/toast';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Input } from '../components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -39,6 +40,9 @@ export function QRCodesPage() {
         fileId: string;
         storagePath: string;
     } | null>(null);
+
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [qrToDelete, setQrToDelete] = useState<string | null>(null);
 
     const { toast } = useToast();
 
@@ -88,13 +92,20 @@ export function QRCodesPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Weet je zeker dat je deze QR code wilt verwijderen?')) return;
+        setQrToDelete(id);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!qrToDelete) return;
         try {
-            await fetchAPI(`/qr/${id}`, { method: 'DELETE' });
+            await fetchAPI(`/qr/${qrToDelete}`, { method: 'DELETE' });
             toast({ type: 'success', title: 'Verwijderd', message: 'QR code verwijderd.' });
-            setQrs(qrs.filter(q => q.id !== id));
+            setQrs(qrs.filter(q => q.id !== qrToDelete));
         } catch (error) {
             toast({ type: 'error', title: 'Fout', message: 'Kon niet verwijderen.' });
+        } finally {
+            setQrToDelete(null);
         }
     };
 
@@ -260,6 +271,16 @@ export function QRCodesPage() {
                     </div>
                 )}
             </Dialog>
+
+            <ConfirmDialog
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmDelete}
+                title="QR Code Verwijderen"
+                description="Weet je zeker dat je deze QR code wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+                variant="destructive"
+                confirmText="Verwijderen"
+            />
         </div>
     );
 }

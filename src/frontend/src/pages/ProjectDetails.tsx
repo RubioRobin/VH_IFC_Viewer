@@ -9,6 +9,7 @@ import { useToast } from '../components/ui/toast';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Input } from '../components/ui/input';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 
 interface FileData {
     id: string;
@@ -35,6 +36,8 @@ export function ProjectDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) loadData();
@@ -132,13 +135,20 @@ export function ProjectDetailsPage() {
     };
 
     const handleDelete = async (fileId: string) => {
-        if (!confirm('Weet je zeker dat je dit bestand wilt verwijderen?')) return;
+        setFileToDelete(fileId);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!fileToDelete) return;
         try {
-            await fetchAPI(`/files/${fileId}`, { method: 'DELETE' });
+            await fetchAPI(`/files/${fileToDelete}`, { method: 'DELETE' });
             toast({ type: 'success', title: 'Verwijderd', message: 'Bestand is verwijderd.' });
-            setFiles(files.filter(f => f.id !== fileId));
+            setFiles(files.filter(f => f.id !== fileToDelete));
         } catch (error) {
             toast({ type: 'error', title: 'Fout', message: 'Kon bestand niet verwijderen.' });
+        } finally {
+            setFileToDelete(null);
         }
     };
 
@@ -314,6 +324,16 @@ export function ProjectDetailsPage() {
                     )}
                 </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmDelete}
+                title="Bestand Verwijderen"
+                description="Weet je zeker dat je dit bestand wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+                variant="destructive"
+                confirmText="Verwijderen"
+            />
         </div>
     );
 }

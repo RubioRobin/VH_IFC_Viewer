@@ -15,6 +15,7 @@ import {
     RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 
 interface DetailedStats {
     projects: { name: string; count: number }[];
@@ -25,6 +26,7 @@ interface DetailedStats {
 export function Statistics() {
     const [stats, setStats] = useState<DetailedStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -41,15 +43,13 @@ export function Statistics() {
     }, []);
 
     const handleResetStats = async () => {
-        if (!confirm('Weet je zeker dat je alle scan statistieken wilt resetten?')) return;
-
         try {
             await fetchAPI('/statistics/reset', { method: 'POST' });
             // Refresh data
             const data = await fetchAPI('/statistics/detailed');
             setStats(data);
         } catch (error: any) {
-            alert('Fout bij resetten: ' + error.message);
+            console.error('Fout bij resetten:', error);
         }
     };
 
@@ -89,7 +89,7 @@ export function Statistics() {
                 <Button
                     variant="outline"
                     className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
-                    onClick={handleResetStats}
+                    onClick={() => setResetDialogOpen(true)}
                 >
                     <RotateCcw className="w-4 h-4" />
                     Reset Statistieken
@@ -142,17 +142,24 @@ export function Statistics() {
                         Scan Activiteit (Laatste 30 dagen)
                     </h3>
                 </div>
-                <div className="h-64 flex items-end gap-1 sm:gap-2">
+                <div className="h-64 flex items-end gap-1 sm:gap-1.5 relative border-b border-slate-100">
+                    {/* Background Grid Lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-[0.03]">
+                        {[0, 1, 2, 3, 4].map(i => <div key={i} className="border-t border-slate-900 w-full h-0" />)}
+                    </div>
+
                     {stats?.timeline.map((t, i) => (
                         <motion.div
                             key={t.date}
-                            className="flex-1 bg-primary/20 hover:bg-primary transition-colors rounded-t-sm relative group"
+                            className="flex-1 min-w-[8px] max-w-[24px] bg-gradient-to-t from-primary/40 to-primary hover:to-primary/80 transition-all rounded-t-sm relative group cursor-pointer"
                             initial={{ height: 0 }}
-                            animate={{ height: `${(t.count / maxTimelineCount) * 100}%` }}
-                            transition={{ delay: i * 0.02, duration: 0.5 }}
+                            animate={{ height: `${(t.count / (maxTimelineCount || 1)) * 100}%` }}
+                            transition={{ delay: i * 0.01, duration: 0.5, ease: "easeOut" }}
                         >
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                {t.date}: {t.count}
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-xl whitespace-nowrap z-10 pointer-events-none scale-90 group-hover:scale-100">
+                                <div className="font-bold border-b border-white/10 pb-0.5 mb-0.5">{t.date}</div>
+                                <div className="text-primary-foreground/80">{t.count} scans</div>
+                                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
                             </div>
                         </motion.div>
                     ))}
@@ -240,6 +247,16 @@ export function Statistics() {
                     </div>
                 </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={resetDialogOpen}
+                onClose={() => setResetDialogOpen(false)}
+                onConfirm={handleResetStats}
+                title="Statistieken Resetten"
+                description="Weet je zeker dat je alle scan statistieken wilt resetten? Dit kan niet ongedaan worden gemaakt."
+                variant="destructive"
+                confirmText="Reset Alles"
+            />
         </motion.div>
     );
 }
