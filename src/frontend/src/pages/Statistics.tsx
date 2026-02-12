@@ -11,7 +11,8 @@ import {
     Calendar,
     ArrowUpRight,
     ArrowDownRight,
-    Search
+    Search,
+    RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -39,6 +40,19 @@ export function Statistics() {
         load();
     }, []);
 
+    const handleResetStats = async () => {
+        if (!confirm('Weet je zeker dat je alle scan statistieken wilt resetten?')) return;
+
+        try {
+            await fetchAPI('/statistics/reset', { method: 'POST' });
+            // Refresh data
+            const data = await fetchAPI('/statistics/detailed');
+            setStats(data);
+        } catch (error: any) {
+            alert('Fout bij resetten: ' + error.message);
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-8 space-y-8 animate-pulse">
@@ -64,12 +78,22 @@ export function Statistics() {
             transition={{ duration: 0.6 }}
         >
             {/* Header */}
-            <div>
-                <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
-                    <BarChart3 className="w-10 h-10 text-primary" />
-                    Statistieken Overzicht
-                </h2>
-                <p className="text-slate-500 mt-2 text-lg">Gedetailleerde inzichten in het gebruik van QR-codes en projectactiviteit.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
+                        <BarChart3 className="w-10 h-10 text-primary" />
+                        Statistieken Overzicht
+                    </h2>
+                    <p className="text-slate-500 mt-2 text-lg">Gedetailleerde inzichten in het gebruik van QR-codes en projectactiviteit.</p>
+                </div>
+                <Button
+                    variant="outline"
+                    className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
+                    onClick={handleResetStats}
+                >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset Statistieken
+                </Button>
             </div>
 
             {/* Quick Stats */}
