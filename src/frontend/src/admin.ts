@@ -298,7 +298,12 @@ function renderStatisticsTab() {
 
     return `
         <div class="tab-content">
-            <h2>Statistieken</h2>
+            <div class="content-header">
+                <h2>Statistieken</h2>
+                <button class="btn-secondary" onclick="window.resetStatistics()">
+                    Statistieken Resetten
+                </button>
+            </div>
             
             <div class="stats-grid">
                 <div class="stat-card glass-panel">
@@ -822,6 +827,30 @@ function closeModal() {
     const modalContainer = document.getElementById('modal-container')!;
     modalContainer.innerHTML = '';
 }
+
+(window as any).resetStatistics = async () => {
+    if (!confirm('Weet je zeker dat je alle scan statistieken wilt resetten?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/statistics/reset`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            alert('Statistieken gereset.');
+            await fetchStatistics();
+            await fetchActivity();
+            render();
+        } else {
+            const error = await response.json();
+            alert('Fout bij resetten: ' + (error.error || 'Onbekende fout'));
+        }
+    } catch (error) {
+        console.error('Reset error:', error);
+        alert('Netwerkfout bij resetten.');
+    }
+};
 
 (window as any).closeModal = closeModal;
 (window as any).logout = logout;

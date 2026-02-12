@@ -468,6 +468,19 @@ async function logActivity(projectId, user, type, details) {
     if (error) console.error('Activity Log Error:', error);
 }
 
+async function resetScanActivity() {
+    if (!supabase) return;
+    const { error } = await supabase
+        .from('activity')
+        .delete()
+        .eq('type', 'scan');
+
+    if (error) {
+        console.error('Reset Scans Error:', error);
+        throw error;
+    }
+}
+
 // Matches server.js: db.getRecentActivity(limit)
 async function getRecentActivity(limit = 20) {
     if (!supabase) return [];
@@ -632,6 +645,7 @@ module.exports = {
     uploadRevisionFile,
 
     logActivity,
+    resetScanActivity,
     getRecentActivity,
     getStatistics,
     getStatistics,

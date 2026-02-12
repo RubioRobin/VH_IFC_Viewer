@@ -12,6 +12,15 @@ router.get('/statistics', vereisAuthenticatie, async (req, res) => {
     }
 });
 
+router.post('/statistics/reset', vereisAuthenticatie, async (req, res) => {
+    try {
+        await db.resetScanActivity();
+        res.json({ success: true, message: 'Scan statistieken gereset.' });
+    } catch (e) {
+        res.status(500).json({ error: 'Fout bij het resetten van statistieken.' });
+    }
+});
+
 router.get('/activity', vereisAuthenticatie, async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     try {
