@@ -18,14 +18,6 @@ export function Dialog({ isOpen, onClose, title, children, footer }: DialogProps
                 <>
 
 
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[9998]"
-                    />
 
                     {/* Content Container */}
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
@@ -48,7 +40,7 @@ export function Dialog({ isOpen, onClose, title, children, footer }: DialogProps
                             </div>
 
                             {footer && (
-                                <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
+                                <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-3 p-6 border-t border-slate-100 bg-white">
                                     {footer}
                                 </div>
                             )}
