@@ -1099,8 +1099,8 @@ bim-table [data-table-cell-value] {
     pointer-events: auto;
     display: flex;
     justify-content: center;
-    /* Add safe area inset + extra padding to clear browser UI */
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    /* Significantly increased padding to clear mobile browser bottom bars (Safari/Chrome) */
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
 
   /* Force toolbar to be visible and scrollable */
