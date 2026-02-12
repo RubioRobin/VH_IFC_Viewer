@@ -33,7 +33,8 @@ export function Statistics() {
         const load = async () => {
             try {
                 setLoading(true);
-                const data = await fetchAPI(`/statistics/detailed?days=${period}`);
+                const fetchDays = period > 7 ? 366 : 7; // Use 366 to cover leap years
+                const data = await fetchAPI(`/statistics/detailed?days=${fetchDays}`);
                 setStats(data);
             } catch (err) {
                 console.error("Detailed stats load failed", err);
@@ -69,7 +70,12 @@ export function Statistics() {
         );
     }
 
-    const maxTimelineCount = Math.max(...(stats?.timeline.map(t => t.count) || [1]));
+    const getMonthName = (monthIndex: number) => {
+        return new Intl.DateTimeFormat('nl-NL', { month: 'long' }).format(new Date(2026, monthIndex));
+    };
+
+    const rawMax = Math.max(...(stats?.timeline.map(t => t.count) || [0]), 1);
+    const maxTimelineCount = Math.ceil(Math.max(rawMax, 5) / 5) * 5;
     const totalScans = stats?.timeline.reduce((sum, t) => sum + t.count, 0) || 0;
 
     return (
@@ -141,7 +147,7 @@ export function Statistics() {
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
                     <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-slate-400" />
-                        Scan Activiteit ({period === 365 ? 'Laatste jaar' : period === 30 ? 'Laatste maand' : 'Deze week'})
+                        Scan Activiteit ({period === 365 ? new Date().getFullYear() : period === 30 ? getMonthName(new Date().getMonth()) : 'Deze week'})
                     </h3>
                     <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                         {[7, 30, 365].map((p) => (
@@ -158,9 +164,18 @@ export function Statistics() {
                         ))}
                     </div>
                 </div>
-                <div className="h-64 flex items-end justify-between px-2 sm:px-6 relative border-b border-slate-100">
+                <div className="h-64 flex items-end justify-between px-2 sm:px-6 relative border-b border-slate-100 ml-8">
+                    {/* Y-axis Labels */}
+                    <div className="absolute -left-10 inset-y-0 flex flex-col justify-between text-[10px] font-black text-slate-300 py-1 pointer-events-none text-right w-8">
+                        <span>{maxTimelineCount}</span>
+                        <span>{Math.round(maxTimelineCount * 0.75)}</span>
+                        <span>{Math.round(maxTimelineCount * 0.5)}</span>
+                        <span>{Math.round(maxTimelineCount * 0.25)}</span>
+                        <span>0</span>
+                    </div>
+
                     {/* Background Grid Lines */}
-                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-[0.03]">
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
                         {[0, 1, 2, 3, 4].map(i => <div key={i} className="border-t border-slate-900 w-full h-0" />)}
                     </div>
 
@@ -180,7 +195,7 @@ export function Statistics() {
                             for (let i = 0; i < 7; i++) {
                                 const d = new Date(monday);
                                 d.setDate(monday.getDate() + i);
-                                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                const dateStr = formatLocalDate(d);
                                 const dataPoint = stats?.timeline.find(t => t.date === dateStr);
                                 const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
                                 const isToday = d.toDateString() === today.toDateString();
@@ -192,23 +207,49 @@ export function Statistics() {
                                     isToday
                                 });
                             }
-                        } else {
-                            // Rolling periods (30d, 1y)
-                            for (let i = period - 1; i >= 0; i--) {
-                                const d = new Date();
-                                d.setDate(d.getDate() - i);
-                                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        } else if (period === 30) {
+                            // Calendar Month: 1st to End
+                            const now = new Date();
+                            const year = now.getFullYear();
+                            const month = now.getMonth();
+                            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                            for (let i = 1; i <= daysInMonth; i++) {
+                                const d = new Date(year, month, i);
+                                const dateStr = formatLocalDate(d);
                                 const dataPoint = stats?.timeline.find(t => t.date === dateStr);
-                                const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
-                                const monthDay = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 
                                 days.push({
                                     date: dateStr,
                                     count: dataPoint?.count || 0,
-                                    dayName,
-                                    monthDay,
-                                    isMonthStart: d.getDate() === 1,
-                                    isToday: d.toDateString() === new Date().toDateString()
+                                    dayNum: i,
+                                    isToday: d.toDateString() === now.toDateString(),
+                                    isStart: i === 1,
+                                    isMid: i === Math.floor(daysInMonth / 2),
+                                    isEnd: i === daysInMonth
+                                });
+                            }
+                        } else {
+                            // Calendar Year: Jan to Dec (as 12 monthly bars)
+                            const year = new Date().getFullYear();
+                            for (let m = 0; m < 12; m++) {
+                                const daysInMonth = new Date(year, m + 1, 0).getDate();
+                                let monthCount = 0;
+                                let monthDateStr = "";
+
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                    const dateStr = formatLocalDate(new Date(year, m, d));
+                                    if (d === 1) monthDateStr = dateStr;
+                                    const dataPoint = stats?.timeline.find(t => t.date === dateStr);
+                                    monthCount += dataPoint?.count || 0;
+                                }
+
+                                days.push({
+                                    date: monthDateStr,
+                                    count: monthCount,
+                                    monthName: new Intl.DateTimeFormat('nl-NL', { month: 'short' }).format(new Date(year, m, 1)).replace('.', ''),
+                                    isToday: new Date().getMonth() === m,
+                                    isMonth: true
                                 });
                             }
                         }
@@ -246,14 +287,14 @@ export function Statistics() {
                                             {t.isToday ? 'Vandaag' : t.dayName}
                                         </span>
                                     )}
-                                    {period === 30 && (i === 0 || i === period - 1 || i === Math.floor(period / 2)) && (
+                                    {period === 30 && ((t as any).isStart || (t as any).isMid || (t as any).isEnd) && (
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                            {(t as any).monthDay}
+                                            {(t as any).dayNum} {getMonthName(new Date().getMonth()).slice(0, 3)}
                                         </span>
                                     )}
-                                    {period === 365 && (t as any).isMonthStart && (
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">
-                                            {new Date(t.date).toLocaleDateString('nl-NL', { month: 'short' }).slice(0, 1)}
+                                    {period === 365 && (
+                                        <span className={`text-[10px] font-bold uppercase ${t.isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                            {(t as any).monthName}
                                         </span>
                                     )}
                                 </div>
