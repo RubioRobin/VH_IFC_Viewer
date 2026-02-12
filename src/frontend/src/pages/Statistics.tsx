@@ -165,19 +165,29 @@ export function Statistics() {
                     </div>
                 </div>
                 <div className="h-64 flex items-end justify-between px-2 sm:px-6 relative border-b border-slate-100 ml-8">
-                    {/* Y-axis Labels */}
-                    <div className="absolute -left-10 inset-y-0 flex flex-col justify-between text-[10px] font-black text-slate-300 py-1 pointer-events-none text-right w-8">
-                        <span>{maxTimelineCount}</span>
-                        <span>{Math.round(maxTimelineCount * 0.75)}</span>
-                        <span>{Math.round(maxTimelineCount * 0.5)}</span>
-                        <span>{Math.round(maxTimelineCount * 0.25)}</span>
-                        <span>0</span>
-                    </div>
+                    {(() => {
+                        const yAxisSteps = [];
+                        for (let i = maxTimelineCount; i >= 0; i -= 5) {
+                            yAxisSteps.push(i);
+                        }
+                        return (
+                            <>
+                                {/* Y-axis Labels */}
+                                <div className="absolute -left-10 inset-y-0 flex flex-col justify-between text-[10px] font-black text-slate-300 py-1 pointer-events-none text-right w-8">
+                                    {yAxisSteps.map(step => (
+                                        <span key={step}>{step}</span>
+                                    ))}
+                                </div>
 
-                    {/* Background Grid Lines */}
-                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
-                        {[0, 1, 2, 3, 4].map(i => <div key={i} className="border-t border-slate-900 w-full h-0" />)}
-                    </div>
+                                {/* Background Grid Lines */}
+                                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
+                                    {yAxisSteps.map(step => (
+                                        <div key={step} className="border-t border-slate-900 w-full h-0" />
+                                    ))}
+                                </div>
+                            </>
+                        );
+                    })()}
 
                     {(() => {
                         // Helper for local YYYY-MM-DD
