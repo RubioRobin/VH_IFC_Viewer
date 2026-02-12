@@ -12,10 +12,12 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Search,
-    RotateCcw
+    RotateCcw,
+    ExternalLink
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { useNavigate } from 'react-router-dom';
 
 interface DetailedStats {
     projects: { name: string; count: number }[];
@@ -24,6 +26,7 @@ interface DetailedStats {
 }
 
 export function Statistics() {
+    const navigate = useNavigate();
     const [stats, setStats] = useState<DetailedStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -332,11 +335,20 @@ export function Statistics() {
             <div className="grid gap-8 md:grid-cols-2">
                 {/* Projects Table */}
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                    <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                         <h3 className="font-bold text-slate-900 flex items-center gap-2">
                             <FolderKanban className="w-4 h-4 text-slate-400" />
                             Scans per Project
                         </h3>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-[11px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 gap-2 h-8"
+                            onClick={() => navigate('/projects')}
+                        >
+                            Bekijk alle projecten
+                            <ExternalLink className="w-3 h-3" />
+                        </Button>
                     </div>
                     <div className="p-2">
                         <table className="w-full text-left">
