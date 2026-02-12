@@ -110,8 +110,11 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, asyn
     const { modelId } = req.params;
     const { fileName, contentType, fileSize, checksumSha256 } = req.body;
 
+    // Sanitize filename to prevent "InvalidKey" errors in Supabase Storage
+    const sanitizedFileName = (fileName || 'unnamed.ifc').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
     try {
-        const storagePath = `revit_exports/${modelId}/${uuidv4()}_${fileName}`;
+        const storagePath = `revit_exports/${modelId}/${uuidv4()}_${sanitizedFileName}`;
         const uploadInfo = await db.createSignedUploadUrl(storagePath);
 
         if (!uploadInfo) throw new Error('Kon upload URL niet genereren');
