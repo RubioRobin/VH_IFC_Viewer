@@ -72,7 +72,7 @@ router.get('/me', vereisAuthenticatie, async (req, res) => {
             res.status(401).json({ error: 'Sessie ongeldig (gebruiker niet gevonden)' });
         }
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -116,7 +116,7 @@ router.get('/users', vereisAuthenticatie, async (req, res) => {
         const users = await db.getAllUsers();
         res.json(users);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

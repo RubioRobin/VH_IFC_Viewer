@@ -10,7 +10,7 @@ router.post('/ticket', vereisAuthenticatie, async (req, res) => {
         const { projectId, fileId, fileName } = req.body;
 
         if (!projectId || !fileName) {
-            return res.status(400).json({ error: "ProjectId en FileName zijn verplicht" });
+            return res.status(400).json({ error: "Project ID en bestandsnaam zijn verplicht" });
         }
 
         // Generate or recycle ID
@@ -43,7 +43,7 @@ router.post('/ticket', vereisAuthenticatie, async (req, res) => {
 router.post('/reserve', vereisAuthenticatie, async (req, res) => {
     try {
         const { projectId, fileName } = req.body;
-        if (!projectId || !fileName) return res.status(400).json({ error: "Missing data" });
+        if (!projectId || !fileName) return res.status(400).json({ error: "Ontbrekende gegevens" });
 
         const id = uuidv4();
         // Simple clean name
@@ -51,7 +51,7 @@ router.post('/reserve', vereisAuthenticatie, async (req, res) => {
         const storagePath = `${projectId}/${id}_${safeName}`;
 
         const uploadData = await db.createSignedUploadUrl(storagePath);
-        if (!uploadData) return res.status(500).json({ error: "Failed to generate link" });
+        if (!uploadData) return res.status(500).json({ error: "Kon link niet genereren" });
 
         // Create placeholder file record
         await db.createFile(id, projectId, safeName, storagePath, 0);

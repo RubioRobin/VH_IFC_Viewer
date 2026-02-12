@@ -9,7 +9,7 @@ router.get('/:token', async (req, res) => {
     try {
         const share = await db.getShareByToken(token);
         if (!share) {
-            return res.status(404).json({ error: 'Share not found or expired' });
+            return res.status(404).json({ error: 'Link niet gevonden of verlopen' });
         }
 
         const version = share.model_versions;
@@ -21,7 +21,7 @@ router.get('/:token', async (req, res) => {
         const ifcSignedUrl = await db.getFileDownloadUrl(version.storage_path_ifc);
 
         if (!ifcSignedUrl) {
-            return res.status(500).json({ error: 'Failed to generate download link' });
+            return res.status(500).json({ error: 'Kon download link niet genereren' });
         }
 
         res.json({
@@ -36,7 +36,7 @@ router.get('/:token', async (req, res) => {
 
     } catch (e) {
         console.error('Share access error:', e);
-        res.status(500).json({ error: 'An error occurred while fetching the share' });
+        res.status(500).json({ error: 'Er is een fout opgetreden bij het ophalen van de gedeelde link' });
     }
 });
 

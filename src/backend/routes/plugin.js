@@ -13,7 +13,7 @@ const PLUGIN_CLIENT_SECRET = process.env.PLUGIN_CLIENT_SECRET || 'revit_secret_1
 const authenticatePlugin = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized: Missing token' });
+        return res.status(401).json({ error: 'Niet geautoriseerd: Token ontbreekt' });
     }
 
     const token = authHeader.split(' ')[1];
@@ -22,7 +22,7 @@ const authenticatePlugin = (req, res, next) => {
         req.plugin = decoded;
         next();
     } catch (err) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+        return res.status(401).json({ error: 'Niet geautoriseerd: Ongeldig token' });
     }
 };
 
@@ -35,7 +35,7 @@ router.post('/login', (req, res) => {
         return res.json({ access_token: token, expires_in: 3600 });
     }
 
-    res.status(401).json({ error: 'Invalid credentials' });
+    res.status(401).json({ error: 'Ongeldige inloggegevens' });
 });
 
 // 2. Get Projects
@@ -73,7 +73,7 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, asyn
         const storagePath = `revit_exports/${modelId}/${uuidv4()}_${fileName}`;
         const uploadInfo = await db.createSignedUploadUrl(storagePath);
 
-        if (!uploadInfo) throw new Error('Failed to generate upload URL');
+        if (!uploadInfo) throw new Error('Kon upload URL niet genereren');
 
         // Create a pending version record
         const version = await db.createModelVersion(modelId, storagePath, fileSize, checksumSha256);

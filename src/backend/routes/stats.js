@@ -8,7 +8,7 @@ router.get('/statistics', vereisAuthenticatie, async (req, res) => {
         const stats = await db.getStatistics();
         res.json(stats);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden bij het ophalen van statistieken.' });
     }
 });
 
@@ -18,7 +18,7 @@ router.get('/activity', vereisAuthenticatie, async (req, res) => {
         const activity = await db.getRecentActivity(limit);
         res.json(activity);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden bij het ophalen van activiteit.' });
     }
 });
 

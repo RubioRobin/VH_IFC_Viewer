@@ -9,7 +9,7 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
         const users = await db.getAllUsers();
         res.json(users);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -45,7 +45,7 @@ router.delete('/:id', vereisAuthenticatie, async (req, res) => {
         await db.deleteUser(req.params.id);
         res.status(204).send();
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

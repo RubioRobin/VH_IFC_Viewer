@@ -31,7 +31,7 @@ router.get('/ifc/:publicId', async (req, res) => {
         });
     } catch (e) {
         console.error('[PUBLIC] Fout:', e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -49,7 +49,7 @@ router.get('/resolve/:elementId', async (req, res) => {
 
         res.json({ file_url: publicUrl, element_id: qr.element_id });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

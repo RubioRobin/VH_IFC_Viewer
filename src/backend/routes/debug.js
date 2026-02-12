@@ -22,7 +22,7 @@ router.get('/check-admin', async (req, res) => {
 
 // Force recreate admin user - DISABLED for security
 router.post('/reset-admin', async (req, res) => {
-    res.status(403).json({ error: 'This function is disabled for security reasons.' });
+    res.status(403).json({ error: 'Deze functie is uitgeschakeld om veiligheidsredenen.' });
 });
 
 module.exports = router;

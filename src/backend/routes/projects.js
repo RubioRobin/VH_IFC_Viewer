@@ -12,7 +12,7 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
         const projects = await db.getAllProjects();
         res.json(projects);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -23,7 +23,7 @@ router.get('/:id', vereisAuthenticatie, async (req, res) => {
         if (project) res.json(project);
         else res.status(404).json({ error: "Project niet gevonden" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -34,7 +34,7 @@ router.post('/', vereisAuthenticatie, async (req, res) => {
         const newProject = await db.createProject(uuidv4(), name, description || '', status || 'active');
         res.status(201).json(newProject);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -45,7 +45,7 @@ router.put('/:id', vereisAuthenticatie, async (req, res) => {
         if (updated) res.json(updated);
         else res.status(404).json({ error: "Project niet gevonden" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -63,7 +63,7 @@ router.patch('/:id/status', vereisAuthenticatie, async (req, res) => {
         if (updated) res.json(updated);
         else res.status(404).json({ error: "Project niet gevonden" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -73,7 +73,7 @@ router.delete('/:id', vereisAuthenticatie, async (req, res) => {
         await db.deleteProject(req.params.id);
         res.status(204).send();
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -85,7 +85,7 @@ router.get('/:id/models', vereisAuthenticatie, async (req, res) => {
         const models = await db.getModelsByProjectId(req.params.id);
         res.json(models);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -97,7 +97,7 @@ router.post('/:id/models/:modelId/revisions/:revId/upload', vereisAuthenticatie,
         // For now, let's just mock success to unblock the UI error
         res.json({ success: true, message: "Upload geverifieerd (mock-modus)" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -113,7 +113,7 @@ router.get('/:id/files', vereisAuthenticatie, async (req, res) => {
         const projectFiles = await db.getFilesByProjectId(req.params.id);
         res.json(projectFiles);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

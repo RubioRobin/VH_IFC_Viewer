@@ -21,7 +21,7 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
             res.json(files);
         }
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -61,7 +61,7 @@ router.get('/:id/download', async (req, res) => {
         }
     } catch (e) {
         console.error(`[DOWNLOAD] Error processing ${req.params.id}:`, e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -76,7 +76,7 @@ router.delete('/:id', vereisAuthenticatie, async (req, res) => {
             res.status(404).json({ error: "Bestand niet gevonden" });
         }
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
