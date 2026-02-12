@@ -51,8 +51,10 @@ export function Dashboard() {
                 ]);
                 setStats(statsData);
                 setActivity(activityData);
-            } catch (err) {
-                console.error("Dashboard load failed", err);
+            } catch (err: any) {
+                if (err.message !== "Unauthorized") {
+                    console.error("Dashboard load failed", err);
+                }
             } finally {
                 setLoading(false);
             }
