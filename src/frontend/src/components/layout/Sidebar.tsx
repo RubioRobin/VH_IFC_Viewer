@@ -220,12 +220,15 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                             >
                                 <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0 border border-transparent group-hover:border-primary transition-colors">
                                     <img
-                                        src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=Mason&top=shortHair&hairColor=4a312c&accessories=none&clothing=blazerAndShirt`}
+                                        src={user?.avatar_url || `https://uxwing.com/wp-content/themes/uxwing/download/peoples-avatars/man-user-circle-icon.png`}
                                         alt="User"
                                         className="w-full h-full object-cover"
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
-                                            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=Mason&top=shortHair&hairColor=4a312c&accessories=none&clothing=blazerAndShirt`;
+                                            // Fallback to the static default image if custom url fails
+                                            if (target.src !== `https://uxwing.com/wp-content/themes/uxwing/download/peoples-avatars/man-user-circle-icon.png`) {
+                                                target.src = `https://uxwing.com/wp-content/themes/uxwing/download/peoples-avatars/man-user-circle-icon.png`;
+                                            }
                                         }}
                                     />
                                 </div>
