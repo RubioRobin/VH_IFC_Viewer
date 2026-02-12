@@ -1093,14 +1093,22 @@ bim-table [data-table-cell-value] {
   }
 
   .viewport-ui-bottom {
-    width: 100%;
-    overflow: hidden;
-    /* Container doesn't scroll, toolbar does */
-    pointer-events: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    z-index: 1000;
+    pointer-events: none;
+    /* Container doesn't block clicks */
+
+    /* Center the toolbar */
     display: flex;
     justify-content: center;
-    /* Significantly increased padding to clear mobile browser bottom bars (Safari/Chrome) */
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+
+    /* Padding for safe area - no extra 4rem needed with fixed */
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    margin-bottom: 0;
   }
 
   /* Force toolbar to be visible and scrollable */
