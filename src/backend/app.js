@@ -1,5 +1,5 @@
 try {
-    require('dotenv').config();
+    require('dotenv').config({ path: path.join(__dirname, '.env') });
 } catch (e) {
     console.log('Dotenv niet geladen (waarschijnlijk productie)');
 }

@@ -16,6 +16,7 @@
         "express-session": "^1.18.0",
         "helmet": "^8.1.0",
         "jsonwebtoken": "^9.0.3",
+        "node-fetch": "^3.3.2",
         "qrcode": "^1.5.4",
         "uuid": "^9.0.1",
         "xss-clean": "^0.1.4"
