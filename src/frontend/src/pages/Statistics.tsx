@@ -180,6 +180,14 @@ export function Statistics() {
                     </div>
 
                     {(() => {
+                        // Helper for local YYYY-MM-DD
+                        const formatLocalDate = (date: Date) => {
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${d}`;
+                        };
+
                         // Generate complete date range to ensure consistent chart width
                         const days = [];
 
