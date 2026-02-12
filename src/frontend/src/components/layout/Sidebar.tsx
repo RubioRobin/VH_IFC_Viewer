@@ -223,6 +223,10 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                                         src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=Mason&top=shortHair&hairColor=4a312c&accessories=none&clothing=blazerAndShirt`}
                                         alt="User"
                                         className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=Mason&top=shortHair&hairColor=4a312c&accessories=none&clothing=blazerAndShirt`;
+                                        }}
                                     />
                                 </div>
                             </div>
