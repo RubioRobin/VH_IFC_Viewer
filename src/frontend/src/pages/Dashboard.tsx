@@ -113,11 +113,17 @@ export function Dashboard() {
 
             {/* Stats Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <div className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300">
+                <div
+                    onClick={() => navigate('/projects')}
+                    className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                >
                     <div className="absolute top-6 right-6 p-2 rounded-xl bg-indigo-50 text-indigo-500 group-hover:scale-110 transition-transform">
                         <FolderKanban className="w-5 h-5" />
                     </div>
-                    <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Projecten</div>
+                    <div className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        Projecten
+                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <div className="text-4xl font-black text-slate-900 mt-2">{stats?.total_projects || 0}</div>
                     <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-600 rounded-full w-fit">
                         <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
