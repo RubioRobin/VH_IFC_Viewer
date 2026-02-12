@@ -453,7 +453,7 @@ async function deleteQRCode(id) {
 // I'll make projectId optional in schema (it is References projects(id)).
 // I'll update logic to accept the params server.js sends.
 
-async function logActivity(projectId, user, type, details) {
+async function logActivity(projectId, user, type, details, fileId = null) {
     if (!supabase) return;
 
     const logEntry = {
@@ -461,6 +461,7 @@ async function logActivity(projectId, user, type, details) {
         user_name: user || 'System',
         type: type || 'info',
         details: details || '',
+        file_id: fileId,
         timestamp: new Date().toISOString()
     };
 
@@ -537,6 +538,64 @@ async function getStatistics() {
         total_storage: totalStorage,
         total_qr_codes: qrCodeUsage || 0
     };
+}
+
+async function getDetailedStatistics() {
+    if (!supabase) return { projects: [], files: [], timeline: [] };
+
+    try {
+        // 1. Project-level stats (Join activity with projects)
+        const { data: projectData } = await supabase
+            .from('activity')
+            .select('project_id, projects(name)')
+            .eq('type', 'scan')
+            .not('project_id', 'is', null);
+
+        const projectCounts = {};
+        projectData?.forEach(item => {
+            const name = item.projects?.name || 'Onbekend Project';
+            projectCounts[name] = (projectCounts[name] || 0) + 1;
+        });
+
+        // 2. File-level stats (Join activity with files)
+        const { data: fileData } = await supabase
+            .from('activity')
+            .select('file_id, files(filename)')
+            .eq('type', 'scan')
+            .not('file_id', 'is', null);
+
+        const fileCounts = {};
+        fileData?.forEach(item => {
+            const name = item.files?.filename || 'Onbekend Bestand';
+            fileCounts[name] = (fileCounts[name] || 0) + 1;
+        });
+
+        // 3. Usage over time (Last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data: timelineData } = await supabase
+            .from('activity')
+            .select('timestamp')
+            .eq('type', 'scan')
+            .gte('timestamp', thirtyDaysAgo.toISOString());
+
+        // Group by day
+        const timeline = {};
+        timelineData?.forEach(item => {
+            const date = item.timestamp.split('T')[0];
+            timeline[date] = (timeline[date] || 0) + 1;
+        });
+
+        return {
+            projects: Object.entries(projectCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+            files: Object.entries(fileCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+            timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date))
+        };
+    } catch (e) {
+        console.error('getDetailedStatistics error:', e);
+        return { projects: [], files: [], timeline: [] };
+    }
 }
 
 // --- PUBLIC LINKS ---
@@ -648,8 +707,7 @@ module.exports = {
     resetScanActivity,
     getRecentActivity,
     getStatistics,
-    getStatistics,
-    getStatistics,
+    getDetailedStatistics,
     getFileDownloadUrl, // Exported for server.js to redirect downloads
     createSignedUploadUrl,
 

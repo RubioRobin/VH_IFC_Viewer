@@ -12,6 +12,15 @@ router.get('/statistics', vereisAuthenticatie, async (req, res) => {
     }
 });
 
+router.get('/statistics/detailed', vereisAuthenticatie, async (req, res) => {
+    try {
+        const stats = await db.getDetailedStatistics();
+        res.json(stats);
+    } catch (e) {
+        res.status(500).json({ error: 'Fout bij het ophalen van gedetailleerde statistieken.' });
+    }
+});
+
 router.post('/statistics/reset', vereisAuthenticatie, async (req, res) => {
     try {
         await db.resetScanActivity();

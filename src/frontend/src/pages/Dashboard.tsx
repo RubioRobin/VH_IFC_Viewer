@@ -33,7 +33,8 @@ import {
     User,
     ChevronRight,
     Search,
-    RotateCcw
+    RotateCcw,
+    ArrowUpRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -156,13 +157,19 @@ export function Dashboard() {
                     </div>
                 </div>
 
-                <div className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300">
+                <div
+                    onClick={() => navigate('/statistics')}
+                    className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                >
                     <div className="absolute top-6 right-6 p-2 rounded-xl bg-purple-50 text-purple-500 group-hover:scale-110 transition-transform">
                         <QrCode className="w-5 h-5" />
                     </div>
-                    <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">QR Codes</div>
+                    <div className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        QR Codes
+                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <div className="text-4xl font-black text-slate-900 mt-2">{stats?.total_qr_codes || 0}</div>
-                    <div className="text-xs font-semibold text-slate-500 mt-3">Keer gebruikt</div>
+                    <div className="text-xs font-semibold text-slate-500 mt-3">Beheer statistieken</div>
                 </div>
 
                 <div className="group relative p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300">

@@ -8,6 +8,7 @@ import { UsersPage } from './pages/Users'
 import { ProjectsPage } from './pages/Projects'
 import { ProjectDetailsPage } from './pages/ProjectDetails'
 import { ProfilePage } from './pages/Profile'
+import { Statistics } from './pages/Statistics'
 import { ToastProvider } from './components/ui/toast'
 
 ReactDOM.createRoot(document.getElementById('admin-app')!).render(
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('admin-app')!).render(
                         <Route path="projects/:id" element={<ProjectDetailsPage />} />
                         <Route path="users" element={<UsersPage />} />
                         <Route path="profile" element={<ProfilePage />} />
+                        <Route path="statistics" element={<Statistics />} />
                         {/* Fallback */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>

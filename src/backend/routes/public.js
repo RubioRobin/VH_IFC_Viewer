@@ -25,12 +25,12 @@ router.get('/ifc/:publicId', async (req, res) => {
             filename = file.filename;
 
             // Log scan activity
-            await db.logActivity(file.project_id, 'Guest', 'scan', `Direct Scan: ${filename}`);
+            await db.logActivity(file.project_id, 'Guest', 'scan', `Direct Scan: ${filename}`, file.id);
         }
 
         if (link) {
             // Log scan activity for link
-            await db.logActivity(link.project_id, 'Guest', 'scan', `QR Scan: ${link.files?.filename || 'Unknown'}`);
+            await db.logActivity(link.project_id, 'Guest', 'scan', `QR Scan: ${link.files?.filename || 'Unknown'}`, link.ifc_file_id);
         }
 
         res.json({

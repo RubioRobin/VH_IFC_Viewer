@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, ChevronLeft, ChevronRight, LogOut, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, ChevronLeft, ChevronRight, LogOut, Loader2, BarChart3 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 
@@ -14,6 +14,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: FileText, label: 'Projecten', path: '/projects' },
+    { icon: BarChart3, label: 'Statistieken', path: '/statistics' },
     { icon: Users, label: 'Gebruikers', path: '/users' },
 ];
 
