@@ -540,7 +540,7 @@ async function getStatistics() {
     };
 }
 
-async function getDetailedStatistics() {
+async function getDetailedStatistics(days = 30) {
     if (!supabase) return { projects: [], files: [], timeline: [] };
 
     try {
@@ -570,15 +570,15 @@ async function getDetailedStatistics() {
             fileCounts[name] = (fileCounts[name] || 0) + 1;
         });
 
-        // 3. Usage over time (Last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // 3. Usage over time
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
 
         const { data: timelineData } = await supabase
             .from('activity')
             .select('timestamp')
             .eq('type', 'scan')
-            .gte('timestamp', thirtyDaysAgo.toISOString());
+            .gte('timestamp', startDate.toISOString());
 
         // Group by day
         const timeline = {};

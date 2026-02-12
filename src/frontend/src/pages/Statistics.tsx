@@ -27,11 +27,13 @@ export function Statistics() {
     const [stats, setStats] = useState<DetailedStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    const [period, setPeriod] = useState(7); // Default to 7 days as requested
 
     useEffect(() => {
         const load = async () => {
             try {
-                const data = await fetchAPI('/statistics/detailed');
+                setLoading(true);
+                const data = await fetchAPI(`/statistics/detailed?days=${period}`);
                 setStats(data);
             } catch (err) {
                 console.error("Detailed stats load failed", err);
@@ -40,7 +42,7 @@ export function Statistics() {
             }
         };
         load();
-    }, []);
+    }, [period]);
 
     const handleResetStats = async () => {
         try {
@@ -136,11 +138,25 @@ export function Statistics() {
 
             {/* Timeline Chart (Simple CSS implementation) */}
             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
                     <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-slate-400" />
-                        Scan Activiteit (Laatste 30 dagen)
+                        Scan Activiteit (Laatste {period === 365 ? 'jaar' : period === 30 ? 'maand' : '7 dagen'})
                     </h3>
+                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        {[7, 30, 365].map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${period === p
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                {p === 7 ? '7d' : p === 30 ? '1m' : '1j'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
                 <div className="h-64 flex items-end gap-1 sm:gap-1.5 relative border-b border-slate-100">
                     {/* Background Grid Lines */}
@@ -148,29 +164,44 @@ export function Statistics() {
                         {[0, 1, 2, 3, 4].map(i => <div key={i} className="border-t border-slate-900 w-full h-0" />)}
                     </div>
 
-                    {stats?.timeline.map((t, i) => (
-                        <motion.div
-                            key={t.date}
-                            className="flex-1 min-w-[8px] max-w-[24px] bg-gradient-to-t from-primary/40 to-primary hover:to-primary/80 transition-all rounded-t-sm relative group cursor-pointer"
-                            initial={{ height: 0 }}
-                            animate={{ height: `${(t.count / (maxTimelineCount || 1)) * 100}%` }}
-                            transition={{ delay: i * 0.01, duration: 0.5, ease: "easeOut" }}
-                        >
-                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-xl whitespace-nowrap z-10 pointer-events-none scale-90 group-hover:scale-100">
-                                <div className="font-bold border-b border-white/10 pb-0.5 mb-0.5">{t.date}</div>
-                                <div className="text-primary-foreground/80">{t.count} scans</div>
-                                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
-                            </div>
-                        </motion.div>
-                    ))}
-                    {stats?.timeline.length === 0 && (
+                    {(() => {
+                        // Generate complete date range to ensure consistent chart width
+                        const days = [];
+                        for (let i = period - 1; i >= 0; i--) {
+                            const d = new Date();
+                            d.setDate(d.getDate() - i);
+                            const dateStr = d.toISOString().split('T')[0];
+                            const dataPoint = stats?.timeline.find(t => t.date === dateStr);
+                            days.push({ date: dateStr, count: dataPoint?.count || 0 });
+                        }
+
+                        return days.map((t, i) => (
+                            <motion.div
+                                key={t.date}
+                                className="flex-1 min-w-[4px] max-w-[40px] bg-indigo-500 hover:bg-indigo-600 transition-all rounded-t-[2px] relative group cursor-pointer"
+                                initial={{ height: 0 }}
+                                animate={{ height: `${(t.count / (maxTimelineCount || 1)) * 100}%` }}
+                                transition={{ delay: i * (0.3 / period), duration: 0.4, ease: "easeOut" }}
+                            >
+                                <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-2xl whitespace-nowrap z-20 pointer-events-none scale-90 group-hover:scale-100 mb-2">
+                                    <div className="font-bold border-b border-white/10 pb-1 mb-1">{t.date}</div>
+                                    <div className="text-indigo-200 flex items-center justify-between gap-4">
+                                        <span>Scans:</span>
+                                        <span className="font-black text-white">{t.count}</span>
+                                    </div>
+                                    <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900" />
+                                </div>
+                            </motion.div>
+                        ));
+                    })()}
+                    {stats?.timeline.length === 0 && !loading && (
                         <div className="w-full h-full flex items-center justify-center text-slate-400 italic">
-                            Nog geen activiteit geregistreerd in de afgelopen 30 dagen.
+                            Geen activiteit geregistreerd in deze periode.
                         </div>
                     )}
                 </div>
-                <div className="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                    <span>30 dagen geleden</span>
+                <div className="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2 pr-2">
+                    <span>{period === 365 ? '1 jaar geleden' : period === 30 ? '30 dagen geleden' : '7 dagen geleden'}</span>
                     <span>Vandaag</span>
                 </div>
             </div>

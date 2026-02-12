@@ -14,7 +14,8 @@ router.get('/statistics', vereisAuthenticatie, async (req, res) => {
 
 router.get('/statistics/detailed', vereisAuthenticatie, async (req, res) => {
     try {
-        const stats = await db.getDetailedStatistics();
+        const days = parseInt(req.query.days) || 30;
+        const stats = await db.getDetailedStatistics(days);
         res.json(stats);
     } catch (e) {
         res.status(500).json({ error: 'Fout bij het ophalen van gedetailleerde statistieken.' });
