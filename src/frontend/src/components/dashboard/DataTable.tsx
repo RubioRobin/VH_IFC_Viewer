@@ -118,10 +118,7 @@ export function DataTable<T extends { id: string | number }>({ data, columns, se
                 </Table>
             </div>
 
-            {/* Simple Footer/Pagination info */}
-            <div className="text-xs text-muted-foreground">
-                Totaal {sortedData.length} items
-            </div>
+
         </div>
     );
 }
