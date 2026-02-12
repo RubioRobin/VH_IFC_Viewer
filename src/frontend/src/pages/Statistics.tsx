@@ -141,7 +141,7 @@ export function Statistics() {
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
                     <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-slate-400" />
-                        Scan Activiteit (Laatste {period === 365 ? 'jaar' : period === 30 ? 'maand' : '7 dagen'})
+                        Scan Activiteit ({period === 365 ? 'Laatste jaar' : period === 30 ? 'Laatste maand' : 'Deze week'})
                     </h3>
                     <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                         {[7, 30, 365].map((p) => (
@@ -167,21 +167,50 @@ export function Statistics() {
                     {(() => {
                         // Generate complete date range to ensure consistent chart width
                         const days = [];
-                        for (let i = period - 1; i >= 0; i--) {
-                            const d = new Date();
-                            d.setDate(d.getDate() - i);
-                            const dateStr = d.toISOString().split('T')[0];
-                            const dataPoint = stats?.timeline.find(t => t.date === dateStr);
-                            const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
-                            const monthDay = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 
-                            days.push({
-                                date: dateStr,
-                                count: dataPoint?.count || 0,
-                                dayName,
-                                monthDay,
-                                isMonthStart: d.getDate() === 1
-                            });
+                        if (period === 7) {
+                            // Fixed week: Monday to Sunday
+                            const today = new Date();
+                            const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
+                            const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                            const monday = new Date(today);
+                            monday.setDate(today.getDate() - diffToMonday);
+                            monday.setHours(0, 0, 0, 0);
+
+                            for (let i = 0; i < 7; i++) {
+                                const d = new Date(monday);
+                                d.setDate(monday.getDate() + i);
+                                const dateStr = d.toISOString().split('T')[0];
+                                const dataPoint = stats?.timeline.find(t => t.date === dateStr);
+                                const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
+                                const isToday = d.toDateString() === today.toDateString();
+
+                                days.push({
+                                    date: dateStr,
+                                    count: dataPoint?.count || 0,
+                                    dayName,
+                                    isToday
+                                });
+                            }
+                        } else {
+                            // Rolling periods (30d, 1y)
+                            for (let i = period - 1; i >= 0; i--) {
+                                const d = new Date();
+                                d.setDate(d.getDate() - i);
+                                const dateStr = d.toISOString().split('T')[0];
+                                const dataPoint = stats?.timeline.find(t => t.date === dateStr);
+                                const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
+                                const monthDay = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+
+                                days.push({
+                                    date: dateStr,
+                                    count: dataPoint?.count || 0,
+                                    dayName,
+                                    monthDay,
+                                    isMonthStart: d.getDate() === 1,
+                                    isToday: d.toDateString() === new Date().toDateString()
+                                });
+                            }
                         }
 
                         return days.map((t, i) => (
@@ -193,7 +222,8 @@ export function Statistics() {
                                     transition={{ delay: i * (0.2 / period) }}
                                 >
                                     <motion.div
-                                        className="w-4 sm:w-8 bg-indigo-500 hover:bg-indigo-600 transition-all rounded-t-[2px] mx-auto relative cursor-pointer"
+                                        className={`w-4 sm:w-8 transition-all rounded-t-[2px] mx-auto relative cursor-pointer ${t.isToday ? 'bg-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.3)]' : 'bg-indigo-500 hover:bg-indigo-600'
+                                            }`}
                                         initial={{ height: 0 }}
                                         animate={{ height: `${(t.count / (maxTimelineCount || 1)) * 100}%` }}
                                         transition={{ delay: i * (0.3 / period), duration: 0.4, ease: "easeOut" }}
@@ -212,16 +242,16 @@ export function Statistics() {
                                 {/* Label row directly under the bar */}
                                 <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
                                     {period === 7 && (
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${i === period - 1 ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                            {i === period - 1 ? 'Vandaag' : t.dayName}
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${t.isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                            {t.isToday ? 'Vandaag' : t.dayName}
                                         </span>
                                     )}
                                     {period === 30 && (i === 0 || i === period - 1 || i === Math.floor(period / 2)) && (
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                            {t.monthDay}
+                                            {(t as any).monthDay}
                                         </span>
                                     )}
-                                    {period === 365 && t.isMonthStart && (
+                                    {period === 365 && (t as any).isMonthStart && (
                                         <span className="text-[9px] font-bold text-slate-400 uppercase">
                                             {new Date(t.date).toLocaleDateString('nl-NL', { month: 'short' }).slice(0, 1)}
                                         </span>
