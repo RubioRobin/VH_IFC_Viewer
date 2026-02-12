@@ -9,6 +9,7 @@ import { ProjectsPage } from './pages/Projects'
 import { ProjectDetailsPage } from './pages/ProjectDetails'
 import { ProfilePage } from './pages/Profile'
 import { Statistics } from './pages/Statistics'
+import { LoginPage } from './pages/Login'
 import { ToastProvider } from './components/ui/toast'
 
 ReactDOM.createRoot(document.getElementById('admin-app')!).render(
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('admin-app')!).render(
         <ToastProvider>
             <Router>
                 <Routes>
+                    <Route path="/login" element={<LoginPage />} />
                     <Route path="/" element={<AdminLayout />}>
                         <Route index element={<Dashboard />} />
                         <Route path="projects" element={<ProjectsPage />} />

@@ -44,7 +44,9 @@ export function Dashboard() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        let isAuthError = false;
         const load = async () => {
+            if (isAuthError) return;
             try {
                 const [statsData, activityData] = await Promise.all([
                     fetchAPI('/statistics'),
@@ -53,7 +55,10 @@ export function Dashboard() {
                 setStats(statsData);
                 setActivity(activityData);
             } catch (err: any) {
-                if (err.message !== "Unauthorized") {
+                if (err.message === "Unauthorized") {
+                    isAuthError = true;
+                    clearInterval(interval);
+                } else {
                     console.error("Dashboard load failed", err);
                 }
             } finally {

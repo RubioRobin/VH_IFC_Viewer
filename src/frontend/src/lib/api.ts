@@ -13,8 +13,10 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     if (!res.ok) {
         if (res.status === 401 && !endpoint.includes('/auth/login')) {
             // Redirect to login if unauthorized and not currently logging in
-            if (window.location.hash !== '#/login') {
-                window.location.hash = '/login';
+            const currentHash = window.location.hash;
+            if (currentHash !== '#/login' && !currentHash.startsWith('#/login')) {
+                console.warn('Unauthorized access detected, redirecting to login...');
+                window.location.href = '/admin.html#/login';
             }
             throw new Error("Unauthorized");
         }
