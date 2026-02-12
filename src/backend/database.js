@@ -453,8 +453,30 @@ async function deleteQRCode(id) {
 // I'll make projectId optional in schema (it is References projects(id)).
 // I'll update logic to accept the params server.js sends.
 
+// In-memory cache for debouncing scan logs
+const scanGuard = new Map();
+
 async function logActivity(projectId, user, type, details, fileId = null) {
     if (!supabase) return;
+
+    // Prevention of double-logging (e.g. browser pre-fetches or multiple route hits)
+    if (type === 'scan') {
+        const key = `${projectId}-${details}`;
+        const now = Date.now();
+        const lastScan = scanGuard.get(key);
+        if (lastScan && (now - lastScan < 10000)) {
+            console.log(`[ACTIVITY] Guard: Skipping duplicate scan for ${key}`);
+            return;
+        }
+        scanGuard.set(key, now);
+
+        // Cleanup old entries occasionally
+        if (scanGuard.size > 100) {
+            for (const [k, v] of scanGuard.entries()) {
+                if (now - v > 30000) scanGuard.delete(k);
+            }
+        }
+    }
 
     const logEntry = {
         project_id: projectId, // Can be null
@@ -582,10 +604,12 @@ async function getDetailedStatistics(days = 30) {
             .eq('type', 'scan')
             .gte('timestamp', startDate.toISOString());
 
-        // Group by day
+        // Group by local day
         const timeline = {};
         timelineData?.forEach(item => {
-            const date = item.timestamp.split('T')[0];
+            // Convert UTC timestamp from DB to local date string YYYY-MM-DD
+            const d = new Date(item.timestamp);
+            const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             timeline[date] = (timeline[date] || 0) + 1;
         });
 
