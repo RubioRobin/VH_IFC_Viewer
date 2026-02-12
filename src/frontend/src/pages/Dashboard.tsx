@@ -32,7 +32,8 @@ import {
     Clock,
     User,
     ChevronRight,
-    Search
+    Search,
+    RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -65,6 +66,23 @@ export function Dashboard() {
         const interval = setInterval(load, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const handleResetStats = async () => {
+        if (!confirm('Weet je zeker dat je alle scan statistieken wilt resetten?')) return;
+
+        try {
+            await fetchAPI('/statistics/reset', { method: 'POST' });
+            // Refresh data
+            const [statsData, activityData] = await Promise.all([
+                fetchAPI('/statistics'),
+                fetchAPI('/activity?limit=10')
+            ]);
+            setStats(statsData);
+            setActivity(activityData);
+        } catch (error: any) {
+            alert('Fout bij resetten: ' + error.message);
+        }
+    };
 
     const formatBytes = (bytes: number) => {
         if (bytes === 0) return '0 B';
@@ -99,10 +117,17 @@ export function Dashboard() {
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-
                     <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Overzicht</h2>
                     <p className="text-slate-500 mt-1 max-w-2xl text-lg">Beheer je BIM-modellen, projecten en live activiteit vanaf één plek.</p>
                 </div>
+                <Button
+                    variant="outline"
+                    className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
+                    onClick={handleResetStats}
+                >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset Statistieken
+                </Button>
             </div>
 
             {/* Stats Grid */}
