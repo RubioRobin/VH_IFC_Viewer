@@ -33,7 +33,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
 
     const handleLogout = async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            await api.logout();
             navigate('/login');
         } catch (error) {
             console.error('Logout failed:', error);
