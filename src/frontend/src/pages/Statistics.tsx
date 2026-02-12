@@ -78,7 +78,10 @@ export function Statistics() {
     };
 
     const rawMax = Math.max(...(stats?.timeline.map(t => t.count) || [0]), 1);
-    const maxTimelineCount = Math.ceil(Math.max(rawMax, 5) / 5) * 5;
+    // Ensure we always have exactly 5 segments, with each segment being a multiple of 5.
+    // Minimum step of 5 results in a scale of 0, 5, 10, 15, 20, 25.
+    const yAxisStep = Math.max(Math.ceil(rawMax / 25) * 5, 5);
+    const maxTimelineCount = yAxisStep * 5;
     const totalScans = stats?.timeline.reduce((sum, t) => sum + t.count, 0) || 0;
 
     return (
@@ -170,8 +173,8 @@ export function Statistics() {
                 <div className="h-64 flex items-end justify-between px-2 sm:px-6 relative border-b border-slate-100 ml-8">
                     {(() => {
                         const yAxisSteps = [];
-                        for (let i = maxTimelineCount; i >= 0; i -= 5) {
-                            yAxisSteps.push(i);
+                        for (let i = 5; i >= 0; i--) {
+                            yAxisSteps.push(i * yAxisStep);
                         }
                         return (
                             <>
