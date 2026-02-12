@@ -25,7 +25,10 @@ router.post('/', vereisAuthenticatie, async (req, res) => {
         const newUser = await db.createUser(username, password, role || 'user');
         res.status(201).json(newUser);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
+            return res.status(400).json({ error: 'Deze gebruikersnaam is al in gebruik.' });
+        }
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden bij het aanmaken van de gebruiker.' });
     }
 });
 

@@ -94,7 +94,10 @@ router.put('/profile', vereisAuthenticatie, async (req, res) => {
         res.json({ message: 'Profiel bijgewerkt', user: updatedUser });
     } catch (e) {
         console.error('Update profile error:', e);
-        res.status(500).json({ error: 'Kon profiel niet bijwerken' });
+        if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
+            return res.status(400).json({ error: 'Deze gebruikersnaam is al in gebruik.' });
+        }
+        res.status(500).json({ error: 'Kon profiel niet bijwerken. Probeer het later opnieuw.' });
     }
 });
 
