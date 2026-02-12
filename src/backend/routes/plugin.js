@@ -19,14 +19,30 @@ const authenticatePlugin = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        req.plugin = decoded;
+        req.plugin = decoded; // Contains client_id
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Niet geautoriseerd: Ongeldig token' });
     }
 };
 
-// 1. Plugin Login
+// Middleware to verify User JWT (from Plugin)
+const authenticatePluginUser = (req, res, next) => {
+    const userToken = req.headers['x-user-token'];
+    // It's optional for some routes, but if provided, we decode it.
+    // If STRICTLY required, check based on route.
+    if (userToken) {
+        try {
+            const decoded = jwt.verify(userToken, JWT_SECRET); // Using same secret for simplicity
+            req.user = decoded;
+        } catch (e) {
+            console.warn('Invalid user token:', e.message);
+        }
+    }
+    next();
+};
+
+// 1. Plugin Login (Service Account)
 router.post('/login', (req, res) => {
     const { client_id, client_secret } = req.body;
 
@@ -36,6 +52,30 @@ router.post('/login', (req, res) => {
     }
 
     res.status(401).json({ error: 'Ongeldige inloggegevens' });
+});
+
+// 1.1 User Login (via Plugin)
+router.post('/user-login', authenticatePlugin, async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const user = await db.getUserByUsername(username);
+        if (user && await require('bcryptjs').compare(password, user.password_hash)) {
+            // Issue a long-lived token for the plugin user
+            const token = jwt.sign(
+                { userId: user.id, username: user.username },
+                JWT_SECRET,
+                { expiresIn: '7d' } // 7 days persistence
+            );
+            return res.json({
+                access_token: token,
+                username: user.username,
+                expires_in: 7 * 24 * 3600
+            });
+        }
+        res.status(401).json({ error: 'Ongeldige gebruikersnaam of wachtwoord.' });
+    } catch (e) {
+        res.status(500).json({ error: 'Login fout: ' + e.message });
+    }
 });
 
 // 2. Get Projects
@@ -54,10 +94,11 @@ router.get('/projects', authenticatePlugin, async (req, res) => {
 });
 
 // 3. Create Model
-router.post('/models/create', authenticatePlugin, async (req, res) => {
+router.post('/models/create', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { projectId, modelName } = req.body;
     try {
-        const model = await db.createModel(projectId, modelName);
+        const createdBy = req.user ? req.user.username : 'Plugin';
+        const model = await db.createModel(projectId, modelName, createdBy);
         res.json({ modelId: model.id });
     } catch (e) {
         res.status(500).json({ error: e.message });
