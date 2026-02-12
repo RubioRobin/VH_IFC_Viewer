@@ -1111,17 +1111,30 @@ bim-table [data-table-cell-value] {
     overflow-x: auto !important;
     /* Enable horizontal scrolling */
     pointer-events: auto !important;
+    scrollbar-width: none;
+    /* Hide scrollbar Firefox */
 
     /* Style refinement for mobile */
     background-color: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(8px);
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
     border-radius: 12px !important;
-    padding: 2px !important;
-    margin-bottom: 0 !important;
+    padding: 4px !important;
+    margin-bottom: 0.5rem !important;
 
     /* Ensure it doesn't get pushed off screen */
     flex-shrink: 0;
+  }
+
+  /* Hide labels in the bottom toolbar on mobile to save space */
+  .viewport-ui-bottom .custom-btn__label {
+    display: none !important;
+  }
+
+  /* Adjust button padding when labels are hidden to keep icons centered */
+  .viewport-ui-bottom .custom-btn {
+    padding: 0 0.5rem !important;
+    min-width: 2.5rem !important;
   }
 
   /* Ensure the toolbar content is flexible */
@@ -1131,5 +1144,12 @@ bim-table [data-table-cell-value] {
     justify-content: flex-start !important;
     min-width: max-content;
     /* Allow section to take needed space */
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Remove section borders and labels for extra space on mobile */
+  bim-toolbar-section::part(label) {
+    display: none !important;
   }
 }
