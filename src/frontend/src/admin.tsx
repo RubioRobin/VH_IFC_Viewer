@@ -9,14 +9,12 @@ import { ProjectsPage } from './pages/Projects'
 import { ProjectDetailsPage } from './pages/ProjectDetails'
 import { ProfilePage } from './pages/Profile'
 import { ToastProvider } from './components/ui/toast'
-import { LoginPage } from './pages/Login'
 
 ReactDOM.createRoot(document.getElementById('admin-app')!).render(
     <React.StrictMode>
         <ToastProvider>
             <Router>
                 <Routes>
-                    <Route path="/login" element={<LoginPage />} />
                     <Route path="/" element={<AdminLayout />}>
                         <Route index element={<Dashboard />} />
                         <Route path="projects" element={<ProjectsPage />} />
