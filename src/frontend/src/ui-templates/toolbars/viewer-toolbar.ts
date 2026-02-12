@@ -223,18 +223,18 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
   return BUI.html`
     <bim-toolbar>
-      <bim-toolbar-section label="Zichtbaarheid"> 
+      <bim-toolbar-section> 
         ${customButton({ icon: appIcons.SHOW, label: "Toon alles", onClick: onShowAll })}
         ${customButton({ icon: appIcons.TRANSPARENT, label: "Transparant", onClick: onToggleGhost })}
       </bim-toolbar-section> 
       
-      <bim-toolbar-section label="Selectie">
+      <bim-toolbar-section>
         ${customButton({ icon: appIcons.FOCUS, label: "Focus", onClick: onFocus })}
         ${customButton({ icon: appIcons.HIDE, label: "Verberg", onClick: onHide })}
         ${customButton({ icon: appIcons.ISOLATE, label: "Isoleer", onClick: onIsolate })}
       </bim-toolbar-section> 
 
-      <bim-toolbar-section label="Tools">
+      <bim-toolbar-section>
          ${customButton({ icon: appIcons.RULER, label: "Meten", onClick: onMeasurementsClick })}
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
       </bim-toolbar-section>
