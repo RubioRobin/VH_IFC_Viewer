@@ -465,6 +465,8 @@ async function logActivity(projectId, user, type, details, fileId = null) {
         timestamp: new Date().toISOString()
     };
 
+    console.log(`[ACTIVITY] Logging ${type} for project ${projectId}: ${details}`);
+
     const { error } = await supabase.from('activity').insert([logEntry]);
     if (error) console.error('Activity Log Error:', error);
 }
