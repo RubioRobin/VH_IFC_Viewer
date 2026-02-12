@@ -1159,7 +1159,27 @@ bim-table [data-table-cell-value] {
   }
 
   /* Remove section borders and labels for extra space on mobile */
-  bim-toolbar-section::part(label) {
+  bim-toolbar-section::part(label),
+  bim-label {
     display: none !important;
+  }
+}
+
+/* Landscape Mode Specific Adjustments */
+@media (max-width: 900px) and (orientation: landscape) {
+  .viewport-ui-bottom {
+    /* Reduce padding significantly in landscape as vertical space is scarce */
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  /* Make buttons slightly smaller in landscape to save vertical space */
+  .viewport-ui-bottom .custom-btn {
+    height: 2rem !important;
+    min-height: 2rem !important;
+  }
+
+  .viewport-ui-bottom bim-toolbar {
+    padding: 2px !important;
+    margin-bottom: 0 !important;
   }
 }
