@@ -220,7 +220,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
                             >
                                 <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0 border border-transparent group-hover:border-primary transition-colors">
                                     <img
-                                        src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
+                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Felix`}
                                         alt="User"
                                         className="w-full h-full object-cover"
                                     />
