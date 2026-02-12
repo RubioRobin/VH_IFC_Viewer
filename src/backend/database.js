@@ -511,10 +511,11 @@ async function getStatistics() {
         .select('size');
     const totalStorage = filesData?.reduce((sum, file) => sum + (file.size || 0), 0) || 0;
 
-    // Get QR code usage count (count of public_links which represent QR code scans)
+    // Get QR code usage count (count scan activities)
     const { count: qrCodeUsage } = await supabase
-        .from('public_links')
-        .select('*', { count: 'exact', head: true });
+        .from('activity')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'scan');
 
     return {
         total_projects: totalProjects || 0,

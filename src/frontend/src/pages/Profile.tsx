@@ -120,7 +120,7 @@ export function ProfilePage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="pl-9"
-                                        placeholder="naam@voorbeeld.nl"
+                                        placeholder="naam@VH-pe.nl"
                                     />
                                 </div>
                             </div>
@@ -163,7 +163,7 @@ export function ProfilePage() {
                                     type="password"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    placeholder="Laat leeg om niet te wijzigen"
+                                    placeholder="Nieuw wachtwoord"
                                     autoComplete="new-password"
                                 />
                             </div>
