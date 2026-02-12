@@ -71,6 +71,7 @@ export function ProjectDetailsPage() {
 
             let successCount = 0;
             let failCount = 0;
+            let hasAuthError = false;
 
             await Promise.all(selectedFiles.map(async (file) => {
                 try {
@@ -105,9 +106,12 @@ export function ProjectDetailsPage() {
                     });
 
                     successCount++;
-                } catch (err) {
+                } catch (err: any) {
                     console.error(`Failed to upload ${file.name}`, err);
                     failCount++;
+                    if (err.message === 'Unauthorized') {
+                        hasAuthError = true;
+                    }
                 }
             }));
 
@@ -115,7 +119,7 @@ export function ProjectDetailsPage() {
                 toast({ type: 'success', title: 'Upload voltooid', message: `${successCount} bestand(en) succesvol toegevoegd.` });
                 loadData();
             }
-            if (failCount > 0) {
+            if (failCount > 0 && !hasAuthError) {
                 toast({ type: 'error', title: 'Waarschuwing', message: `${failCount} bestand(en) konden niet worden geupload.` });
             }
 
