@@ -334,8 +334,6 @@ export function Statistics() {
                     </div>
                     <div className="h-8" /> {/* Spacer for labels */}
                 </div>
-
-                {/* Tables Row */}
                 <div className="grid gap-8 md:grid-cols-2">
                     {/* Projects Table */}
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -416,8 +414,7 @@ export function Statistics() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </motion.div >
+            </motion.div>
 
             <ConfirmDialog
                 isOpen={resetDialogOpen}
@@ -428,6 +425,6 @@ export function Statistics() {
                 variant="destructive"
                 confirmText="Reset Alles"
             />
-    </>
-);
+        </>
+    );
 }
