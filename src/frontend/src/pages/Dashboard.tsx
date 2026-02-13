@@ -4,23 +4,6 @@ import { Skeleton } from '../components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
-
-interface Stats {
-    total_projects: number;
-    active_projects: number;
-    total_files: number;
-    total_storage: number;
-    total_qr_codes: number;
-}
-
-interface Activity {
-    id: number;
-    username: string;
-    action: string;
-    details: string;
-    timestamp: string;
-}
-
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -36,6 +19,22 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+
+interface Stats {
+    total_projects: number;
+    active_projects: number;
+    total_files: number;
+    total_storage: number;
+    total_qr_codes: number;
+}
+
+interface Activity {
+    id: number;
+    user_name: string;
+    type: string;
+    details: string;
+    timestamp: string;
+}
 
 export function Dashboard() {
     const [stats, setStats] = useState<Stats | null>(null);
@@ -57,7 +56,7 @@ export function Dashboard() {
             } catch (err: any) {
                 if (err.message === "Unauthorized") {
                     isAuthError = true;
-                    clearInterval(interval);
+                    // clearInterval logic is handled by the return cleanup
                 } else {
                     console.error("Dashboard load failed", err);
                 }
@@ -72,13 +71,24 @@ export function Dashboard() {
         return () => clearInterval(interval);
     }, []);
 
-
     const formatBytes = (bytes: number) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const getActionLabel = (type: string) => {
+        switch (type) {
+            case 'upload_file': return 'een bestand geüpload';
+            case 'create_project': return 'een project aangemaakt';
+            case 'update_project_status': return 'projectstatus gewijzigd';
+            case 'scan': return 'een QR code gescand';
+            case 'create_link': return 'een publieke link aangemaakt';
+            case 'login': return 'ingelogd';
+            default: return type.replace(/_/g, ' ');
+        }
     };
 
     if (loading) {
@@ -189,8 +199,8 @@ export function Dashboard() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                                         <p className="text-sm font-bold text-slate-900">
-                                            {act.username}
-                                            <span className="text-slate-500 font-medium ml-2">heeft {act.action}</span>
+                                            {act.user_name || 'System'}
+                                            <span className="text-slate-500 font-medium ml-2">heeft {getActionLabel(act.type)}</span>
                                         </p>
                                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-full shrink-0 h-fit">
                                             {act.timestamp ? formatDistanceToNow(new Date(act.timestamp), { addSuffix: true, locale: nl }) : '-'}

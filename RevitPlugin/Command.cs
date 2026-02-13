@@ -1,4 +1,7 @@
 using System;
+using System.Windows.Threading;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -13,7 +16,7 @@ namespace VH_IFC_QR
     [Transaction(TransactionMode.Manual)]
     public class ExportIFCCommand : IExternalCommand
     {
-        private const string BaseUrl = "https://vh-ifc-backend.onrender.com"; // Render backend url
+        private const string BaseUrl = "https://vh-ifc-backend.onrender.com";
         private const string ClientId = "revit_plugin";
         private const string ClientSecret = "revit_secret_123";
 
@@ -29,120 +32,135 @@ namespace VH_IFC_QR
                 var views3D = new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>().Where(v => !v.IsTemplate).ToList();
                 var sheets = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().ToList();
 
-                // 2. Initialize API Client and Auth
+                // 2. Initialize API Client
                 var client = new PluginClient(BaseUrl);
-                bool loginOk = Task.Run(() => client.LoginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
                 
+                // Plugin Level Auth
+                bool loginOk = Task.Run(() => client.LoginPluginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
                 if (!loginOk)
                 {
-                    TaskDialog.Show("Auth Fout", "Kon niet inloggen bij VH Backend. Controleer credentials.");
+                    TaskDialog.Show("Auth Fout", "Kon niet verbinden met VH Server.");
                     return Result.Failed;
+                }
+
+                // User Level Auth
+                if (!client.LoadToken())
+                {
+                    LoginWindow loginWin = new LoginWindow(client);
+                    if (loginWin.ShowDialog() != true) return Result.Cancelled;
                 }
 
                 // 3. Get Projects
                 var projects = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
 
-                // 4. Show UI
-                string defaultName = $"{doc.Title}_{DateTime.Now:yyyyMMdd_HHmm}";
-                using (var form = new SelectionForm(projects, views3D, sheets, defaultName))
-                {
-                    form.OnTestConnection += () => {
-                        var sw = System.Diagnostics.Stopwatch.StartNew();
-                        try {
-                            form.UpdateStatus("Test Login...", 10);
-                            var tLogin = Task.Run(() => client.LoginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
-                            form.UpdateStatus($"Login: OK ({sw.ElapsedMilliseconds}ms)", 50);
+                // 4. Show Multi-Selection UI
+                string defaultPrefix = $"{doc.Title}";
+                
+                SelectionWindow selWin = new SelectionWindow(projects, views3D, sheets, defaultPrefix, client.CurrentUsername);
+                selWin.OnLogout += () => { client.Logout(); TaskDialog.Show("Info", "U bent uitgelogd."); };
+
+                if (selWin.ShowDialog() != true) return Result.Cancelled;
+
+                // --- BATCH WORKFLOW ---
+                ProgressWindow progress = new ProgressWindow();
+                progress.Show();
+
+                // 6. Loop over MAPPINGS (1 mapping = 1 view + 1 sheet)
+                var mappings = selWin.ValidMappings;
+                List<string> results = new List<string>();
+                int totalSteps = mappings.Count * 7; 
+                int currentStep = 0;
+
+                    try
+                    {
+                        foreach (var mapping in mappings)
+                        {
+                            View3D view = mapping.View;
+                            ViewSheet sheet = mapping.SelectedSheet;
+
+                            string cleanViewName = view.Name.Replace("{", "").Replace("}", "").Trim();
+                            string modelName = $"{selWin.ModelNamePrefix} {cleanViewName} {DateTime.Now:dd-MM-yyyy}".Trim();
+                            progress.Update($"Verwerken: {modelName}...", (int)((double)currentStep / totalSteps * 100));
+
+                            // 1. Export
+                            string tempPath = Path.Combine(Path.GetTempPath(), modelName + ".ifc");
                             
-                            form.UpdateStatus("Test Projects...", 60);
-                            var tProjs = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
-                            form.UpdateStatus($"Conn Test: SUCCESS! {tProjs.Count} projecten gevonden in {sw.ElapsedMilliseconds}ms.", 100);
-                        } catch (Exception ex) {
-                            form.UpdateStatus($"Conn Test: FOUT ({sw.ElapsedMilliseconds}ms): {ex.Message}", 0);
+                            using (Transaction t = new Transaction(doc, "Export IFC"))
+                            {
+                                t.Start();
+                                if (!ExportToIfc(doc, view, tempPath)) throw new Exception($"Export mislukt voor {view.Name}");
+                                t.Commit();
+                            }
+                            currentStep++; // 1
+
+                            // Backend Tasks
+                            ShareInfo share = null;
+                            string qrUrl = null;
+                            string modelId = null;
+
+                            var bgTask = Task.Run(async () => {
+                                // Hash
+                                progress.Update($"Model voorbereiden...", (int)((double)currentStep / totalSteps * 100)); // Was Hashing
+                                string checksum = GetSha256(tempPath);
+                                long fileSize = new FileInfo(tempPath).Length;
+                                currentStep++; // 2
+
+                                // Register
+                                modelId = await client.CreateModelAsync(selWin.SelectedProject.id, modelName);
+                                var session = await client.CreateUploadSessionAsync(modelId, modelName, fileSize, checksum);
+                                currentStep++; // 3
+
+                                // Upload
+                                progress.Update($"Uploaden naar server...", (int)((double)currentStep / totalSteps * 100));
+                                await client.UploadFileAsync(session.uploadUrl, tempPath);
+                                await client.CompleteVersionAsync(modelId, session.versionId);
+                                currentStep++; // 4/5
+
+                                // Share & QR
+                                share = await client.CreateShareAsync(modelId, session.versionId);
+                                qrUrl = await client.GenerateQRAsync(modelId, session.versionId, share.viewerUrl, selWin.SelectedProject.id);
+                                currentStep++; // 6
+                            });
+
+                            // Wait for background task while keeping UI alive
+                            while (!bgTask.IsCompleted)
+                            {
+                                DoEvents();
+                                Thread.Sleep(10);
+                            }
+                            bgTask.GetAwaiter().GetResult(); // Check for exceptions
+
+                            // Place QR on SPECIFIC MAPPED SHEET
+                            progress.Update($"QR code genereren...", (int)((double)currentStep / totalSteps * 100));
+                            byte[] qrBytes = Task.Run(() => client.DownloadQRAsync(qrUrl)).GetAwaiter().GetResult();
+                            string qrTempPath = Path.Combine(Path.GetTempPath(), $"{modelId}_qr.png");
+                            File.WriteAllBytes(qrTempPath, qrBytes);
+
+                            using (Transaction t = new Transaction(doc, "Place QR"))
+                            {
+                                t.Start();
+                                PlaceQrOnSheet(doc, sheet.Id, qrTempPath, view.Name);
+                                t.Commit();
+                            }
+                            
+                            if (File.Exists(tempPath)) File.Delete(tempPath);
+                            if (File.Exists(qrTempPath)) File.Delete(qrTempPath);
+                            
+                            results.Add($"{modelName}");
+                            currentStep++; // 7
                         }
-                    };
 
-                    if (form.ShowDialog() != System.Windows.Forms.DialogResult.OK) return Result.Cancelled;
+                    progress.Update("Klaar!", 100);
+                    progress.Close();
 
-                    // --- START WORKFLOW ---
-                    var totalSw = System.Diagnostics.Stopwatch.StartNew();
-                    form.UpdateStatus("Stap 1/7: IFC exporteren uit Revit...", 10);
-                    
-                    string tempPath = Path.Combine(Path.GetTempPath(), form.ModelName + ".ifc");
-                    View3D exportView = doc.GetElement(form.Selected3DViewId) as View3D;
-
-                    bool exportOk = false;
-                    using (Transaction t = new Transaction(doc, "Export IFC"))
-                    {
-                        t.Start();
-                        exportOk = ExportToIfc(doc, exportView, tempPath);
-                        t.Commit();
-                    }
-
-                    if (!exportOk) throw new Exception("IFC Export mislukt door Revit.");
-                    form.UpdateStatus($"Stap 1: Gereed ({totalSw.ElapsedMilliseconds}ms)", 15);
-
-                    // 5. Hash & Upload
-                    UploadSessionInfo session = null;
-                    ShareInfo share = null;
-                    string qrUrl = null;
-
-                    Task.Run(async () => {
-                        var stepSw = System.Diagnostics.Stopwatch.StartNew();
-                        
-                        form.UpdateStatus("Stap 2/7: Bestand hashen...", 20);
-                        long fileSize = new FileInfo(tempPath).Length;
-                        string checksum = GetSha256(tempPath);
-                        form.UpdateStatus($"Stap 2: Gereed ({stepSw.ElapsedMilliseconds}ms)", 30);
-
-                        stepSw.Restart();
-                        form.UpdateStatus("Stap 3.1/7: Model registreren...", 35);
-                        string modelId = await client.CreateModelAsync(form.SelectedProjectId, form.ModelName);
-                        form.UpdateStatus($"Stap 3.1: Gereed ({stepSw.ElapsedMilliseconds}ms)", 38);
-
-                        stepSw.Restart();
-                        form.UpdateStatus("Stap 3.2/7: Backend sessie aanvragen...", 40);
-                        session = await client.CreateUploadSessionAsync(modelId, form.ModelName, fileSize, checksum);
-                        form.UpdateStatus($"Stap 3.2: Gereed ({stepSw.ElapsedMilliseconds}ms)", 45);
-
-                        stepSw.Restart();
-                        form.UpdateStatus($"Stap 4/7: Upload naar Supabase ({(fileSize/1024.0/1024.0):F2} MB)...", 50);
-                        await client.UploadFileAsync(session.uploadUrl, tempPath);
-                        form.UpdateStatus($"Stap 4: Gereed ({stepSw.ElapsedMilliseconds}ms)", 65);
-
-                        stepSw.Restart();
-                        form.UpdateStatus("Stap 5/7: Registratie in backend...", 70);
-                        await client.CompleteVersionAsync(modelId, session.versionId);
-                        form.UpdateStatus($"Stap 5: Gereed ({stepSw.ElapsedMilliseconds}ms)", 75);
-
-                        stepSw.Restart();
-                        form.UpdateStatus("Stap 6/7: Deep-link genereren...", 80);
-                        share = await client.CreateShareAsync(modelId, session.versionId);
-                        form.UpdateStatus($"Stap 6: Gereed ({stepSw.ElapsedMilliseconds}ms)", 85);
-
-                        stepSw.Restart();
-                        form.UpdateStatus("Stap 7/7: QR asset aanmaken...", 90);
-                        qrUrl = await client.GenerateQRAsync(modelId, session.versionId, share.viewerUrl, form.SelectedProjectId);
-                        form.UpdateStatus($"Stap 7: Gereed ({stepSw.ElapsedMilliseconds}ms)", 95);
-                    }).GetAwaiter().GetResult();
-
-                    // 6. Download & Place QR on Sheet
-                    form.UpdateStatus("Afronden: QR op sheet plakken...", 98);
-                    byte[] qrBytes = Task.Run(() => client.DownloadQRAsync(qrUrl)).GetAwaiter().GetResult();
-                    string qrTempPath = Path.Combine(Path.GetTempPath(), "qr.png");
-                    File.WriteAllBytes(qrTempPath, qrBytes);
-
-                    using (Transaction t = new Transaction(doc, "Place QR"))
-                    {
-                        t.Start();
-                        PlaceQrOnSheet(doc, form.SelectedSheetId, qrTempPath);
-                        t.Commit();
-                    }
-
-                    form.UpdateStatus($"SUCCES! Totaal: {totalSw.ElapsedMilliseconds}ms", 100);
-                    TaskDialog.Show("Succes", $"Workflow succesvol afgerond in {totalSw.Elapsed.TotalSeconds:F1}s!\nURL: {share.viewerUrl}");
-                    
-                    if (File.Exists(tempPath)) File.Delete(tempPath);
-                    if (File.Exists(qrTempPath)) File.Delete(qrTempPath);
+                    ResultWindow resWin = new ResultWindow(results, selWin.SelectedProject.id);
+                    resWin.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    progress.Close();
+                    TaskDialog.Show("Fout", ex.Message);
+                    return Result.Failed;
                 }
 
                 return Result.Succeeded;
@@ -157,7 +175,13 @@ namespace VH_IFC_QR
         private bool ExportToIfc(Document doc, View activeView, string outputPath)
         {
             IFCExportOptions options = new IFCExportOptions();
-            options.FileVersion = IFCVersion.IFC4; // Or 2x3
+            
+            // Use settings
+            string settingsVersion = SettingsManager.Instance.IfcVersion;
+            if (settingsVersion == "IFC2x3") options.FileVersion = IFCVersion.IFC2x3;
+            else if (settingsVersion == "IFC4") options.FileVersion = IFCVersion.IFC4;
+            else options.FileVersion = IFCVersion.IFC4; // Default
+            
             options.FilterViewId = activeView.Id;
             string dir = Path.GetDirectoryName(outputPath);
             string filename = Path.GetFileName(outputPath);
@@ -176,25 +200,69 @@ namespace VH_IFC_QR
             }
         }
 
-        private void PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath)
+        private void PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath, string viewName)
         {
             ViewSheet sheet = doc.GetElement(sheetId) as ViewSheet;
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
             
-            // Place at bottom right
             ImagePlacementOptions placement = new ImagePlacementOptions();
-            placement.PlacementPoint = BoxPlacement.BottomRight;
             
-            ImageInstance.Create(doc, sheet, type.Id, placement);
+            // Map settings to BoxPlacement
+            string loc = SettingsManager.Instance.QrLocation;
+            if (loc == "BottomLeft") placement.PlacementPoint = BoxPlacement.BottomLeft;
+            else if (loc == "TopRight") placement.PlacementPoint = BoxPlacement.TopRight;
+            else if (loc == "TopLeft") placement.PlacementPoint = BoxPlacement.TopLeft;
+            else placement.PlacementPoint = BoxPlacement.BottomRight;
+            
+            ImageInstance instance = ImageInstance.Create(doc, sheet, type.Id, placement);
+            
+            // Scale to size in mm
+            double sizeInMm = SettingsManager.Instance.QrSizeMm;
+            double targetSizeInFeet = sizeInMm / 304.8;
+            
+            try 
+            {
+                // Try setting Width/Height directly on instance first
+                Parameter pWidth = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH);
+                Parameter pHeight = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HEIGHT);
+                
+                if (pWidth != null && !pWidth.IsReadOnly) 
+                {
+                    pWidth.Set(targetSizeInFeet);
+                    if (pHeight != null && !pHeight.IsReadOnly) pHeight.Set(targetSizeInFeet);
+                }
 
-            // Optional: Text label
-            TextNoteOptions textOptions = new TextNoteOptions();
-            textOptions.HorizontalAlignment = HorizontalTextAlignment.Right;
-            textOptions.TypeId = doc.GetDefaultElementTypeId(ElementTypeGroup.TextNoteType);
-            
-            XYZ textPos = new XYZ(0, 0, 0); // Need proper calculation based on sheet size
-            TextNote.Create(doc, sheet.Id, textPos, "Scan voor 3D model", textOptions);
+                // Use scale as a robust fallback (necessary in some Revit configurations)
+                double currentWidth = pWidth != null ? pWidth.AsDouble() : 0;
+                if (currentWidth > 0 && Math.Abs(currentWidth - targetSizeInFeet) > 0.001)
+                {
+                    double scaleFactor = targetSizeInFeet / currentWidth;
+                    Parameter pScaleH = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HORIZ_SCALE);
+                    Parameter pScaleV = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_VERT_SCALE);
+                    
+                    if (pScaleH != null && !pScaleH.IsReadOnly) pScaleH.Set(scaleFactor);
+                    if (pScaleV != null && !pScaleV.IsReadOnly) pScaleV.Set(scaleFactor);
+                }
+            }
+            catch (Exception) 
+            { 
+                // Ignore sizing error to allow the QR to still appear at default size
+            }
+
+            // Label creation removed as per user request
+        }
+        public void DoEvents()
+        {
+            DispatcherFrame frame = new DispatcherFrame();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(ExitFrame), frame);
+            Dispatcher.PushFrame(frame);
+        }
+
+        public object ExitFrame(object frame)
+        {
+            ((DispatcherFrame)frame).Continue = false;
+            return null;
         }
     }
 }

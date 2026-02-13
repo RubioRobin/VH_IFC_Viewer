@@ -19,17 +19,25 @@ namespace VH_IFC_QR
             RibbonPanel panel = application.CreateRibbonPanel(tabName, "Tools");
 
             string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
+            
+            // 1. Export Button
             PushButtonData buttonData = new PushButtonData("cmdExportIFC",
                 "Export IFC", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
+            buttonData.ToolTip = "Export current view to IFC locally and link with VH Viewer.";
             
-            PushButtonData diagData = new PushButtonData("cmdDiagnostics",
-                "Test Verbinding", thisAssemblyPath, "VH_IFC_QR.DiagnosticCommand");
+            // 2. Admin Button
+            PushButtonData adminData = new PushButtonData("cmdAdmin",
+                "Admin Dashboard", thisAssemblyPath, "VH_IFC_QR.AdminCommand");
+            adminData.ToolTip = "Open backend admin dashboard.";
 
-            buttonData.ToolTip = "Export current view to IFC locally.";
-            diagData.ToolTip = "Test de verbinding met de backend server.";
+            // 3. Settings Button
+            PushButtonData settingsData = new PushButtonData("cmdSettings",
+                "IFC Instellingen", thisAssemblyPath, "VH_IFC_QR.IfcSettingsCommand");
+            settingsData.ToolTip = "Configureer IFC export en QR code instellingen.";
 
             panel.AddItem(buttonData);
-            panel.AddItem(diagData);
+            panel.AddItem(adminData);
+            panel.AddItem(settingsData);
 
             return Result.Succeeded;
         }

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -9,24 +8,19 @@
     <Configurations>Debug;Release</Configurations>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
-
   <ItemGroup>
-
-    <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.*" ExcludeAssets="runtime" />
+    <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*" ExcludeAssets="runtime" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
-
-  <PropertyGroup Condition="$(Configuration.Contains('Debug'))">
-    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
-
-  <PropertyGroup Condition="$(Configuration.Contains('Release'))">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>RELEASE;TRACE</DefineConstants>
     <DebugType>pdbonly</DebugType>
     <OutputPath>bin\Release\</OutputPath>
     <Optimize>true</Optimize>
   </PropertyGroup>
-
 </Project>
