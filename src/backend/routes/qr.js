@@ -47,7 +47,7 @@ router.post('/generate', async (req, res) => {
 
     try {
         // Create Public Link (Active)
-        const publicLink = await db.createPublicLink(project_id, file_id);
+        const publicLink = await db.createPublicLink(project_id, file_id, req.session.username);
         const publicId = publicLink.public_id;
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

@@ -106,7 +106,7 @@ router.post('/models/create', authenticatePlugin, authenticatePluginUser, async 
 });
 
 // 4. Create Upload Session
-router.post('/models/:modelId/versions/upload-session', authenticatePlugin, async (req, res) => {
+router.post('/models/:modelId/versions/upload-session', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { modelId } = req.params;
     const { fileName, contentType, fileSize, checksumSha256 } = req.body;
 
@@ -126,7 +126,8 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, asyn
         try {
             const { data: model } = await db.supabase.from('models').select('project_id').eq('id', modelId).single();
             if (model) {
-                await db.createFile(null, model.project_id, fileName, storagePath, fileSize);
+                const userName = req.user ? req.user.username : 'Revit User';
+                await db.createFile(null, model.project_id, fileName, storagePath, fileSize, userName);
             }
         } catch (syncError) {
             console.warn('Dashboard sync failed (non-critical):', syncError.message);

@@ -31,7 +31,7 @@ router.get('/:id', vereisAuthenticatie, async (req, res) => {
 router.post('/', vereisAuthenticatie, async (req, res) => {
     const { name, description, status } = req.body;
     try {
-        const newProject = await db.createProject(uuidv4(), name, description || '', status || 'active');
+        const newProject = await db.createProject(uuidv4(), name, description || '', status || 'active', req.session.username);
         res.status(201).json(newProject);
     } catch (e) {
         res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
@@ -59,7 +59,7 @@ router.patch('/:id/status', vereisAuthenticatie, async (req, res) => {
     }
 
     try {
-        const updated = await db.updateProjectStatus(req.params.id, status);
+        const updated = await db.updateProjectStatus(req.params.id, status, req.session.username);
         if (updated) res.json(updated);
         else res.status(404).json({ error: "Project niet gevonden" });
     } catch (e) {

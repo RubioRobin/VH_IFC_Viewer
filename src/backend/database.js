@@ -195,7 +195,7 @@ async function getProjectById(id) {
 
 // Matches server.js: db.createProject(uuid, name, description, status)
 // Note: server.js provides UUID, we can use it or ignore it. Let's use it for consistency.
-async function createProject(id, name, description, status) {
+async function createProject(id, name, description, status, user = 'Admin') {
     if (!supabase) return null;
     const newProject = {
         id: id || uuidv4(),
@@ -223,12 +223,12 @@ async function createProject(id, name, description, status) {
 
     if (error) throw error;
 
-    await logActivity(newProject.id, 'Admin', 'create_project', `Project "${name}" created`);
+    await logActivity(newProject.id, user || 'Admin', 'create_project', `Project "${name}" created`);
 
     return { ...data, files: [] };
 }
 
-async function updateProjectStatus(projectId, status) {
+async function updateProjectStatus(projectId, status, user = 'Admin') {
     if (!supabase) return null;
 
     const { data, error } = await supabase
@@ -240,7 +240,7 @@ async function updateProjectStatus(projectId, status) {
 
     if (error) throw error;
 
-    await logActivity(projectId, 'Admin', 'update_project_status', `Status changed to "${status}"`);
+    await logActivity(projectId, user || 'Admin', 'update_project_status', `Status changed to "${status}"`);
 
     return data;
 }
@@ -355,7 +355,7 @@ async function deleteFile(id) {
 }
 
 // Matches server.js: db.createFile(id, projectId, filename, path, size)
-async function createFile(id, projectId, filename, path, size) {
+async function createFile(id, projectId, filename, path, size, user = 'Admin') {
     if (!supabase) return null;
 
     // Defensive check: Ensure we have a valid name
@@ -377,7 +377,7 @@ async function createFile(id, projectId, filename, path, size) {
         throw error;
     }
 
-    await logActivity(projectId, 'Admin', 'upload_file', `File "${filename}" uploaded`);
+    await logActivity(projectId, user || 'Admin', 'upload_file', `File "${filename}" uploaded`);
     return mapFile(data);
 }
 
@@ -625,7 +625,7 @@ async function getDetailedStatistics(days = 30) {
 }
 
 // --- PUBLIC LINKS ---
-async function createPublicLink(projectId, fileId) {
+async function createPublicLink(projectId, fileId, user = 'Admin') {
     if (!supabase) return null;
 
     // Check if active link exists? Optional. Let's create new one.
@@ -639,7 +639,7 @@ async function createPublicLink(projectId, fileId) {
     const { data, error } = await supabase.from('public_links').insert([newLink]).select().single();
     if (error) throw error;
 
-    await logActivity(projectId, 'Admin', 'create_link', `Public link created for file ${fileId}`);
+    await logActivity(projectId, user || 'Admin', 'create_link', `Public link created for file ${fileId}`);
     return data;
 }
 

@@ -54,7 +54,7 @@ router.post('/reserve', vereisAuthenticatie, async (req, res) => {
         if (!uploadData) return res.status(500).json({ error: "Kon link niet genereren" });
 
         // Create placeholder file record
-        await db.createFile(id, projectId, safeName, storagePath, 0);
+        await db.createFile(id, projectId, safeName, storagePath, 0, req.session.username);
 
         res.json({
             fileId: id,
@@ -84,7 +84,7 @@ router.post('/confirm', vereisAuthenticatie, async (req, res) => {
             console.log(`[UPLOAD] Bestaand bestand geupdate: ${fileId}`);
         } else {
             // Create new
-            await db.createFile(fileId, projectId, fileName, storagePath, fileSize);
+            await db.createFile(fileId, projectId, fileName, storagePath, fileSize, req.session.username);
         }
 
         res.json({ status: 'ok', fileId });
