@@ -4,7 +4,7 @@
         Title="VH Engineering - IFC Export"
         Height="650" Width="700"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResize"
+        ResizeMode="NoResize"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent">
