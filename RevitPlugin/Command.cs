@@ -107,8 +107,8 @@ namespace VH_IFC_QR
                                 currentStep++; // 2
 
                                 // Register
-                                modelId = await client.CreateModelAsync(selWin.SelectedProject.id, modelName, revitUsername);
-                                var session = await client.CreateUploadSessionAsync(modelId, modelName, fileSize, checksum, revitUsername);
+                                modelId = await client.CreateModelAsync(selWin.SelectedProject.id, modelName, client.CurrentUsername);
+                                var session = await client.CreateUploadSessionAsync(modelId, modelName, fileSize, checksum, client.CurrentUsername);
                                 currentStep++; // 3
 
                                 // Upload
