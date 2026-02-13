@@ -219,10 +219,10 @@
             </Grid>
 
             <!-- View-Sheet Mapping List Area -->
-            <Border Grid.Row="2" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" UseLayoutRounding="True" SnapsToDevicePixels="True" ClipToBounds="True">
-                <Grid>
+            <Border Grid.Row="2" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" UseLayoutRounding="True" SnapsToDevicePixels="True">
+                <Grid Margin="1">
                     <!-- Header Background (Rounded) -->
-                    <Border Background="#F9FAFB" CornerRadius="7,7,0,0" VerticalAlignment="Top" Height="45" />
+                    <Border Background="#F9FAFB" CornerRadius="6,6,0,0" VerticalAlignment="Top" Height="45" />
                     
                     <DataGrid x:Name="gridMapping" AutoGenerateColumns="False" CanUserAddRows="False" 
                               HeadersVisibility="Column" GridLinesVisibility="Horizontal"
