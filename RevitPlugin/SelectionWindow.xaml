@@ -218,98 +218,100 @@
                 </StackPanel>
             </Grid>
 
-            <!-- View-Sheet Mapping List -->
-            <Border Grid.Row="2" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" UseLayoutRounding="True" SnapsToDevicePixels="True" ClipToBounds="True" Padding="1">
-                <DataGrid x:Name="gridMapping" AutoGenerateColumns="False" CanUserAddRows="False" 
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                          Background="White" BorderThickness="0"
-                          HorizontalGridLinesBrush="#F3F4F6" VerticalGridLinesBrush="Transparent"
-                          RowHeight="45">
+            <!-- View-Sheet Mapping List Area -->
+            <Border Grid.Row="2" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" UseLayoutRounding="True" SnapsToDevicePixels="True" ClipToBounds="True">
+                <Grid>
+                    <!-- Header Background (Rounded) -->
+                    <Border Background="#F9FAFB" CornerRadius="7,7,0,0" VerticalAlignment="Top" Height="45" />
                     
-                    <DataGrid.Resources>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#F9FAFB"/>
-                            <Setter Property="Foreground" Value="#6B7280"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Padding" Value="10,10"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#9CA3AF"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                        </Style>
-                        <Style TargetType="DataGridCell">
-                            <Setter Property="Padding" Value="10,0"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="DataGridCell">
-                                        <Border BorderThickness="0" Background="Transparent" SnapsToDevicePixels="True">
-                                            <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </DataGrid.Resources>
-
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Width="50">
-                            <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                    <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="Background" Value="#F9FAFB"/>
-                                    <Setter Property="Foreground" Value="#6B7280"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                    <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                    <DataGrid x:Name="gridMapping" AutoGenerateColumns="False" CanUserAddRows="False" 
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              Background="Transparent" BorderThickness="0"
+                              HorizontalGridLinesBrush="#F3F4F6" VerticalGridLinesBrush="Transparent"
+                              RowHeight="45">
+                        
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#6B7280"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="10,10"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#9CA3AF"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Padding" Value="10,0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridCell">
+                                            <Border BorderThickness="0" Background="Transparent" SnapsToDevicePixels="True">
+                                                <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </DataGrid.Resources>
+    
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="50">
+                                <DataGridTemplateColumn.HeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Foreground" Value="#6B7280"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                        <Setter Property="BorderBrush" Value="#9CA3AF"/>
+                                    </Style>
+                                </DataGridTemplateColumn.HeaderStyle>
+                                <DataGridTemplateColumn.Header>
+                                    <CheckBox IsChecked="{Binding DataContext.AllSelected, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Click="HeaderCheckBox_Click" ToolTip="Selecteer Alles"/>
+                                </DataGridTemplateColumn.Header>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" Click="RowCheckBox_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+    
+                        <DataGridTextColumn Header="3D View (Model)" Binding="{Binding ViewName}" Width="*" IsReadOnly="True" Foreground="#111827">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
                                 </Style>
-                            </DataGridTemplateColumn.HeaderStyle>
-                            <DataGridTemplateColumn.Header>
-                                <CheckBox IsChecked="{Binding DataContext.AllSelected, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                          Click="HeaderCheckBox_Click" ToolTip="Selecteer Alles"/>
-                            </DataGridTemplateColumn.Header>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+    
+                        <DataGridTemplateColumn Width="40">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                              HorizontalAlignment="Center" VerticalAlignment="Center" Click="RowCheckBox_Click"/>
+                                    <TextBlock Text="➔" Foreground="#9CA3AF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-
-                    <DataGridTextColumn Header="3D View (Model)" Binding="{Binding ViewName}" Width="*" IsReadOnly="True" Foreground="#111827">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
-                    <DataGridTemplateColumn Width="40">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="➔" Foreground="#9CA3AF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-
-                    <DataGridTemplateColumn Header="Plaats QR op Sheet" Width="2*">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <ComboBox ItemsSource="{Binding AllSheets}" DisplayMemberPath="Name" 
-                                          SelectedItem="{Binding SelectedSheet, UpdateSourceTrigger=PropertyChanged}"
-                                          Height="35"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-        </Border>
+    
+                        <DataGridTemplateColumn Header="Plaats QR op Sheet" Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding AllSheets}" DisplayMemberPath="Name" 
+                                              SelectedItem="{Binding SelectedSheet, UpdateSourceTrigger=PropertyChanged}"
+                                              Height="35"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
 
         <!-- Footer / Action Area -->
         <Grid Grid.Row="3">
             <Border Background="#F3F4F6" CornerRadius="8" Padding="15">
-                <Grid>
-                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
