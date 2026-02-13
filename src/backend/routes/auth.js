@@ -17,6 +17,7 @@ const vereisAuthenticatie = (req, res, next) => {
             // Mock session for API access
             if (!req.session) req.session = {};
             req.session.userId = 'admin-api-user';
+            req.session.username = 'API Admin';
             return next();
         }
     }
@@ -35,6 +36,7 @@ router.post('/login', async (req, res) => {
 
         if (user && await bcrypt.compare(password, user.password_hash)) {
             req.session.userId = user.id;
+            req.session.username = user.username;
             console.log(`[LOGIN] Succes! Sessie ID: ${req.session.id}`);
             res.json({ message: 'OK', user: { id: user.id, username: user.username } });
         } else {
