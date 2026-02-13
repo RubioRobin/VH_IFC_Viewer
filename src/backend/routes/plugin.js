@@ -95,9 +95,9 @@ router.get('/projects', authenticatePlugin, async (req, res) => {
 
 // 3. Create Model
 router.post('/models/create', authenticatePlugin, authenticatePluginUser, async (req, res) => {
-    const { projectId, modelName } = req.body;
+    const { projectId, modelName, uploaderName } = req.body;
     try {
-        const createdBy = req.user ? req.user.username : 'Plugin';
+        const createdBy = req.user ? req.user.username : (uploaderName || 'Plugin');
         const model = await db.createModel(projectId, modelName, createdBy);
         res.json({ modelId: model.id });
     } catch (e) {
@@ -126,7 +126,7 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, auth
         try {
             const { data: model } = await db.supabase.from('models').select('project_id').eq('id', modelId).single();
             if (model) {
-                const userName = req.user ? req.user.username : 'Revit User';
+                const userName = req.user ? req.user.username : (req.body.uploaderName || 'Revit User');
                 await db.createFile(null, model.project_id, fileName, storagePath, fileSize, userName);
             }
         } catch (syncError) {

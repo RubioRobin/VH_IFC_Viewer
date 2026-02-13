@@ -28,6 +28,7 @@ namespace VH_IFC_QR
 
             try
             {
+                string revitUsername = uiapp.Application.Username;
                 // 1. Gather Revit data
                 var views3D = new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>().Where(v => !v.IsTemplate).ToList();
                 var sheets = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().ToList();
@@ -106,8 +107,8 @@ namespace VH_IFC_QR
                                 currentStep++; // 2
 
                                 // Register
-                                modelId = await client.CreateModelAsync(selWin.SelectedProject.id, modelName);
-                                var session = await client.CreateUploadSessionAsync(modelId, modelName, fileSize, checksum);
+                                modelId = await client.CreateModelAsync(selWin.SelectedProject.id, modelName, revitUsername);
+                                var session = await client.CreateUploadSessionAsync(modelId, modelName, fileSize, checksum, revitUsername);
                                 currentStep++; // 3
 
                                 // Upload
@@ -226,7 +227,9 @@ namespace VH_IFC_QR
             // NEW: Try to find titleblock for precise placement
             XYZ placementPoint = XYZ.Zero;
             bool manualPlacement = false;
-            double marginFeet = 10.0 / 304.8; // 10mm margin from edge
+            double offsetMm = SettingsManager.Instance.QrOffsetMm;
+            if (offsetMm <= 0) offsetMm = 10.0;
+            double marginFeet = offsetMm / 304.8; // User configurable margin from edge
 
             try
             {
@@ -241,14 +244,16 @@ namespace VH_IFC_QR
                     if (bbox != null)
                     {
                         string loc = SettingsManager.Instance.QrLocation;
+                        double halfSize = targetSizeInFeet / 2.0;
+
                         if (loc == "BottomLeft")
-                            placementPoint = new XYZ(bbox.Min.X + marginFeet, bbox.Min.Y + marginFeet, 0);
+                            placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
                         else if (loc == "TopRight")
-                            placementPoint = new XYZ(bbox.Max.X - targetSizeInFeet - marginFeet, bbox.Max.Y - targetSizeInFeet - marginFeet, 0);
+                            placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
                         else if (loc == "TopLeft")
-                            placementPoint = new XYZ(bbox.Min.X + marginFeet, bbox.Max.Y - targetSizeInFeet - marginFeet, 0);
+                            placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
                         else // BottomRight
-                            placementPoint = new XYZ(bbox.Max.X - targetSizeInFeet - marginFeet, bbox.Min.Y + marginFeet, 0);
+                            placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
                         
                         manualPlacement = true;
                     }
@@ -259,7 +264,9 @@ namespace VH_IFC_QR
             ImageInstance instance;
             if (manualPlacement)
             {
-                instance = ImageInstance.Create(doc, sheet, type.Id, placementPoint);
+                ImagePlacementOptions placementOptions = new ImagePlacementOptions();
+                placementOptions.Location = placementPoint;
+                instance = ImageInstance.Create(doc, sheet, type.Id, placementOptions);
             }
             else
             {

@@ -9,7 +9,7 @@ namespace VH_IFC_QR
     {
         public Result OnStartup(UIControlledApplication application)
         {
-            TaskDialog.Show("VH IFC", "Laden VH_IFC_QR v1.3...");
+// Removed startup message as requested
             string tabName = "VH";
             try
             {
@@ -23,17 +23,17 @@ namespace VH_IFC_QR
             
             // 1. Export Button
             PushButtonData buttonData = new PushButtonData("cmdExportIFC",
-                "Export IFC v1.3", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
+                "Export IFC", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
             buttonData.ToolTip = "Export current view to IFC locally and link with VH Viewer.";
             
             // 2. Admin Button
             PushButtonData adminData = new PushButtonData("cmdAdmin",
-                "Admin Dashboard v1.3", thisAssemblyPath, "VH_IFC_QR.AdminCommand");
+                "Admin Dashboard", thisAssemblyPath, "VH_IFC_QR.AdminCommand");
             adminData.ToolTip = "Open backend admin dashboard.";
 
             // 3. Settings Button
             PushButtonData settingsData = new PushButtonData("cmdSettings",
-                "IFC Settings v1.3", thisAssemblyPath, "VH_IFC_QR.IfcSettingsCommand");
+                "IFC Settings", thisAssemblyPath, "VH_IFC_QR.IfcSettingsCommand");
             settingsData.ToolTip = "Configureer IFC export en QR code instellingen.";
 
             panel.AddItem(buttonData);

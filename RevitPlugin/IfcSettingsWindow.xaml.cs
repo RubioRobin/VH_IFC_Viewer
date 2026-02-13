@@ -23,6 +23,7 @@ namespace VH_IFC_QR
         {
             var settings = SettingsManager.Instance;
             txtQrSize.Text = settings.QrSizeMm.ToString();
+            txtQrOffset.Text = settings.QrOffsetMm.ToString();
             
             // Location
             foreach (ComboBoxItem item in comboQrLocation.Items)
@@ -59,6 +60,17 @@ namespace VH_IFC_QR
             else
             {
                 MessageBox.Show("Voer een geldige getalswaarde in voor de QR grootte (bijv. 25 of 25.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            string cleanOffset = txtQrOffset.Text.Replace(",", ".");
+            if (double.TryParse(cleanOffset, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double offset))
+            {
+                SettingsManager.Instance.QrOffsetMm = offset;
+            }
+            else
+            {
+                MessageBox.Show("Voer een geldige getalswaarde in voor de QR afstand (bijv. 10 of 10.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 

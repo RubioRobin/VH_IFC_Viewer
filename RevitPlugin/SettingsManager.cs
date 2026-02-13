@@ -11,6 +11,7 @@ namespace VH_IFC_QR
         
         // QR Settings
         public double QrSizeMm { get; set; } = 50.0;
+        public double QrOffsetMm { get; set; } = 10.0;
         public string QrLocation { get; set; } = "BottomRight"; // BottomRight, BottomLeft, TopRight, TopLeft
 
         // IFC Settings

@@ -152,7 +152,7 @@ namespace VH_IFC_QR
             return JsonConvert.DeserializeObject<List<ProjectInfo>>(content);
         }
 
-        public async Task<string> CreateModelAsync(string projectId, string modelName)
+        public async Task<string> CreateModelAsync(string projectId, string modelName, string uploaderName = null)
         {
             // Attach User Token Header
             if (!string.IsNullOrEmpty(_userToken))
@@ -161,7 +161,7 @@ namespace VH_IFC_QR
                 _client.DefaultRequestHeaders.Add("x-user-token", _userToken);
             }
 
-            var payload = new { projectId, modelName };
+            var payload = new { projectId, modelName, uploaderName };
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/create", content).ConfigureAwait(false);
             
@@ -176,9 +176,9 @@ namespace VH_IFC_QR
             return JObject.Parse(result)["modelId"].ToString();
         }
 
-        public async Task<UploadSessionInfo> CreateUploadSessionAsync(string modelId, string fileName, long fileSize, string checksum)
+        public async Task<UploadSessionInfo> CreateUploadSessionAsync(string modelId, string fileName, long fileSize, string checksum, string uploaderName = null)
         {
-            var payload = new { fileName, contentType = "application/octet-stream", fileSize, checksumSha256 = checksum };
+            var payload = new { fileName, contentType = "application/octet-stream", fileSize, checksumSha256 = checksum, uploaderName };
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/upload-session", content).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
