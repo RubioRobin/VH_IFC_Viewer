@@ -170,7 +170,10 @@
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
-    <Border Background="#F9FAFB" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="12" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="12" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Direction="270" RenderingBias="Quality" ShadowDepth="3" Opacity="0.15"/>
+        </Border.Effect>
         <Grid Margin="30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -219,33 +222,47 @@
             </Grid>
 
             <!-- View-Sheet Mapping List Area -->
-            <Border Grid.Row="2" BorderBrush="#9CA3AF" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" UseLayoutRounding="True" SnapsToDevicePixels="True">
-                <Grid Margin="1">
-                    <!-- Header Background (Rounded) -->
-                    <Border Background="#F9FAFB" CornerRadius="6,6,0,0" VerticalAlignment="Top" Height="45" />
+            <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25" Padding="1" UseLayoutRounding="True" SnapsToDevicePixels="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" Direction="270" RenderingBias="Quality" ShadowDepth="1.5" Opacity="0.08"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     
-                    <DataGrid x:Name="gridMapping" AutoGenerateColumns="False" CanUserAddRows="False" 
+                    <DataGrid x:Name="gridMapping" Grid.Row="0" Grid.RowSpan="2" AutoGenerateColumns="False" CanUserAddRows="False" 
                               HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                               Background="Transparent" BorderThickness="0"
-                              HorizontalGridLinesBrush="#F3F4F6" VerticalGridLinesBrush="Transparent"
-                              RowHeight="45">
+                              HorizontalGridLinesBrush="#F1F5F9" VerticalGridLinesBrush="Transparent"
+                              RowHeight="45" Margin="0">
                         
                         <DataGrid.Resources>
                             <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="#6B7280"/>
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="10,10"/>
+                                <Setter Property="Padding" Value="10,12"/>
                                 <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                <Setter Property="BorderBrush" Value="#9CA3AF"/>
+                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
                                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridColumnHeader">
+                                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
                             </Style>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Padding" Value="10,0"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="DataGridCell">
-                                            <Border BorderThickness="0" Background="Transparent" SnapsToDevicePixels="True">
+                                            <Border BorderThickness="0" Background="Transparent" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                                                 <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                             </Border>
                                         </ControlTemplate>
@@ -260,11 +277,11 @@
                                     <Style TargetType="DataGridColumnHeader">
                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                         <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Foreground" Value="#6B7280"/>
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                        <Setter Property="Foreground" Value="#64748B"/>
                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                        <Setter Property="BorderBrush" Value="#9CA3AF"/>
+                                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
                                     </Style>
                                 </DataGridTemplateColumn.HeaderStyle>
                                 <DataGridTemplateColumn.Header>
@@ -301,7 +318,7 @@
                                     <DataTemplate>
                                         <ComboBox ItemsSource="{Binding AllSheets}" DisplayMemberPath="Name" 
                                                   SelectedItem="{Binding SelectedSheet, UpdateSourceTrigger=PropertyChanged}"
-                                                  Height="35"/>
+                                                  Height="35" Margin="0,0,5,0"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -312,7 +329,10 @@
     
             <!-- Footer / Action Area -->
             <Grid Grid.Row="3">
-                <Border Background="#F3F4F6" CornerRadius="8" Padding="15">
+                <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="15">
+                     <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" Direction="270" RenderingBias="Quality" ShadowDepth="1" Opacity="0.05"/>
+                    </Border.Effect>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
