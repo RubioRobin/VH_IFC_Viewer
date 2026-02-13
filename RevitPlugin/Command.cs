@@ -133,7 +133,7 @@ namespace VH_IFC_QR
                             // Place QR on SPECIFIC MAPPED SHEET
                             progress.Update($"QR code genereren...", (int)((double)currentStep / totalSteps * 100));
                             byte[] qrBytes = Task.Run(() => client.DownloadQRAsync(qrUrl)).GetAwaiter().GetResult();
-                            string qrTempPath = Path.Combine(Path.GetTempPath(), $"{modelId}_qr.png");
+                            string qrTempPath = Path.Combine(Path.GetTempPath(), $"{modelId}_{DateTime.Now.Ticks}_qr.png");
                             File.WriteAllBytes(qrTempPath, qrBytes);
 
                             using (Transaction t = new Transaction(doc, "Place QR"))
@@ -206,26 +206,79 @@ namespace VH_IFC_QR
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
             
-            ImagePlacementOptions placement = new ImagePlacementOptions();
-            
-            // Map settings to BoxPlacement
-            string loc = SettingsManager.Instance.QrLocation;
-            if (loc == "BottomLeft") placement.PlacementPoint = BoxPlacement.BottomLeft;
-            else if (loc == "TopRight") placement.PlacementPoint = BoxPlacement.TopRight;
-            else if (loc == "TopLeft") placement.PlacementPoint = BoxPlacement.TopLeft;
-            else placement.PlacementPoint = BoxPlacement.BottomRight;
-            
-            ImageInstance instance = ImageInstance.Create(doc, sheet, type.Id, placement);
-            
-            // Scale to size in mm
+            // Determine size
             double sizeInMm = SettingsManager.Instance.QrSizeMm;
+            if (sizeInMm <= 0) sizeInMm = 50; 
             double targetSizeInFeet = sizeInMm / 304.8;
+            
+            // 1. Resize the TYPE before placing instance
+            try
+            {
+                // In Revit 2025, BuiltInParameter.RASTER_SYMBOL_WIDTH might be missing or renamed.
+                // Using LookupParameter for more robustness.
+                Parameter tWidth = type.LookupParameter("Width");
+                Parameter tHeight = type.LookupParameter("Height");
+                if (tWidth != null && !tWidth.IsReadOnly) tWidth.Set(targetSizeInFeet);
+                if (tHeight != null && !tHeight.IsReadOnly) tHeight.Set(targetSizeInFeet);
+            }
+            catch { }
+
+            // NEW: Try to find titleblock for precise placement
+            XYZ placementPoint = XYZ.Zero;
+            bool manualPlacement = false;
+            double marginFeet = 10.0 / 304.8; // 10mm margin from edge
+
+            try
+            {
+                Element titleBlock = new FilteredElementCollector(doc, sheet.Id)
+                    .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                    .WhereElementIsNotElementType()
+                    .FirstOrDefault();
+
+                if (titleBlock != null)
+                {
+                    BoundingBoxXYZ bbox = titleBlock.get_BoundingBox(sheet);
+                    if (bbox != null)
+                    {
+                        string loc = SettingsManager.Instance.QrLocation;
+                        if (loc == "BottomLeft")
+                            placementPoint = new XYZ(bbox.Min.X + marginFeet, bbox.Min.Y + marginFeet, 0);
+                        else if (loc == "TopRight")
+                            placementPoint = new XYZ(bbox.Max.X - targetSizeInFeet - marginFeet, bbox.Max.Y - targetSizeInFeet - marginFeet, 0);
+                        else if (loc == "TopLeft")
+                            placementPoint = new XYZ(bbox.Min.X + marginFeet, bbox.Max.Y - targetSizeInFeet - marginFeet, 0);
+                        else // BottomRight
+                            placementPoint = new XYZ(bbox.Max.X - targetSizeInFeet - marginFeet, bbox.Min.Y + marginFeet, 0);
+                        
+                        manualPlacement = true;
+                    }
+                }
+            }
+            catch { }
+
+            ImageInstance instance;
+            if (manualPlacement)
+            {
+                instance = ImageInstance.Create(doc, sheet, type.Id, placementPoint);
+            }
+            else
+            {
+                ImagePlacementOptions placement = new ImagePlacementOptions();
+                string loc = SettingsManager.Instance.QrLocation;
+                if (loc == "BottomLeft") placement.PlacementPoint = BoxPlacement.BottomLeft;
+                else if (loc == "TopRight") placement.PlacementPoint = BoxPlacement.TopRight;
+                else if (loc == "TopLeft") placement.PlacementPoint = BoxPlacement.TopLeft;
+                else placement.PlacementPoint = BoxPlacement.BottomRight;
+                instance = ImageInstance.Create(doc, sheet, type.Id, placement);
+            }
             
             try 
             {
-                // Try setting Width/Height directly on instance first
-                Parameter pWidth = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH);
-                Parameter pHeight = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HEIGHT);
+                doc.Regenerate();
+
+                // 2. Resize the INSTANCE
+                Parameter pWidth = instance.LookupParameter("Width");
+                Parameter pHeight = instance.LookupParameter("Height");
                 
                 if (pWidth != null && !pWidth.IsReadOnly) 
                 {
@@ -233,24 +286,25 @@ namespace VH_IFC_QR
                     if (pHeight != null && !pHeight.IsReadOnly) pHeight.Set(targetSizeInFeet);
                 }
 
-                // Use scale as a robust fallback (necessary in some Revit configurations)
-                double currentWidth = pWidth != null ? pWidth.AsDouble() : 0;
-                if (currentWidth > 0 && Math.Abs(currentWidth - targetSizeInFeet) > 0.001)
+                // 3. AGGRESSIVE SCALE FALLBACK
+                // Calculate current width to find required scale factor
+                double currentWidth = (pWidth != null) ? pWidth.AsDouble() : 0;
+                if (currentWidth <= 0) {
+                   Parameter tWidth = type.LookupParameter("Width");
+                   if (tWidth != null) currentWidth = tWidth.AsDouble();
+                }
+
+                if (currentWidth > 0 && Math.Abs(currentWidth - targetSizeInFeet) > 0.0001)
                 {
                     double scaleFactor = targetSizeInFeet / currentWidth;
-                    Parameter pScaleH = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HORIZ_SCALE);
-                    Parameter pScaleV = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_VERT_SCALE);
+                    Parameter pScaleH = instance.LookupParameter("Horizontal Scale");
+                    Parameter pScaleV = instance.LookupParameter("Vertical Scale");
                     
                     if (pScaleH != null && !pScaleH.IsReadOnly) pScaleH.Set(scaleFactor);
                     if (pScaleV != null && !pScaleV.IsReadOnly) pScaleV.Set(scaleFactor);
                 }
             }
-            catch (Exception) 
-            { 
-                // Ignore sizing error to allow the QR to still appear at default size
-            }
-
-            // Label creation removed as per user request
+            catch (Exception) { }
         }
         public void DoEvents()
         {

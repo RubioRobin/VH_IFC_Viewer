@@ -51,13 +51,14 @@ namespace VH_IFC_QR
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (double.TryParse(txtQrSize.Text, out double size))
+            string cleanText = txtQrSize.Text.Replace(",", ".");
+            if (double.TryParse(cleanText, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double size))
             {
                 SettingsManager.Instance.QrSizeMm = size;
             }
             else
             {
-                MessageBox.Show("Voer een geldige getalswaarde in voor de QR grootte.", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Voer een geldige getalswaarde in voor de QR grootte (bijv. 25 of 25.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
