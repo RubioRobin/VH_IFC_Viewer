@@ -23,6 +23,7 @@ interface DetailedStats {
     projects: { name: string; count: number }[];
     files: { name: string; count: number }[];
     timeline: { date: string; count: number }[];
+    growth: number;
 }
 
 export function Statistics() {
@@ -118,7 +119,12 @@ export function Statistics() {
                             <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl">
                                 <TrendingUp className="w-5 h-5" />
                             </div>
-                            <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">+12%</span>
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${(stats?.growth || 0) >= 0
+                                    ? 'text-green-500 bg-green-50'
+                                    : 'text-red-500 bg-red-50'
+                                }`}>
+                                {stats?.growth && stats.growth >= 0 ? '+' : ''}{stats?.growth || 0}%
+                            </span>
                         </div>
                         <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Totaal Scans (30d)</div>
                         <div className="text-3xl font-black text-slate-900 mt-1">{totalScans}</div>

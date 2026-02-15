@@ -106,10 +106,32 @@ module.exports = (supabase) => {
                     timeline[date] = (timeline[date] || 0) + 1;
                 });
 
+                // Calculate Growth Percentage
+                const currentPeriodCount = timelineData?.length || 0;
+
+                // Fetch scans for the PREVIOUS period of the same length
+                const previousStartDate = new Date(startDate);
+                previousStartDate.setDate(previousStartDate.getDate() - days);
+
+                const { count: previousPeriodCount } = await supabase
+                    .from('activity')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('type', 'scan')
+                    .gte('timestamp', previousStartDate.toISOString())
+                    .lt('timestamp', startDate.toISOString());
+
+                let growth = 0;
+                if (previousPeriodCount > 0) {
+                    growth = ((currentPeriodCount - previousPeriodCount) / previousPeriodCount) * 100;
+                } else if (currentPeriodCount > 0) {
+                    growth = 100; // First scans ever
+                }
+
                 return {
                     projects: Object.entries(projectCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
                     files: Object.entries(fileCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-                    timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date))
+                    timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date)),
+                    growth: Math.round(growth)
                 };
             } catch (e) {
                 console.error('getDetailedStatistics error:', e);
