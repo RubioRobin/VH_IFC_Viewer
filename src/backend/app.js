@@ -34,13 +34,9 @@ const xss = require('xss-clean');
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Trust Proxy for Render (important for secure cookies)
-app.set('trust proxy', 1);
-
+// --- CONFIG ---
+app.set('trust proxy', 1); // Important for secure cookies on Render/Heroku
 const frontendUrl = process.env.FRONTEND_URL || '*';
-
-// --- CONFIG & HEALTH ---
-app.set('trust proxy', 1);
 
 // --- SECURITY MIDDLEWARE ---
 app.use(helmet({
