@@ -306,11 +306,18 @@ export function Statistics() {
                                     </motion.div>
 
                                     {/* Label row directly under the bar */}
-                                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                         {period === 7 && (
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${t.isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                                {t.isToday ? 'Vandaag' : t.dayName}
-                                            </span>
+                                            <>
+                                                <span className={`text-[9px] font-black uppercase tracking-tight ${t.isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                                    {t.dayName}
+                                                </span>
+                                                {t.isToday && (
+                                                    <span className="text-[8px] font-black text-indigo-600 uppercase leading-none mt-0.5">
+                                                        Nu
+                                                    </span>
+                                                )}
+                                            </>
                                         )}
                                         {period === 30 && ((t as any).isStart || (t as any).isMid || (t as any).isEnd) && (
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
@@ -332,7 +339,7 @@ export function Statistics() {
                             </div>
                         )}
                     </div>
-                    <div className="h-8" /> {/* Spacer for labels */}
+                    <div className="h-10" /> {/* Spacer for labels */}
                 </div>
                 <div className="grid gap-8 md:grid-cols-2">
                     {/* Projects Table */}
