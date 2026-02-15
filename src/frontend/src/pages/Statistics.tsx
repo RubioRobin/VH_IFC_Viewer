@@ -120,8 +120,8 @@ export function Statistics() {
                                 <TrendingUp className="w-5 h-5" />
                             </div>
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${(stats?.growth || 0) >= 0
-                                    ? 'text-green-500 bg-green-50'
-                                    : 'text-red-500 bg-red-50'
+                                ? 'text-green-500 bg-green-50'
+                                : 'text-red-500 bg-red-50'
                                 }`}>
                                 {stats?.growth && stats.growth >= 0 ? '+' : ''}{stats?.growth || 0}%
                             </span>
@@ -286,7 +286,7 @@ export function Statistics() {
                             }
 
                             return days.map((t, i) => (
-                                <div key={t.date} className="flex flex-col items-center flex-1 max-w-[60px] h-full relative group">
+                                <div key={t.date} className="flex flex-col items-center flex-1 h-full relative group">
                                     <motion.div
                                         className="w-full h-full flex flex-col justify-end"
                                         initial={{ opacity: 0 }}
@@ -340,7 +340,7 @@ export function Statistics() {
                             ));
                         })()}
                         {stats?.timeline.length === 0 && !loading && (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 italic">
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 italic pointer-events-none">
                                 Geen activiteit geregistreerd in deze periode.
                             </div>
                         )}
