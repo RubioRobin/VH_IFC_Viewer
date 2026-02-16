@@ -1,0 +1,28 @@
+﻿  Determining projects to restore...
+  Restored C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj (in 193 ms).
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs(4,12): error CS0579: Duplicate 'global::System.Runtime.Versioning.TargetFrameworkAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(13,12): error CS0579: Duplicate 'System.Reflection.AssemblyCompanyAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(14,12): error CS0579: Duplicate 'System.Reflection.AssemblyConfigurationAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(15,12): error CS0579: Duplicate 'System.Reflection.AssemblyFileVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(16,12): error CS0579: Duplicate 'System.Reflection.AssemblyInformationalVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(17,12): error CS0579: Duplicate 'System.Reflection.AssemblyProductAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(18,12): error CS0579: Duplicate 'System.Reflection.AssemblyTitleAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(19,12): error CS0579: Duplicate 'System.Reflection.AssemblyVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(20,12): error CS0579: Duplicate 'System.Runtime.Versioning.TargetPlatformAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+
+Build FAILED.
+
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs(4,12): error CS0579: Duplicate 'global::System.Runtime.Versioning.TargetFrameworkAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(13,12): error CS0579: Duplicate 'System.Reflection.AssemblyCompanyAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(14,12): error CS0579: Duplicate 'System.Reflection.AssemblyConfigurationAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(15,12): error CS0579: Duplicate 'System.Reflection.AssemblyFileVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(16,12): error CS0579: Duplicate 'System.Reflection.AssemblyInformationalVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(17,12): error CS0579: Duplicate 'System.Reflection.AssemblyProductAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(18,12): error CS0579: Duplicate 'System.Reflection.AssemblyTitleAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(19,12): error CS0579: Duplicate 'System.Reflection.AssemblyVersionAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\obj\Release\net8.0-windows\VH_IFC_QR.AssemblyInfo.cs(20,12): error CS0579: Duplicate 'System.Runtime.Versioning.TargetPlatformAttribute' attribute [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+    0 Warning(s)
+    9 Error(s)
+
+Time Elapsed 00:00:00.98
+

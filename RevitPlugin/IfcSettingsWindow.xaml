@@ -109,31 +109,39 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#F4F7F9" CornerRadius="15" BorderThickness="1" BorderBrush="#D1D8E0">
-        <Grid Margin="20,20,20,15">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="12" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Direction="270" RenderingBias="Quality" ShadowDepth="3" Opacity="0.15"/>
+        </Border.Effect>
+        <Grid Margin="30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Custom Header / Title Bar Area -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,15">
-                <TextBlock Text="VH IFC &amp; QR Instellingen" FontSize="20" FontWeight="Bold" Foreground="#2C3E50"/>
+            <!-- Custom Header / Title Bar Area (Draggable) -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,25" MouseLeftButtonDown="Window_MouseDown" Background="Transparent">
+                <TextBlock Text="Instellingen" FontSize="22" FontWeight="Bold" Foreground="#111827"/>
+                <TextBlock Text="QR-code en Export Voorkeuren" FontSize="14" Foreground="#6B7280" Margin="0,2,0,0"/>
             </StackPanel>
 
             <!-- Content -->
             <StackPanel Grid.Row="1">
                 <!-- QR Size -->
-                <TextBlock Text="QR Code Grootte (mm):" FontWeight="SemiBold" Margin="0,5,0,5"/>
+                <Label Content="QR Code Grootte (mm):" Margin="0,0,0,5"/>
                 <TextBox x:Name="txtQrSize" Text="50"/>
 
                 <!-- QR Offset -->
-                <TextBlock Text="QR Code Afstand naar hoek (mm):" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                <Label Content="QR Afstand naar hoek (mm):" Margin="0,15,0,5"/>
                 <TextBox x:Name="txtQrOffset" Text="10"/>
 
                 <!-- QR Location -->
-                <TextBlock Text="QR Locatie op Sheet:" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                <Label Content="QR Locatie op Sheet:" Margin="0,15,0,5"/>
                 <ComboBox x:Name="comboQrLocation">
                     <ComboBoxItem Content="Rechtsonder" Tag="BottomRight"/>
                     <ComboBoxItem Content="Linksonder" Tag="BottomLeft"/>
@@ -142,7 +150,7 @@
                 </ComboBox>
 
                 <!-- IFC Version -->
-                <TextBlock Text="IFC Versie:" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                <Label Content="IFC Versie:" Margin="0,15,0,5"/>
                 <ComboBox x:Name="comboIfcVersion">
                     <ComboBoxItem Content="IFC4" Tag="IFC4"/>
                     <ComboBoxItem Content="IFC2x3" Tag="IFC2x3"/>
@@ -150,13 +158,13 @@
                 </ComboBox>
 
                 <!-- Additional Options -->
-                <CheckBox x:Name="chkVisibleOnly" Content="Alleen zichtbare elementen exporteren" Margin="0,20,0,0" IsChecked="True"/>
+                <CheckBox x:Name="chkVisibleOnly" Content="Alleen zichtbare elementen exporteren" Margin="0,20,0,0" IsChecked="True" HorizontalAlignment="Left" Foreground="#374151" FontWeight="SemiBold"/>
             </StackPanel>
 
             <!-- Footer -->
-            <UniformGrid Grid.Row="2" Columns="2" Margin="0,15,0,0">
-                <Button Content="Annuleren" Click="BtnCancel_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,5,0" IsCancel="True" Height="35"/>
-                <Button Content="Opslaan" Click="BtnSave_Click" Style="{StaticResource RoundedButtonStyle}" Margin="5,0,0,0" IsDefault="True" Height="35"/>
+            <UniformGrid Grid.Row="2" Columns="2" Margin="0,25,0,0">
+                <Button Content="Annuleren" Click="BtnCancel_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0" IsCancel="True" Height="40"/>
+                <Button Content="Opslaan" Click="BtnSave_Click" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" IsDefault="True" Height="40"/>
             </UniformGrid>
         </Grid>
     </Border>

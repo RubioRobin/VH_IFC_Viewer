@@ -212,24 +212,25 @@ namespace VH_IFC_QR
             if (sizeInMm <= 0) sizeInMm = 50; 
             double targetSizeInFeet = sizeInMm / 304.8;
             
-            // 1. Resize the TYPE before placing instance
+            // 1. Resize the TYPE before placing instance (Robust lookup)
             try
             {
-                // In Revit 2025, BuiltInParameter.RASTER_SYMBOL_WIDTH might be missing or renamed.
-                // Using LookupParameter for more robustness.
-                Parameter tWidth = type.LookupParameter("Width");
-                Parameter tHeight = type.LookupParameter("Height");
+                // Robust lookup: Built-in parameters are language-neutral
+                Parameter tWidth = type.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH) ?? type.LookupParameter("Width");
+                Parameter tHeight = type.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HEIGHT) ?? type.LookupParameter("Height");
+                
                 if (tWidth != null && !tWidth.IsReadOnly) tWidth.Set(targetSizeInFeet);
                 if (tHeight != null && !tHeight.IsReadOnly) tHeight.Set(targetSizeInFeet);
             }
             catch { }
 
-            // NEW: Try to find titleblock for precise placement
+            // Precise placement Logic
             XYZ placementPoint = XYZ.Zero;
             bool manualPlacement = false;
             double offsetMm = SettingsManager.Instance.QrOffsetMm;
             if (offsetMm <= 0) offsetMm = 10.0;
-            double marginFeet = offsetMm / 304.8; // User configurable margin from edge
+            double marginFeet = offsetMm / 304.8; 
+            double halfSize = targetSizeInFeet / 2.0;
 
             try
             {
@@ -244,8 +245,8 @@ namespace VH_IFC_QR
                     if (bbox != null)
                     {
                         string loc = SettingsManager.Instance.QrLocation;
-                        double halfSize = targetSizeInFeet / 2.0;
 
+                        // Insert point = Corner + Margin + HalfSize (center of QR)
                         if (loc == "BottomLeft")
                             placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
                         else if (loc == "TopRight")
@@ -270,6 +271,7 @@ namespace VH_IFC_QR
             }
             else
             {
+                // Fallback if no titleblock found
                 ImagePlacementOptions placement = new ImagePlacementOptions();
                 string loc = SettingsManager.Instance.QrLocation;
                 if (loc == "BottomLeft") placement.PlacementPoint = BoxPlacement.BottomLeft;
@@ -283,9 +285,9 @@ namespace VH_IFC_QR
             {
                 doc.Regenerate();
 
-                // 2. Resize the INSTANCE
-                Parameter pWidth = instance.LookupParameter("Width");
-                Parameter pHeight = instance.LookupParameter("Height");
+                // 2. Resize the INSTANCE (Ensure sync)
+                Parameter pWidth = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH) ?? instance.LookupParameter("Width");
+                Parameter pHeight = instance.get_Parameter(BuiltInParameter.RASTER_SYMBOL_HEIGHT) ?? instance.LookupParameter("Height");
                 
                 if (pWidth != null && !pWidth.IsReadOnly) 
                 {
@@ -293,11 +295,10 @@ namespace VH_IFC_QR
                     if (pHeight != null && !pHeight.IsReadOnly) pHeight.Set(targetSizeInFeet);
                 }
 
-                // 3. AGGRESSIVE SCALE FALLBACK
-                // Calculate current width to find required scale factor
+                // 3. SCALE FALLBACK (For older Revit versions or specific image behaviors)
                 double currentWidth = (pWidth != null) ? pWidth.AsDouble() : 0;
                 if (currentWidth <= 0) {
-                   Parameter tWidth = type.LookupParameter("Width");
+                   Parameter tWidth = type.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH) ?? type.LookupParameter("Width");
                    if (tWidth != null) currentWidth = tWidth.AsDouble();
                 }
 

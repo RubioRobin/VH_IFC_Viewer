@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>VH_IFC_QR</Name>
+    <Assembly>VH_IFC_QR\VH_IFC_QR.dll</Assembly>
+    <AddInId>B1234567-8901-2345-6789-0123456789EF</AddInId>
+    <FullClassName>VH_IFC_QR.App</FullClassName>
+    <VendorId>VH_ENGINEERING</VendorId>
+    <VendorDescription>VH Engineering</VendorDescription>
+  </AddIn>
+</RevitAddIns>

@@ -1,0 +1,12 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\SelectionWindow.xaml(360,7): error MC3000: 'The 'Grid' start tag on line 177 position 10 does not match the end tag of 'Border'. Line 360, position 7.' XML is not valid. [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+
+Build FAILED.
+
+C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\SelectionWindow.xaml(360,7): error MC3000: 'The 'Grid' start tag on line 177 position 10 does not match the end tag of 'Border'. Line 360, position 7.' XML is not valid. [C:\Users\Robin\Downloads\VH_IFC_Viewer\RevitPlugin\VH_IFC_QR.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:00.73
+
