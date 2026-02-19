@@ -76,17 +76,6 @@ components.get(OBC.Raycasters).get(world);
 const fragments = components.get(OBC.FragmentsManager);
 fragments.init("/obc-worker.mjs");
 
-// Performance optimization: Culling
-const culler = components.get(OBC.FragmentsCuller);
-culler.setup({ world });
-culler.enabled = true;
-fragments.onFragmentsLoaded.add(() => {
-  culler.update(true);
-});
-world.camera.controls.addEventListener("rest", () => {
-  culler.update(true);
-});
-
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
@@ -119,13 +108,7 @@ highlighter.setup({
   },
 });
 
-// Outliner setup
-const outliner = components.get(OBF.Outliner);
-outliner.setup({
-  world,
-});
-
-// Configure Postproduction (AO & Shadows)
+// Configure Postproduction (AO & Borders)
 const postproduction = world.renderer.postproduction;
 postproduction.enabled = true;
 postproduction.customEffects.ao.enabled = true;
