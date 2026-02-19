@@ -206,7 +206,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   };
 
   const onDeleteMeasurements = () => {
-    lengthMeasurer.delete();
+    (lengthMeasurer.list as any).clear();
   };
 
   return BUI.html`
