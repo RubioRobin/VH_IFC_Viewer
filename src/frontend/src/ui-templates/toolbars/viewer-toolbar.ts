@@ -192,33 +192,15 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     btn.active = true;
   };
 
-  const onMeasurementsClick = (e: any) => {
-    // ContextMenu API changed/missing, temporarily disabled to fix build
-    /*
-    const parent = e.target as HTMLElement;
-    BUI.ContextMenu.create({
-      anchor: parent,
-      children: BUI.html`
-        <bim-button label="Lengte Meten" icon="${appIcons.RULER}" @click=${() => {
-          const isCurrentlyEnabled = lengthMeasurer.enabled;
-          disableAll();
-          lengthMeasurer.enabled = !isCurrentlyEnabled;
-          highlighter.enabled = !lengthMeasurer.enabled;
-        }}></bim-button>
-        <bim-button label="Oppervlakte Meten" icon="${appIcons.AREA}" @click=${() => {
-          const isCurrentlyEnabled = areaMeasurer.enabled;
-          disableAll();
-          areaMeasurer.enabled = !isCurrentlyEnabled;
-          highlighter.enabled = !areaMeasurer.enabled;
-        }}></bim-button>
-        <bim-button label="Metingen Wissen" icon="${appIcons.DELETE}" @click=${() => {
-          (lengthMeasurer as any).deleteAll();
-          (areaMeasurer as any).deleteAll();
-        }}></bim-button>
-      `,
-    });
-    */
-    alert("Meetmenu tijdelijk uitgeschakeld vanwege update.");
+  const onToggleLengthMeasure = () => {
+    const isCurrentlyEnabled = lengthMeasurer.enabled;
+    disableAll();
+    lengthMeasurer.enabled = !isCurrentlyEnabled;
+    highlighter.enabled = !lengthMeasurer.enabled;
+  };
+
+  const onDeleteMeasurements = () => {
+    (lengthMeasurer as any).deleteAll();
   };
 
   return BUI.html`
@@ -235,7 +217,8 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       </bim-toolbar-section> 
 
       <bim-toolbar-section>
-         ${customButton({ icon: appIcons.RULER, label: "Meten", onClick: onMeasurementsClick })}
+         ${customButton({ icon: appIcons.RULER, label: "Lengte meten", onClick: onToggleLengthMeasure })}
+         ${customButton({ icon: appIcons.DELETE, label: "Wis metingen", onClick: onDeleteMeasurements })}
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
       </bim-toolbar-section>
     </bim-toolbar>
