@@ -200,3 +200,5 @@ npm run dev:frontend
 ### QR-code scan werkt niet op mobiel
 - Controleer of `VIEWER_URL` de correcte publieke URL is (geen localhost)
 - Zorg dat de backend CORS toestaat voor de frontend URL
+204: 
+205: <!-- Deployment trigger -->
