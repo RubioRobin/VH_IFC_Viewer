@@ -38,16 +38,21 @@ world.camera.threePersp.near = 0.1;
 world.camera.threePersp.far = 10000;
 world.camera.threePersp.updateProjectionMatrix();
 
-// Opmerking: 'touches' en 'enableDamping' verwijderd omdat dit lint-fouten veroorzaakte
-// en mogelijk niet ondersteund werd in deze versie van CameraControls.
 // smoothTime wordt gebruikt voor vloeiende beweging.
 world.camera.controls.smoothTime = 0.25;
+world.camera.controls.dollyToCursor = true;
+world.camera.controls.infinityZoom = true;
+
 
 // Raster
 const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.material.uniforms.uColor.value = new THREE.Color(0xd1d5db);
-worldGrid.material.uniforms.uSize1.value = 2;
-worldGrid.material.uniforms.uSize2.value = 8;
+worldGrid.material.uniforms.uSize1.value = 1;
+worldGrid.material.uniforms.uSize2.value = 5;
+const gridMesh = worldGrid.get();
+gridMesh.material.transparent = true;
+gridMesh.material.opacity = 0.5;
+
 
 // Formaat aanpassen bij vensterwijziging
 const resizeWorld = () => {
@@ -72,6 +77,18 @@ components.get(OBC.Raycasters).get(world);
 
 const fragments = components.get(OBC.FragmentsManager);
 fragments.init("/obc-worker.mjs");
+
+// Performance optimization: Culling
+const culler = components.get(OBC.FragmentsCuller);
+culler.setup({ world });
+culler.enabled = true;
+fragments.onFragmentsLoaded.add(() => {
+  culler.update(true);
+});
+world.camera.controls.addEventListener("rest", () => {
+  culler.update(true);
+});
+
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
@@ -103,6 +120,23 @@ highlighter.setup({
     depthTest: true,
   },
 });
+
+// Outliner setup
+const outliner = components.get(OBF.Outliner);
+outliner.setup({
+  world,
+});
+
+// Configure Postproduction (AO & Shadows)
+const postproduction = world.renderer.postproduction;
+postproduction.enabled = true;
+postproduction.customEffects.ao.enabled = true;
+postproduction.customEffects.ao.opacity = 0.5;
+postproduction.customEffects.outline.enabled = true;
+postproduction.customEffects.outline.color = 0x000000;
+postproduction.customEffects.outline.opacity = 1;
+postproduction.customEffects.outline.thickness = 1;
+
 
 // Tools
 const clipper = components.get(OBC.Clipper);
