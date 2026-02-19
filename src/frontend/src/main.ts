@@ -110,13 +110,22 @@ highlighter.setup({
 
 // Configure Postproduction (AO & Borders)
 const postproduction = world.renderer.postproduction;
-postproduction.enabled = true;
-postproduction.customEffects.ao.enabled = true;
-postproduction.customEffects.ao.opacity = 0.5;
-postproduction.customEffects.outline.enabled = true;
-postproduction.customEffects.outline.color = 0x000000;
-postproduction.customEffects.outline.opacity = 1;
-postproduction.customEffects.outline.thickness = 1;
+if (postproduction) {
+  postproduction.enabled = true;
+  const settings = (postproduction as any).settings;
+  if (settings && settings.customEffects) {
+    settings.customEffects.ao.enabled = true;
+    settings.customEffects.ao.opacity = 0.5;
+    settings.customEffects.outline.enabled = true;
+    settings.customEffects.outline.color = 0x000000;
+    settings.customEffects.outline.opacity = 1;
+    settings.customEffects.outline.thickness = 1;
+  }
+}
+
+// Force resize to ensure postproduction buffers are correctly sized
+setTimeout(() => world.renderer?.resize(), 100);
+
 
 
 // Tools
