@@ -140,7 +140,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
     // If planes exist, clear them
     if (clipper.list.size > 0) {
-      (clipper as any).deleteAll();
+      clipper.delete(world as any);
       btn.active = false;
       return;
     }
@@ -200,7 +200,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   };
 
   const onDeleteMeasurements = () => {
-    (lengthMeasurer as any).deleteAll();
+    lengthMeasurer.delete();
   };
 
   return BUI.html`
