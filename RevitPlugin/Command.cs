@@ -17,7 +17,7 @@ namespace VH_IFC_QR
     {
         private const string BaseUrl = "https://vh-ifc-backend.onrender.com";
         private const string ClientId = "revit_plugin";
-        private const string ClientSecret = "revit_secret_123";
+        private const string ClientSecret = "0dfb4de62d095c839ed086630fef515454d4e2d374c73b3e";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
