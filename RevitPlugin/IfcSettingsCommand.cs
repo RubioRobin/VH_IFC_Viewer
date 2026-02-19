@@ -16,9 +16,9 @@ namespace VH_IFC_QR
                 settingsWin.ShowDialog();
                 return Result.Succeeded;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                TaskDialog.Show("Fout", ex.Message);
+                NotificationWindow.ShowError("Er is een fout opgetreden bij het openen van de instellingen.\n\nProbeer het opnieuw.");
                 return Result.Failed;
             }
         }

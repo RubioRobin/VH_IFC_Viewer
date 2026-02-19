@@ -39,7 +39,7 @@ namespace VH_IFC_QR
                 bool loginOk = Task.Run(() => client.LoginPluginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
                 if (!loginOk)
                 {
-                    TaskDialog.Show("Auth Fout", "Kon niet verbinden met VH Server.");
+                    NotificationWindow.ShowError("Geen verbinding met de VH server.\n\nControleer je internetverbinding en probeer het opnieuw.");
                     return Result.Failed;
                 }
 
@@ -57,7 +57,7 @@ namespace VH_IFC_QR
                 string defaultPrefix = $"{doc.Title}";
                 
                 SelectionWindow selWin = new SelectionWindow(projects, views3D, sheets, defaultPrefix, client.CurrentUsername);
-                selWin.OnLogout += () => { client.Logout(); TaskDialog.Show("Info", "U bent uitgelogd."); };
+                selWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
 
                 if (selWin.ShowDialog() != true) return Result.Cancelled;
 
@@ -159,7 +159,10 @@ namespace VH_IFC_QR
                 catch (Exception ex)
                 {
                     progress.Close();
-                    TaskDialog.Show("Fout", ex.Message);
+                    string userMsg = ex.Message.Contains("502") || ex.Message.Contains("503") || ex.Message.Contains("connect")
+                        ? "De server is tijdelijk niet bereikbaar.\n\nProbeer het over enkele minuten opnieuw."
+                        : "Er is een fout opgetreden bij het exporteren.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
+                    NotificationWindow.ShowError(userMsg);
                     return Result.Failed;
                 }
 
@@ -167,7 +170,10 @@ namespace VH_IFC_QR
             }
             catch (Exception ex)
             {
-                TaskDialog.Show("Fout", ex.Message);
+                string userMsg = ex.Message.Contains("502") || ex.Message.Contains("503") || ex.Message.Contains("connect")
+                    ? "De server is tijdelijk niet bereikbaar.\n\nControleer je internetverbinding en probeer het opnieuw."
+                    : "Er is een onverwachte fout opgetreden.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
+                NotificationWindow.ShowError(userMsg);
                 return Result.Failed;
             }
         }
