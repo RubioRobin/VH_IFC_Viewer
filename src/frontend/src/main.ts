@@ -23,7 +23,7 @@ const world = worlds.create<
 world.name = "Main";
 world.scene = new OBC.SimpleScene(components);
 world.scene.setup();
-world.scene.three.background = null;
+world.scene.three.background = new THREE.Color(0xffffff);
 
 // Viewport aanmaken
 const viewport = BUI.Component.create<BUI.Viewport>(() => {

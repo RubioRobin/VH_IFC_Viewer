@@ -1184,11 +1184,5 @@ bim-table [data-table-cell-value] {
   }
 }
 /* Watermark Background */
-bim-viewport {
-  background-color: #ffffff;
-  background-image: url('/logo.jpg');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 400px;
-}
+
 
