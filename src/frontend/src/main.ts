@@ -116,7 +116,7 @@ areaMeasurer.world = world;
 areaMeasurer.color = new THREE.Color("#4f46e5");
 
 // Viewport-gebeurtenissen
-viewport.addEventListener("dblclick", () => {
+viewport.addEventListener("click", () => {
   if (lengthMeasurer.enabled) lengthMeasurer.create();
   else if (areaMeasurer.enabled) areaMeasurer.create();
 });
