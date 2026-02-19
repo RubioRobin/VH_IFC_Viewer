@@ -107,42 +107,18 @@ highlighter.setup({
 // Tools
 const clipper = components.get(OBC.Clipper);
 clipper.enabled = false;
-const lengthMeasurer = components.get(OBF.LengthMeasurement);
-const areaMeasurer = components.get(OBF.AreaMeasurement);
 
-lengthMeasurer.world = world;
-lengthMeasurer.color = new THREE.Color("#4f46e5");
-areaMeasurer.world = world;
-areaMeasurer.color = new THREE.Color("#4f46e5");
 
 
 
 window.addEventListener("keydown", (event) => {
   if (event.code === "Delete" || event.code === "Backspace") {
     if (clipper.enabled) clipper.delete(world);
-    if (lengthMeasurer.enabled) lengthMeasurer.delete();
-    if (areaMeasurer.enabled) areaMeasurer.delete();
   }
-  if (event.code === "Enter" || event.code === "NumpadEnter") {
-    if (areaMeasurer.enabled) areaMeasurer.endCreation();
-  }
+
 });
 
-// Measurement Events
-lengthMeasurer.list.onItemAdded.add((line) => {
-  const center = new THREE.Vector3();
-  line.getCenter(center);
-  const radius = line.distance() / 3;
-  const sphere = new THREE.Sphere(center, radius);
-  world.camera.controls.fitToSphere(sphere, false);
-});
 
-areaMeasurer.list.onItemAdded.add((area) => {
-  if (!area.boundingBox) return;
-  const sphere = new THREE.Sphere();
-  area.boundingBox.getBoundingSphere(sphere);
-  world.camera.controls.fitToSphere(sphere, false);
-});
 
 // Model Loaded Handler
 fragments.list.onItemSet.add(async ({ value: model }) => {

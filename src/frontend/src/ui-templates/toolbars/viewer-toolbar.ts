@@ -122,14 +122,10 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   };
 
   /* Measurement & Clipper Logic */
-  const lengthMeasurer = components.get(OBF.LengthMeasurement);
-  const areaMeasurer = components.get(OBF.AreaMeasurement);
   const clipper = components.get(OBC.Clipper);
 
   const disableAll = () => {
     BUI.ContextMenu.removeMenus();
-    lengthMeasurer.enabled = false;
-    areaMeasurer.enabled = false;
     clipper.enabled = false;
     highlighter.enabled = true;
   };
@@ -192,24 +188,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     btn.active = true;
   };
 
-  const onToggleLengthMeasure = () => {
-    if (lengthMeasurer.enabled) {
-      lengthMeasurer.enabled = false;
-      lengthMeasurer.delete();
-      highlighter.enabled = true;
-    } else {
-      disableAll();
-      highlighter.enabled = false;
-      highlighter.selection.clear();
-      highlighter.hover.clear();
-      lengthMeasurer.enabled = true;
-      lengthMeasurer.create();
-    }
-  };
 
-  const onDeleteMeasurements = () => {
-    (lengthMeasurer.list as any).clear();
-  };
 
   return BUI.html`
     <bim-toolbar>
@@ -225,8 +204,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       </bim-toolbar-section> 
 
       <bim-toolbar-section>
-         ${customButton({ icon: appIcons.RULER, label: "Lengte meten", onClick: onToggleLengthMeasure })}
-         ${customButton({ icon: appIcons.DELETE, label: "Wis metingen", onClick: onDeleteMeasurements })}
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
       </bim-toolbar-section>
     </bim-toolbar>
