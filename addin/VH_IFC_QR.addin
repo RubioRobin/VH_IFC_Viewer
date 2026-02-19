@@ -2,8 +2,8 @@
 <RevitAddIns>
   <AddIn Type="Application">
     <Name>VH_IFC_QR</Name>
-    <Assembly>VH_IFC_QR\VH_IFC_QR.dll</Assembly>
-    <AddInId>A93F9D78-1234-4567-8901-23456789ABCF</AddInId>
+    <Assembly>C:\Users\Robin\AppData\Roaming\Autodesk\Revit\Addins\2025\VH_IFC_QR\VH_IFC_QR.dll</Assembly>
+    <AddInId>0F3C8A7B-E2D1-4B8F-9C4D-8A2E1F3B4C5D</AddInId>
     <FullClassName>VH_IFC_QR.App</FullClassName>
     <VendorId>VH_ENGINEERING</VendorId>
     <VendorDescription>VH Engineering</VendorDescription>

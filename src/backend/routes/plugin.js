@@ -5,11 +5,18 @@ const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'revit-plugin-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 const PLUGIN_CLIENT_ID = process.env.PLUGIN_CLIENT_ID || 'revit_plugin';
-const PLUGIN_CLIENT_SECRET = process.env.PLUGIN_CLIENT_SECRET || 'revit_secret_123';
+const PLUGIN_CLIENT_SECRET = process.env.PLUGIN_CLIENT_SECRET;
 
-// Middleware to verify Plugin JWT
+if (!JWT_SECRET) {
+    console.error('❌ KRITIEK: JWT_SECRET is niet ingesteld! Plugin-authenticatie is niet veilig.');
+}
+if (!PLUGIN_CLIENT_SECRET) {
+    console.error('❌ KRITIEK: PLUGIN_CLIENT_SECRET is niet ingesteld! Plugin-authenticatie is niet veilig.');
+}
+
+// Middleware om Plugin JWT te verifiëren
 const authenticatePlugin = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -18,53 +25,53 @@ const authenticatePlugin = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.plugin = decoded; // Contains client_id
+        const decoded = jwt.verify(token, JWT_SECRET || 'fallback-onveilig');
+        req.plugin = decoded; // Bevat client_id
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Niet geautoriseerd: Ongeldig token' });
     }
 };
 
-// Middleware to verify User JWT (from Plugin)
+// Middleware om ingeplugde gebruikers-JWT te verifiëren
 const authenticatePluginUser = (req, res, next) => {
     const userToken = req.headers['x-user-token'];
-    // It's optional for some routes, but if provided, we decode it.
-    // If STRICTLY required, check based on route.
+    // Optioneel: als het token aanwezig is, decoderen we het.
+    // Indien verplicht, controleer per route.
     if (userToken) {
         try {
-            const decoded = jwt.verify(userToken, JWT_SECRET); // Using same secret for simplicity
+            const decoded = jwt.verify(userToken, JWT_SECRET || 'fallback-onveilig');
             req.user = decoded;
         } catch (e) {
-            console.warn('Invalid user token:', e.message);
+            console.warn('Ongeldig gebruikerstoken:', e.message);
         }
     }
     next();
 };
 
-// 1. Plugin Login (Service Account)
+// 1. Plugin Login (Serviceaccount)
 router.post('/login', (req, res) => {
     const { client_id, client_secret } = req.body;
 
     if (client_id === PLUGIN_CLIENT_ID && client_secret === PLUGIN_CLIENT_SECRET) {
-        const token = jwt.sign({ client_id }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ client_id }, JWT_SECRET || 'fallback-onveilig', { expiresIn: '1h' });
         return res.json({ access_token: token, expires_in: 3600 });
     }
 
     res.status(401).json({ error: 'Ongeldige inloggegevens' });
 });
 
-// 1.1 User Login (via Plugin)
+// 1.1 Gebruikerslogin (via Plugin)
 router.post('/user-login', authenticatePlugin, async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await db.getUserByUsername(username);
         if (user && await require('bcryptjs').compare(password, user.password_hash)) {
-            // Issue a long-lived token for the plugin user
+            // Geef een langdurig token uit voor de plugin-gebruiker
             const token = jwt.sign(
                 { userId: user.id, username: user.username },
-                JWT_SECRET,
-                { expiresIn: '7d' } // 7 days persistence
+                JWT_SECRET || 'fallback-onveilig',
+                { expiresIn: '7d' } // 7 dagen persistentie
             );
             return res.json({
                 access_token: token,
@@ -78,7 +85,7 @@ router.post('/user-login', authenticatePlugin, async (req, res) => {
     }
 });
 
-// 2. Get Projects
+// 2. Projecten ophalen
 router.get('/projects', authenticatePlugin, async (req, res) => {
     try {
         const projects = await db.getAllProjects();
@@ -93,7 +100,7 @@ router.get('/projects', authenticatePlugin, async (req, res) => {
     }
 });
 
-// 3. Create Model
+// 3. Model aanmaken
 router.post('/models/create', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { projectId, modelName, uploaderName } = req.body;
     try {
@@ -105,12 +112,12 @@ router.post('/models/create', authenticatePlugin, authenticatePluginUser, async 
     }
 });
 
-// 4. Create Upload Session
+// 4. Upload-sessie aanmaken
 router.post('/models/:modelId/versions/upload-session', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { modelId } = req.params;
     const { fileName, contentType, fileSize, checksumSha256 } = req.body;
 
-    // Sanitize filename to prevent "InvalidKey" errors in Supabase Storage
+    // Bestandsnaam sanitiseren om 'InvalidKey'-fouten in Supabase Storage te voorkomen
     const sanitizedFileName = (fileName || 'unnamed.ifc').replace(/[^a-zA-Z0-9.\-_]/g, '_');
 
     try {
@@ -143,14 +150,14 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, auth
     }
 });
 
-// 5. Complete Version
+// 5. Versie afronden
 router.post('/models/:modelId/versions/:versionId/complete', authenticatePlugin, async (req, res) => {
-    // In this implementation, createModelVersion already handles metadata.
-    // This endpoint can be used to trigger post-processing or just return OK.
+    // In deze implementatie handelt createModelVersion de metadata al af.
+    // Dit endpoint kan worden gebruikt voor naverwerking of simpelweg OK teruggeven.
     res.json({ ok: true });
 });
 
-// 6. Create Share
+// 6. Deellink aanmaken
 router.post('/models/:modelId/versions/:versionId/share', authenticatePlugin, async (req, res) => {
     const { versionId } = req.params;
     const shareToken = uuidv4();
@@ -164,7 +171,7 @@ router.post('/models/:modelId/versions/:versionId/share', authenticatePlugin, as
     }
 });
 
-// 7. Generate QR
+// 7. QR-code genereren
 router.post('/models/:modelId/versions/:versionId/qr', authenticatePlugin, async (req, res) => {
     const { modelId, versionId } = req.params;
     const { viewerUrl, projectId } = req.body;

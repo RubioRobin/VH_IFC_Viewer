@@ -1,9 +1,15 @@
 {
-    "name": "vh-ifc-viewer-root",
+    "name": "vh-ifc-viewer",
     "version": "1.0.0",
     "private": true,
+    "description": "VH IFC Viewer — volledig systeem met backend, frontend en Revit plugin",
     "scripts": {
         "start": "node src/backend/app.js",
-        "install-backend": "npm install --prefix src/backend"
+        "dev:backend": "cd src/backend && npm run dev",
+        "dev:frontend": "cd src/frontend && npm run dev",
+        "install:backend": "npm install --prefix src/backend",
+        "install:frontend": "npm install --prefix src/frontend",
+        "install:all": "npm run install:backend && npm run install:frontend",
+        "build:frontend": "cd src/frontend && npm run build"
     }
 }

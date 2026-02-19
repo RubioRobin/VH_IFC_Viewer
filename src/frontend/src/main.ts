@@ -7,10 +7,10 @@ import { ModelAligner, AlignmentStrategy, BoundsCalculationMethod } from "./view
 import { TransparencyManager } from "./viewer/transparency-manager";
 import "./style.css";
 
-// Initialize UI Manager
+// UI Manager initialiseren
 BUI.Manager.init();
 
-// Components Setup
+// Componenten instellen
 const components = new OBC.Components();
 const worlds = components.get(OBC.Worlds);
 
@@ -25,7 +25,7 @@ world.scene = new OBC.SimpleScene(components);
 world.scene.setup();
 world.scene.three.background = new THREE.Color(0xffffff);
 
-// Create Viewport
+// Viewport aanmaken
 const viewport = BUI.Component.create<BUI.Viewport>(() => {
   return BUI.html`<bim-viewport></bim-viewport>`;
 });
@@ -33,23 +33,23 @@ const viewport = BUI.Component.create<BUI.Viewport>(() => {
 world.renderer = new OBF.PostproductionRenderer(components, viewport);
 world.camera = new OBC.OrthoPerspectiveCamera(components);
 
-// Camera Settings
+// Camera-instellingen
 world.camera.threePersp.near = 0.1;
 world.camera.threePersp.far = 10000;
 world.camera.threePersp.updateProjectionMatrix();
 
-// Note: Removed 'touches' and 'enableDamping' settings as they were causing lint errors
-// and might not be supported on this version of CameraControls.
-// Using smoothTime for smoother movement.
+// Opmerking: 'touches' en 'enableDamping' verwijderd omdat dit lint-fouten veroorzaakte
+// en mogelijk niet ondersteund werd in deze versie van CameraControls.
+// smoothTime wordt gebruikt voor vloeiende beweging.
 world.camera.controls.smoothTime = 0.25;
 
-// Grid
+// Raster
 const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.material.uniforms.uColor.value = new THREE.Color(0xd1d5db);
 worldGrid.material.uniforms.uSize1.value = 2;
 worldGrid.material.uniforms.uSize2.value = 8;
 
-// Resize Logic
+// Formaat aanpassen bij vensterwijziging
 const resizeWorld = () => {
   const { width, height } = viewport.getBoundingClientRect();
   if (width === 0 || height === 0) return;
@@ -84,14 +84,14 @@ world.camera.controls.addEventListener("rest", () => {
   fragments.core.update(true);
 });
 
-// IFC Loader Setup
+// IFC Loader instellen
 const ifcLoader = components.get(OBC.IfcLoader);
 await ifcLoader.setup({
   autoSetWasm: false,
-  wasm: { absolute: true, path: "https://unpkg.com/web-ifc@0.0.71/" },
+  wasm: { absolute: true, path: "https://unpkg.com/web-ifc@0.0.72/" },
 });
 
-// Highlighter Setup
+// Highlighter instellen
 const highlighter = components.get(OBF.Highlighter);
 highlighter.setup({
   world,
@@ -115,7 +115,7 @@ lengthMeasurer.color = new THREE.Color("#4f46e5");
 areaMeasurer.world = world;
 areaMeasurer.color = new THREE.Color("#4f46e5");
 
-// Viewport Events
+// Viewport-gebeurtenissen
 viewport.addEventListener("dblclick", () => {
   if (lengthMeasurer.enabled) lengthMeasurer.create();
   else if (areaMeasurer.enabled) areaMeasurer.create();
@@ -181,7 +181,7 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
     }, 500);
   }
 
-  // Handle URL Parameter Highlighting (ID)
+  // Verwerk URL-parameter voor element-markering (ID)
   const urlParams = new URLSearchParams(window.location.search);
   const elementId = urlParams.get("id");
 
@@ -260,9 +260,9 @@ const init = async () => {
       if (!metaResponse.ok) throw new Error("Fout bij ophalen gegevens");
 
       const { modelUrl, filename } = await metaResponse.json();
-      console.log(`Loading model: ${filename}`);
+      console.log(`Model laden: ${filename}`);
 
-      // Fetch the actual IFC file (via signed URL or proxy)
+      // Het IFC-bestand ophalen (via ondertekende URL of proxy)
       const modelResponse = await fetch(modelUrl);
       if (!modelResponse.ok) throw new Error(`Fout bij downloaden model: ${modelResponse.status}`);
 
@@ -273,10 +273,11 @@ const init = async () => {
 
       await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
     } catch (e) {
-      console.error("Public Viewer Error:", e);
-      alert(`Fout: ${(e as any).message}\n\nDebug Info:\nID: ${publicId}\nPath: ${window.location.pathname}\nAPI: ${baseUrl}`);
+      console.error("Publieke viewer fout:", e);
       const loader = document.getElementById('initial-loading-overlay');
-      if (loader) loader.innerHTML = `<div style="color:white;text-align:center"><h1>❌</h1><p>${(e as any).message}</p><small style="opacity:0.7">ID: ${publicId}</small></div>`;
+      if (loader) {
+        loader.innerHTML = `<div style="color:white;text-align:center;padding:2rem"><h2>❌ Fout bij laden</h2><p>${(e as any).message}</p><small style="opacity:0.7">ID: ${publicId}</small></div>`;
+      }
     }
   } else if (modelName || fileId) {
     // Legacy / Admin Logic
@@ -291,7 +292,7 @@ const init = async () => {
 
     try {
       const response = await fetch(modelUrl);
-      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+      if (!response.ok) throw new Error(`Ophalen mislukt: ${response.status}`);
 
       const blob = await response.blob();
       const file = new File([blob], displayTitle, { type: 'application/octet-stream' });
@@ -300,10 +301,11 @@ const init = async () => {
 
       await ifcLoader.load(bytes, true, displayTitle.replace(".ifc", ""));
     } catch (e) {
-      console.error("Load failed:", e);
-      alert(`Fout bij laden model: ${e}\n\nDebug Info:\nURL: ${modelUrl}\nPath: ${window.location.pathname}`);
+      console.error("Laden mislukt:", e);
       const loader = document.getElementById('initial-loading-overlay');
-      if (loader) loader.remove();
+      if (loader) {
+        loader.innerHTML = `<div style="color:white;text-align:center;padding:2rem"><h2>❌ Fout bij laden</h2><p>Kon model niet laden.</p><small style="opacity:0.7">URL: ${modelUrl}</small></div>`;
+      }
     }
   } else {
     // If no model provided, just remove the spinner so user sees empty viewer

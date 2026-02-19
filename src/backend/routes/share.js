@@ -58,7 +58,7 @@ router.get('/:token', async (req, res) => {
 
             return res.json({
                 filename: file.filename,
-                projectName: "Legacy Project", // public_links might not join project name readily, or we can fetch it if needed. kept simple for now.
+                projectName: "Verouderd Project", // public_links bevatten mogelijk geen projectnaam, eenvoudig gehouden
                 modelUrl: modelUrl,
                 expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
             });

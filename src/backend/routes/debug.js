@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../database');
+const { vereisAuthenticatie } = require('./auth');
 const router = express.Router();
 
-// Debug endpoint to check if admin user exists
-router.get('/check-admin', async (req, res) => {
+// Debugfunctie: controleer of de admin-gebruiker bestaat (ALLEEN VOOR BEHEERDERS)
+router.get('/check-admin', vereisAuthenticatie, async (req, res) => {
     try {
         const user = await db.getUserByUsername('admin');
         if (user) {
@@ -20,7 +21,7 @@ router.get('/check-admin', async (req, res) => {
     }
 });
 
-// Force recreate admin user - DISABLED for security
+// Admin reset - uitgeschakeld om veiligheidsredenen
 router.post('/reset-admin', async (req, res) => {
     res.status(403).json({ error: 'Deze functie is uitgeschakeld om veiligheidsredenen.' });
 });

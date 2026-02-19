@@ -1,12 +1,12 @@
+const path = require('path');
 try {
     require('dotenv').config({ path: path.join(__dirname, '.env') });
 } catch (e) {
-    console.log('Dotenv niet geladen (waarschijnlijk productie)');
+    console.log('Dotenv niet geladen (waarschijnlijk productie-omgeving)');
 }
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
-const path = require('path');
 const session = require('express-session');
 const db = require('./database');
 
@@ -14,7 +14,7 @@ const db = require('./database');
 const { router: authRouter } = require('./routes/auth');
 const projectsRouter = require('./routes/projects');
 const { router: filesRouter } = require('./routes/files');
-const uploadRouter = require('./routes/upload'); // Add this
+const uploadRouter = require('./routes/upload');
 const qrRouter = require('./routes/qr');
 const publicRouter = require('./routes/public');
 const usersRouter = require('./routes/users');
@@ -24,13 +24,9 @@ const debugRouter = require('./routes/debug');
 const pluginRouter = require('./routes/plugin');
 const shareRouter = require('./routes/share');
 
-
-
 const helmet = require('helmet');
 const xss = require('xss-clean');
-
-// ... (imports)
-
+const rateLimit = require('express-rate-limit');
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -45,8 +41,35 @@ app.use(helmet({
 }));
 app.use(xss());
 
-// ... (logging)
+// --- RATE LIMITING ---
+// Strikt limiet voor inlog-endpoints (bescherming tegen brute-force)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minuten
+    max: 10,                   // max 10 pogingen per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' }
+});
 
+// Normaal limiet voor overige API-endpoints
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' }
+});
+
+// Publiek limiet voor deellinks en downloads (hogere drempel voor viewers)
+const publicLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 minuut
+    max: 60,                   // max 60 verzoeken per minuut
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' }
+});
+
+// Basisstatus endpoint
 app.get('/', (req, res) => {
     res.send('VH IFC Viewer Backend is ONLINE! 🚀');
 });
@@ -76,16 +99,23 @@ app.use(express.json({ limit: '10kb' })); // Body limit against DoS
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
+// Veiligheidscheck: SESSION_SECRET is verplicht in productie
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && isProduction) {
+    console.error('❌ KRITIEK: SESSION_SECRET is niet ingesteld in productie-omgeving! Applicatie stopt.');
+    process.exit(1);
+}
+
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'bim-admin-secret-key-CHANGE-THIS-IN-PROD',
+    secret: sessionSecret || 'lokale-dev-secret-niet-voor-productie',
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Required for Render/Heroku to trust the proxy for secure cookies
+    proxy: true, // Vereist voor Render/Heroku om de proxy te vertrouwen voor beveiligde cookies
     cookie: {
-        secure: isProduction, // Secure needs HTTPS
+        secure: isProduction, // Beveiligd vereist HTTPS
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: isProduction ? 'none' : 'lax' // 'none' required for cross-site (frontend <-> backend)
+        sameSite: isProduction ? 'none' : 'lax' // 'none' vereist voor cross-site (frontend <-> backend)
     }
 }));
 
@@ -93,17 +123,18 @@ app.use(session({
 db.initDatabase().then(() => console.log('Database initialisatie gestart'));
 
 // --- ROUTES ---
-app.use('/api/auth', authRouter);
-app.use('/api/projects', projectsRouter);
-app.use('/api/files', filesRouter);
-app.use('/api/upload', uploadRouter); // Add this
-app.use('/api/qr', qrRouter);
-app.use('/api/public', publicRouter);
-app.use('/api/users', usersRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api', statsRouter);
-app.use('/api/plugin', pluginRouter);
-app.use('/api/share', shareRouter);
+app.use('/api/auth', loginLimiter, authRouter);   // Strikt limiet op auth
+app.use('/api/plugin', loginLimiter, pluginRouter); // Strikt limiet op plugin login
+app.use('/api/share', publicLimiter, shareRouter);  // Publiek limiet op deellinks
+app.use('/api/public', publicLimiter, publicRouter);
+app.use('/api/projects', apiLimiter, projectsRouter);
+app.use('/api/files', apiLimiter, filesRouter);
+app.use('/api/upload', apiLimiter, uploadRouter);
+app.use('/api/qr', apiLimiter, qrRouter);
+app.use('/api/users', apiLimiter, usersRouter);
+app.use('/api/admin', apiLimiter, adminRouter);
+app.use('/api/debug', apiLimiter, debugRouter);
+app.use('/api', apiLimiter, statsRouter);
 
 
 

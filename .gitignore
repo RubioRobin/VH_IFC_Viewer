@@ -41,3 +41,13 @@ logs/
 
 # Release artifacts
 release/
+
+# Windows foutief aangemaakte omgevingsvariabele-mappen
+%AppData%/
+
+# Deployscripts (bevatten mogelijk gevoelige informatie)
+scripts/
+
+# Runtime-mappen (aangemaakt door de server, nooit committen)
+src/backend/qr-codes/
+src/backend/uploads/

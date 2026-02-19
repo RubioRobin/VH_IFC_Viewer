@@ -3,8 +3,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../database');
 const router = express.Router();
 
-// Middleware voor authenticatie
-// Middleware voor authenticatie
+// Middleware voor authenticatiecontrole
 const vereisAuthenticatie = (req, res, next) => {
     // 1. Session check
     if (req.session && req.session.userId) return next();
