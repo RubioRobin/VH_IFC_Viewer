@@ -193,10 +193,16 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   };
 
   const onToggleLengthMeasure = () => {
-    const isCurrentlyEnabled = lengthMeasurer.enabled;
-    disableAll();
-    lengthMeasurer.enabled = !isCurrentlyEnabled;
-    highlighter.enabled = !lengthMeasurer.enabled;
+    if (lengthMeasurer.enabled) {
+      lengthMeasurer.enabled = false;
+      lengthMeasurer.delete();
+      highlighter.enabled = true;
+    } else {
+      disableAll();
+      lengthMeasurer.enabled = true;
+      highlighter.enabled = false;
+      lengthMeasurer.create();
+    }
   };
 
   const onDeleteMeasurements = () => {
