@@ -200,6 +200,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     } else {
       disableAll();
       lengthMeasurer.enabled = true;
+      highlighter.enabled = false;
       lengthMeasurer.create();
     }
   };
