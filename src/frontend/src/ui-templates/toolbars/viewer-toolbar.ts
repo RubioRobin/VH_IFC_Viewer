@@ -200,7 +200,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     } else {
       disableAll();
       lengthMeasurer.enabled = true;
-      highlighter.enabled = false;
+      // highlighter.enabled = false; // Removed to fix raycasting?
       lengthMeasurer.create();
     }
   };
