@@ -123,8 +123,8 @@ app.use(session({
 db.initDatabase().then(() => console.log('Database initialisatie gestart'));
 
 // --- ROUTES ---
-app.use('/api/auth', loginLimiter, authRouter);   // Strikt limiet op auth
-app.use('/api/plugin', loginLimiter, pluginRouter); // Strikt limiet op plugin login
+app.use('/api/auth', loginLimiter, authRouter);    // Strikt limiet op auth
+app.use('/api/plugin', apiLimiter, pluginRouter);   // Normaal limiet — login endpoint heeft eigen limiter via plugin.js
 app.use('/api/share', publicLimiter, shareRouter);  // Publiek limiet op deellinks
 app.use('/api/public', publicLimiter, publicRouter);
 app.use('/api/projects', apiLimiter, projectsRouter);
