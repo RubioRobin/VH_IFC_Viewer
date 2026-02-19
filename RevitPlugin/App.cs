@@ -1,7 +1,8 @@
 using System;
 using System.Reflection;
-using Autodesk.Revit.UI;
+using System.IO;
 using System.Windows.Media.Imaging;
+using Autodesk.Revit.UI;
 
 namespace VH_IFC_QR
 {
@@ -35,6 +36,27 @@ namespace VH_IFC_QR
             PushButtonData settingsData = new PushButtonData("cmdSettings",
                 "IFC Settings", thisAssemblyPath, "VH_IFC_QR.IfcSettingsCommand");
             settingsData.ToolTip = "Configureer IFC export en QR code instellingen.";
+
+            // Laad iconen vanuit dezelfde map als de DLL
+            string dllDir = Path.GetDirectoryName(thisAssemblyPath);
+            BitmapImage LoadIcon(string name) {
+                string iconPath = Path.Combine(dllDir, name);
+                if (!File.Exists(iconPath)) return null;
+                var img = new BitmapImage();
+                img.BeginInit();
+                img.UriSource = new Uri(iconPath);
+                img.CacheOption = BitmapCacheOption.OnLoad;
+                img.EndInit();
+                return img;
+            }
+
+            var exportIcon = LoadIcon("icon_export.png");
+            var adminIcon = LoadIcon("icon_admin.png");
+            var settingsIcon = LoadIcon("icon_settings.png");
+
+            if (exportIcon != null) buttonData.LargeImage = exportIcon;
+            if (adminIcon != null) adminData.LargeImage = adminIcon;
+            if (settingsIcon != null) settingsData.LargeImage = settingsIcon;
 
             panel.AddItem(buttonData);
             panel.AddItem(adminData);
