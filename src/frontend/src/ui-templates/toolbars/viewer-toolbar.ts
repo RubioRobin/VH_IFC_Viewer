@@ -134,11 +134,15 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   const onSectionBox = async (e: any) => {
     const btn = e.currentTarget as BUI.Button;
 
-    // If planes exist, clear them all
-    if (clipper.list.size > 0) {
-      const planes = Array.from(clipper.list);
-      for (const plane of planes) {
-        clipper.delete(world as any, plane);
+    // Use button state as truth for toggle
+    if (btn.active) {
+      if ("deleteAll" in clipper) {
+        (clipper as any).deleteAll();
+      } else {
+        const planes = Array.from(clipper.list);
+        for (const plane of planes) {
+          clipper.delete(world as any, plane);
+        }
       }
       clipper.enabled = false;
       btn.active = false;

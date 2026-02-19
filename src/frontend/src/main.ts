@@ -55,13 +55,24 @@ worldGrid.material.uniforms.uSize2.value = 5;
 // Formaat aanpassen bij vensterwijziging
 const resizeWorld = () => {
   const { width, height } = viewport.getBoundingClientRect();
-  if (width === 0 || height === 0) return;
+  if (width < 1 || height < 1) return;
+
+  if (world.renderer && world.renderer.postproduction && !world.renderer.postproduction.enabled) {
+    world.renderer.postproduction.enabled = true;
+    if (world.renderer.postproduction.customEffects) {
+      world.renderer.postproduction.customEffects.outlineEnabled = true;
+    }
+    // Force a resize immediately after enabling to allocate buffers correctly
+    world.renderer.resize();
+  }
+
   world.renderer?.resize();
   world.camera.updateAspect();
 };
 
 const resizeObserver = new ResizeObserver(() => resizeWorld());
 resizeObserver.observe(viewport);
+// Note: We removed the immediate resizeWorld() call to wait for the first valid layout from ResizeObserver
 
 world.dynamicAnchor = false;
 
@@ -111,20 +122,16 @@ highlighter.setup({
 // Configure Postproduction (AO & Borders)
 const postproduction = world.renderer.postproduction;
 if (postproduction) {
-  postproduction.enabled = true;
   const settings = (postproduction as any).settings;
   if (settings && settings.customEffects) {
     settings.customEffects.ao.enabled = true;
-    settings.customEffects.ao.opacity = 0.3; // Subtler AO for more realism
+    settings.customEffects.ao.opacity = 0.3;
     settings.customEffects.outline.enabled = true;
-    settings.customEffects.outline.color = 0x333333; // Dark grey instead of pitch black
+    settings.customEffects.outline.color = 0x333333;
     settings.customEffects.outline.opacity = 0.8;
-    settings.customEffects.outline.thickness = 0.5; // Thinner lines
+    settings.customEffects.outline.thickness = 0.5;
   }
 }
-
-// Force resize to ensure postproduction buffers are correctly sized
-setTimeout(() => world.renderer?.resize(), 100);
 
 // Tools
 const clipper = components.get(OBC.Clipper);
