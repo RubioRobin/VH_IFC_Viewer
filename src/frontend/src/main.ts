@@ -31,6 +31,7 @@ const viewport = BUI.Component.create<BUI.Viewport>(() => {
 });
 
 world.renderer = new OBF.PostproductionRenderer(components, viewport);
+world.renderer.enabled = false; // Definitively prevent WebGL clear/render before layout is ready
 world.camera = new OBC.OrthoPerspectiveCamera(components);
 
 // Camera-instellingen
@@ -55,15 +56,18 @@ worldGrid.material.uniforms.uSize2.value = 5;
 // Formaat aanpassen bij vensterwijziging
 const resizeWorld = () => {
   const { width, height } = viewport.getBoundingClientRect();
-  if (width < 1 || height < 1) return;
+  if (width < 10 || height < 10) return;
 
-  if (world.renderer && world.renderer.postproduction && !world.renderer.postproduction.enabled) {
-    world.renderer.postproduction.enabled = true;
-    if (world.renderer.postproduction.customEffects) {
-      world.renderer.postproduction.customEffects.outlineEnabled = true;
+  if (world.renderer) {
+    // Only enable renderer and postproduction when we have a valid size
+    if (!world.renderer.enabled) world.renderer.enabled = true;
+
+    if (world.renderer.postproduction && !world.renderer.postproduction.enabled) {
+      world.renderer.postproduction.enabled = true;
+      if (world.renderer.postproduction.customEffects) {
+        world.renderer.postproduction.customEffects.outlineEnabled = true;
+      }
     }
-    // Force a resize immediately after enabling to allocate buffers correctly
-    world.renderer.resize();
   }
 
   world.renderer?.resize();
@@ -72,7 +76,7 @@ const resizeWorld = () => {
 
 const resizeObserver = new ResizeObserver(() => resizeWorld());
 resizeObserver.observe(viewport);
-// Note: We removed the immediate resizeWorld() call to wait for the first valid layout from ResizeObserver
+// Note: Immediate resizeWorld() call removed. We wait for ResizeObserver to provide first valid layout.
 
 world.dynamicAnchor = false;
 
@@ -234,8 +238,7 @@ const [contentGrid] = BUI.Component.create(
 
 const app = document.getElementById("app");
 if (app) app.appendChild(contentGrid);
-
-resizeWorld();
+// resizeWorld(); // REMOVED: Triggers WebGL zero-size warnings if called before layout is ready
 
 // 🚀 AUTO-LOAD LOGIC
 const init = async () => {
