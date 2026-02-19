@@ -130,25 +130,6 @@ setTimeout(() => world.renderer?.resize(), 100);
 const clipper = components.get(OBC.Clipper);
 clipper.enabled = false;
 
-// Solid Section Capping
-const edges = components.get(OBC.ClippingEdges);
-edges.setup({ world });
-
-const fillMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
-const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
-
-clipper.styles.create("default", new Set(), world, lineMaterial, fillMaterial);
-
-// Update styles when model is loaded
-fragments.onFragmentsLoaded.add((model) => {
-  const style = clipper.styles.get("default");
-  if (style) {
-    for (const fragment of model.items) {
-      style.fragments.add(fragment.mesh);
-    }
-  }
-});
-
 
 
 
