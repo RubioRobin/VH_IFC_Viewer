@@ -49,9 +49,7 @@ const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.material.uniforms.uColor.value = new THREE.Color(0xd1d5db);
 worldGrid.material.uniforms.uSize1.value = 1;
 worldGrid.material.uniforms.uSize2.value = 5;
-const gridMesh = worldGrid.get();
-gridMesh.material.transparent = true;
-gridMesh.material.opacity = 0.5;
+
 
 
 // Formaat aanpassen bij vensterwijziging
