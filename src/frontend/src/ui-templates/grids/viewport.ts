@@ -18,6 +18,9 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
 
   return BUI.html`
     <div class="viewport-ui-overlay">
+      <div class="watermark-container">
+        <img src="/logo.png" alt="Watermark" />
+      </div>
       <div class="viewport-ui-bottom">
         ${bottomToolbar}
       </div>
