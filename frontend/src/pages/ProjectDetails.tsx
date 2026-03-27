@@ -139,6 +139,24 @@ export function ProjectDetailsPage() {
         setIsConfirmOpen(true);
     };
 
+    const handleDownload = async (file: FileData) => {
+        try {
+            const response = await fetch(`${BASE_URL}/api/files/${file.id}/download`, { credentials: 'include' });
+            if (!response.ok) throw new Error('Download mislukt');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch {
+            toast({ type: 'error', title: 'Fout', message: 'Kon bestand niet downloaden.' });
+        }
+    };
+
     const confirmDelete = async () => {
         if (!fileToDelete) return;
         try {
@@ -299,6 +317,16 @@ export function ProjectDetailsPage() {
                                         onClick={() => window.open(`${window.location.origin}/?fileId=${f.id}`, '_blank')}
                                     >
                                         <Eye className="w-4 h-4" /> Openen
+                                    </Button>
+
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-9 w-9 text-muted-foreground hover:text-blue-500 hover:bg-blue-50"
+                                        title="Download IFC"
+                                        onClick={() => handleDownload(f)}
+                                    >
+                                        <Download className="w-4 h-4" />
                                     </Button>
 
                                     <Button
