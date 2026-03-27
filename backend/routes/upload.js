@@ -81,7 +81,6 @@ router.post('/confirm', vereisAuthenticatie, async (req, res) => {
                 size: fileSize,
                 upload_date: new Date().toISOString()
             });
-            console.log(`[UPLOAD] Bestaand bestand geupdate: ${fileId}`);
         } else {
             // Create new
             await db.createFile(fileId, projectId, fileName, storagePath, fileSize, req.session.username);

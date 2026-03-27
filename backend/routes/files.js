@@ -40,7 +40,6 @@ router.get('/:id/download', async (req, res) => {
             // 2. Try as Public Link ID (Fallback)
             const link = await db.getPublicLink(req.params.id);
             if (link) {
-                console.log(`[DOWNLOAD] Link gevonden:`, JSON.stringify(link));
                 // Handle Supabase foreign key response (could be object or array)
                 const fileData = Array.isArray(link.files) ? link.files[0] : link.files;
 
@@ -53,10 +52,8 @@ router.get('/:id/download', async (req, res) => {
         }
 
         if (publicUrl) {
-            console.log(`[DOWNLOAD] Redirect naar: ${publicUrl}`);
             res.redirect(publicUrl);
         } else {
-            console.error(`[DOWNLOAD] 404 - ID niet gevonden: ${req.params.id}`);
             res.status(404).json({ error: 'Bestand of Link niet gevonden' });
         }
     } catch (e) {

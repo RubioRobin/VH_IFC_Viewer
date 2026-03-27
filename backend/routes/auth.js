@@ -52,23 +52,17 @@ const vereisAdmin = async (req, res, next) => {
 // LOGIN Route
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    console.log(`[LOGIN] Poging voor gebruiker: ${username}`);
-
     try {
         const user = await db.getUserByUsername(username);
-        console.log(`[LOGIN] Gebruiker gevonden:`, user ? 'JA' : 'NEE');
 
         if (user && !user.disabled && await bcrypt.compare(password, user.password_hash)) {
             req.session.userId = user.id;
             req.session.username = user.username;
             req.session.role = user.role || 'user';
-            console.log(`[LOGIN] Succes! Sessie ID: ${req.session.id}, Rol: ${req.session.role}`);
             res.json({ message: 'OK', user: { id: user.id, username: user.username, role: user.role || 'user' } });
         } else if (user && user.disabled) {
-            console.log(`[LOGIN] Mislukt - Account uitgeschakeld`);
             res.status(403).json({ error: 'Account is uitgeschakeld. Neem contact op met een beheerder.' });
         } else {
-            console.log(`[LOGIN] Mislukt - Ongeldige gegevens`);
             res.status(401).json({ error: 'Inloggen mislukt' });
         }
     } catch (e) {
@@ -94,7 +88,7 @@ router.get('/me', vereisAuthenticatie, async (req, res) => {
             res.json({
                 id: user.id,
                 username: user.username,
-                role: user.role || 'admin',
+                role: user.role || 'user',
                 email: user.email,
                 avatar_url: user.avatar_url
             });
