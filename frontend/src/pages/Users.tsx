@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataTable, Column } from '../components/dashboard/DataTable';
 import { Button } from '../components/ui/button';
-import { Plus, Trash2, Loader2, KeyRound, UserX, UserCheck } from 'lucide-react';
+import { Plus, Trash2, Loader2, KeyRound, UserX, UserCheck, ChevronDown } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Dialog } from '../components/ui/dialog';
@@ -34,6 +34,7 @@ export function UsersPage() {
     const [userToReset, setUserToReset] = useState<User | null>(null);
     const [newResetPassword, setNewResetPassword] = useState('');
     const [resetting, setResetting] = useState(false);
+    const [roleDropdownOpen, setRoleDropdownOpen] = useState<string | null>(null);
 
     const loadUsers = async () => {
         try {
@@ -49,6 +50,12 @@ export function UsersPage() {
     useEffect(() => {
         loadUsers();
     }, []);
+
+    useEffect(() => {
+        const handleClickOutside = () => { if (roleDropdownOpen) setRoleDropdownOpen(null); };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [roleDropdownOpen]);
 
     useEffect(() => {
         if (createDialogOpen) {
@@ -161,20 +168,36 @@ export function UsersPage() {
             key: 'role',
             label: 'Rol',
             sortable: true,
-            render: (u) => (
-                <select
-                    value={u.role}
-                    onChange={(e) => handleRoleChange(u, e.target.value)}
-                    className="text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    style={{
-                        background: u.role === 'admin' ? '#f3e8ff' : '#dbeafe',
-                        color: u.role === 'admin' ? '#6b21a8' : '#1d4ed8'
-                    }}
-                >
-                    <option value="admin">admin</option>
-                    <option value="user">user</option>
-                </select>
-            )
+            render: (u) => {
+                const isAdmin = u.role === 'admin';
+                return (
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => setRoleDropdownOpen(roleDropdownOpen === u.id ? null : u.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all hover:shadow-md ${isAdmin
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                        >
+                            {u.role}
+                            <ChevronDown className="w-3 h-3" />
+                        </button>
+                        {roleDropdownOpen === u.id && (
+                            <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 z-[100] min-w-[130px]">
+                                {['admin', 'user'].map((role) => (
+                                    <button
+                                        key={role}
+                                        onClick={() => { handleRoleChange(u, role); setRoleDropdownOpen(null); }}
+                                        className={`w-full px-4 py-2 text-left text-sm font-semibold transition-colors ${u.role === role ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
+                                    >
+                                        {role}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            }
         },
         {
             key: 'created_at',
@@ -188,7 +211,7 @@ export function UsersPage() {
             render: (u) => {
                 const isLastUser = data.length <= 1;
                 return (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-start gap-1">
                         <Button
                             variant="ghost"
                             size="icon"
