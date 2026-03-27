@@ -15,7 +15,7 @@ namespace VH_IFC_QR
     [Transaction(TransactionMode.Manual)]
     public class ExportIFCCommand : IExternalCommand
     {
-        private const string BaseUrl = "https://vh-ifc-backend.onrender.com";
+        private static string BaseUrl => SettingsManager.Instance.BackendUrl;
         private const string ClientId = "revit_plugin";
         private const string ClientSecret = "0dfb4de62d095c839ed086630fef515454d4e2d374c73b3e";
 
@@ -156,7 +156,7 @@ namespace VH_IFC_QR
                     progress.Update("Klaar!", 100);
                     progress.Close();
 
-                    ResultWindow resWin = new ResultWindow(results, selWin.SelectedProject.id);
+                    ResultWindow resWin = new ResultWindow(results);
                     resWin.ShowDialog();
                 }
                 catch (Exception ex)
@@ -212,6 +212,32 @@ namespace VH_IFC_QR
         private void PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath, string viewName)
         {
             ViewSheet sheet = doc.GetElement(sheetId) as ViewSheet;
+
+            // Verwijder bestaande QR code(s) voor deze view op deze sheet
+            try
+            {
+                var existingImages = new FilteredElementCollector(doc, sheet.Id)
+                    .OfCategory(BuiltInCategory.OST_RasterImages)
+                    .WhereElementIsNotElementType()
+                    .Cast<ImageInstance>()
+                    .ToList();
+
+                foreach (var img in existingImages)
+                {
+                    var imgType = doc.GetElement(img.GetTypeId()) as ImageType;
+                    // In Command.cs wordt de naam gevormd met de modelId van de nieuwe export
+                    // Maar we kunnen ook checken op de viewName in de metadata als we die hadden.
+                    // Voor nu checken we of de type naam "qr" bevat en op deze sheet staat.
+                    // Beter: we checken of de naam begint met het modelId patroon of viewName.
+                    // De oude QR types hebben namen als "{modelId}_{ticks}_qr.png"
+                    if (imgType != null && (imgType.Name.Contains("_qr") || imgType.Name.Contains(viewName)))
+                    {
+                        doc.Delete(img.Id);
+                    }
+                }
+            }
+            catch { }
+
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
             

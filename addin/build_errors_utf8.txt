@@ -1,0 +1,7 @@
+﻿c:\Users\Robin\Downloads\Coderen\VH\VH_IFC_Viewer\revit-plugin\Command.cs(159,47): error CS1729: 'ResultWindow' does not contain a constructor that takes 2 arguments [c:\Users\Robin\Downloads\Coderen\VH\VH_IFC_Viewer\revit-plugin\VH_IFC_QR.csproj]
+
+Build FAILED.
+    117 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.10

@@ -27,6 +27,7 @@ const shareRouter = require('./routes/share');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const rateLimit = require('express-rate-limit');
+const createSupabaseSessionStore = require('./services/session-store');
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -106,11 +107,16 @@ if (!sessionSecret && isProduction) {
     process.exit(1);
 }
 
+// Gebruik Supabase-backed session store in productie zodat sessies een herstart overleven.
+// In development (geen Supabase) valt het terug op in-memory store.
+const sessionStore = db.supabase ? createSupabaseSessionStore(db.supabase) : undefined;
+
 app.use(session({
     secret: sessionSecret || 'lokale-dev-secret-niet-voor-productie',
     resave: false,
     saveUninitialized: false,
     proxy: true, // Vereist voor Render/Heroku om de proxy te vertrouwen voor beveiligde cookies
+    store: sessionStore,
     cookie: {
         secure: isProduction, // Beveiligd vereist HTTPS
         httpOnly: true,

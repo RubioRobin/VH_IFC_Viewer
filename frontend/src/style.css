@@ -1049,138 +1049,196 @@ bim-table [data-table-cell-value] {
 /* ========================================
    MOBILE OPTIMIZATION
    ======================================== */
+
+/* touch-action op de viewport zodat touch events niet door de browser worden
+   onderschept — camera-controls heeft dit nodig voor pinch-to-zoom */
+bim-viewport,
+bim-viewport canvas {
+  touch-action: none !important;
+}
+
 @media (max-width: 768px) {
 
-  /* Hide side panels on mobile to maximize viewer space */
-  .app-side-panel {
-    display: none !important;
-  }
-
-  /* Reset grid layout for full screen */
+  /* Reset grid layout voor volledig scherm */
   .app-content {
     display: block !important;
     padding: 0 !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     width: 100vw !important;
     overflow: hidden !important;
-    background-color: black !important;
-    /* Dark background for immersive feel */
+    background-color: #f8fafc !important;
   }
 
-  /* Maximize viewer container */
+  /* Viewer neemt volledig scherm in */
   .app-viewer-container {
     width: 100% !important;
-    height: 100% !important;
+    height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
+    position: absolute !important;
+    inset: 0 !important;
   }
 
-  /* Ensure viewport takes full space */
   bim-viewport {
     width: 100% !important;
     height: 100% !important;
   }
 
-  /* Adjust toolbar for mobile if necessary */
+  /* ---- Zijpanelen als slide-in drawers ---- */
+  .app-side-panel {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: min(90vw, 340px) !important;
+    height: 100dvh !important;
+    z-index: 200 !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15) !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .app-side-panel--left {
+    left: 0 !important;
+    transform: translateX(-100%) !important;
+  }
+
+  .app-side-panel--right {
+    right: 0 !important;
+    left: auto !important;
+    transform: translateX(100%) !important;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15) !important;
+  }
+
+  /* Klasse toegevoegd door JS om paneel zichtbaar te maken */
+  .app-side-panel--left.mobile-panel-open {
+    transform: translateX(0) !important;
+  }
+
+  .app-side-panel--right.mobile-panel-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Overlay scrim achter open panelen */
+  .mobile-panel-scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+
+  .mobile-panel-scrim.visible {
+    display: block;
+  }
+
+  /* ---- Mobiele FAB knoppen (linksboven/rechtsonder) ---- */
+  .mobile-fab {
+    position: fixed !important;
+    z-index: 201 !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,0.95) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    color: #4f46e5 !important;
+    font-size: 1.2rem !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    padding: 0 !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  }
+
+  .mobile-fab:active {
+    transform: scale(0.92) !important;
+  }
+
+  .mobile-fab--models {
+    top: calc(0.75rem + env(safe-area-inset-top)) !important;
+    left: 0.75rem !important;
+  }
+
+  .mobile-fab--properties {
+    top: calc(0.75rem + env(safe-area-inset-top)) !important;
+    right: 0.75rem !important;
+  }
+
+  /* ---- Bottom toolbar aanpassingen ---- */
   .viewport-ui-overlay {
     padding: 0.5rem !important;
-    pointer-events: none;
-    /* Ensure clicks pass through overlay area */
+    pointer-events: none !important;
     z-index: 50 !important;
-    /* Ensure it's on top */
   }
 
   .viewport-ui-bottom {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100vw;
-    z-index: 1000;
-    pointer-events: none;
-    /* Container doesn't block clicks */
-
-    /* Center the toolbar */
-    display: flex;
-    justify-content: center;
-
-    /* Padding for safe area - no extra 4rem needed with fixed */
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-    margin-bottom: 0;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    z-index: 100 !important;
+    pointer-events: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
   }
 
-  /* Force toolbar to be visible and scrollable */
-  /* Target BOTH bim-grid parent AND direct child in case functionality changes */
-  bim-grid[floating],
-  bim-grid[floating]>bim-toolbar,
   .viewport-ui-bottom bim-toolbar {
     display: flex !important;
     max-width: 95vw !important;
     overflow-x: auto !important;
-    /* Enable horizontal scrolling */
     pointer-events: auto !important;
-    scrollbar-width: none;
-    /* Hide scrollbar Firefox */
-
-    /* Style refinement for mobile */
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    border-radius: 12px !important;
-    padding: 4px !important;
-    margin-bottom: 0.5rem !important;
-
-    /* Ensure it doesn't get pushed off screen */
-    flex-shrink: 0;
+    scrollbar-width: none !important;
+    background-color: rgba(255, 255, 255, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-radius: 14px !important;
+    padding: 6px !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
   }
 
-  /* Hide labels in the bottom toolbar on mobile to save space */
-  .viewport-ui-bottom .custom-btn__label {
+  /* Grotere touch targets voor knoppen in toolbar */
+  .viewport-ui-bottom bim-button {
+    min-height: 2.75rem !important;
+    min-width: 2.75rem !important;
+    padding: 0 0.5rem !important;
+  }
+
+  /* Labels verbergen op mobiel voor compacte toolbar */
+  .viewport-ui-bottom bim-button::part(label) {
     display: none !important;
   }
 
-  /* Adjust button padding when labels are hidden to keep icons centered */
-  .viewport-ui-bottom .custom-btn {
-    padding: 0 0.5rem !important;
-    min-width: 2.5rem !important;
-  }
-
-  /* Ensure the toolbar content is flexible */
   bim-toolbar-section {
     flex-wrap: nowrap !important;
-    /* Keep in one line for horizontal scroll */
     justify-content: flex-start !important;
-    min-width: max-content;
-    /* Allow section to take needed space */
+    min-width: max-content !important;
     border: none !important;
     padding: 0 !important;
   }
-
-  /* Remove section borders and labels for extra space on mobile */
-  bim-toolbar-section::part(label),
-  bim-label {
-    display: none !important;
-  }
 }
 
-/* Landscape Mode Specific Adjustments */
+/* Landscape modus */
 @media (max-width: 900px) and (orientation: landscape) {
   .viewport-ui-bottom {
-    /* Reduce padding significantly in landscape as vertical space is scarce */
     padding-bottom: env(safe-area-inset-bottom) !important;
   }
 
-  /* Make buttons slightly smaller in landscape to save vertical space */
-  .viewport-ui-bottom .custom-btn {
-    height: 2rem !important;
-    min-height: 2rem !important;
-  }
-
-  .viewport-ui-bottom bim-toolbar {
-    padding: 2px !important;
-    margin-bottom: 0 !important;
+  .mobile-fab--models,
+  .mobile-fab--properties {
+    top: calc(0.5rem + env(safe-area-inset-top)) !important;
   }
 }
 /* Watermark Background */

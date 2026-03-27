@@ -47,21 +47,25 @@ module.exports = (supabase) => {
             return data;
         },
 
-        async updateUserProfile(id, { username, email, password, avatar_url }) {
+        async updateUserProfile(id, { username, email, password, avatar_url, role, disabled }) {
             if (!supabase) throw new Error('Database not initialized');
             const updates = {};
             if (username) updates.username = username;
-            if (email) updates.email = email;
-            if (avatar_url) updates.avatar_url = avatar_url;
+            if (email !== undefined) updates.email = email;
+            if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+            if (role) updates.role = role;
+            if (typeof disabled === 'boolean') updates.disabled = disabled;
             if (password) {
                 updates.password_hash = await bcrypt.hash(password, 10);
             }
+
+            if (Object.keys(updates).length === 0) return null;
 
             const { data, error } = await supabase
                 .from('users')
                 .update(updates)
                 .eq('id', id)
-                .select('id, username, email, avatar_url, role')
+                .select('id, username, email, avatar_url, role, disabled')
                 .single();
 
             if (error) throw error;

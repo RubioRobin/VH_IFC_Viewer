@@ -14,12 +14,21 @@ router.get('/:token', async (req, res) => {
 
 
         if (share) {
+            // Controleer expiratie (indien ingesteld)
+            if (share.expires_at && new Date(share.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Deze deellink is verlopen' });
+            }
+
+            // Controleer of de share nog actief is
+            if (!share.is_active) {
+                return res.status(410).json({ error: 'Deze deellink is niet meer actief' });
+            }
+
             const version = share.model_versions;
             const model = version.models;
             const project = model.projects;
 
             // Log Activity (Scan)
-            // Note: server.js logging usually passes (projectId, user, type, details)
             await db.logActivity(project.id, 'Gast', 'scan', `Deel-link scan: ${model.name}`);
 
             const ifcSignedUrl = await db.getFileDownloadUrl(version.storage_path_ifc);

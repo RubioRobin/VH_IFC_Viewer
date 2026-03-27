@@ -108,7 +108,7 @@ Het systeem bestaat uit drie losstaande componenten die communiceren via HTTP-AP
 | `hooks/` | React hooks |
 | `lib/` | Hulpfuncties |
 
-### Revit Plugin (`revit-plugin/`)
+### Revit Plugin (`addin/`)
 
 | Bestand | Beschrijving |
 |---|---|

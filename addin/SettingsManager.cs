@@ -8,7 +8,11 @@ namespace VH_IFC_QR
     {
         public string LastProjectId { get; set; }
         public string LastPrefix { get; set; }
-        
+
+        // Server Settings
+        public string BackendUrl { get; set; } = "https://vh-ifc-backend.onrender.com";
+        public string AdminUrl { get; set; } = "https://vh-ifc-viewer.vercel.app/admin.html#/login";
+
         // QR Settings
         public double QrSizeMm { get; set; } = 50.0;
         public double QrOffsetMm { get; set; } = 10.0;

@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../database');
 const router = express.Router();
 
-// Middleware voor authenticatiecontrole
+// Middleware: vereist dat de gebruiker is ingelogd
 const vereisAuthenticatie = (req, res, next) => {
     // 1. Session check
     if (req.session && req.session.userId) return next();
@@ -13,15 +13,40 @@ const vereisAuthenticatie = (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         if (process.env.ADMIN_API_KEY && token === process.env.ADMIN_API_KEY) {
-            // Mock session for API access
             if (!req.session) req.session = {};
             req.session.userId = 'admin-api-user';
             req.session.username = 'API Admin';
+            req.session.role = 'admin';
             return next();
         }
     }
 
     res.status(401).json({ error: 'Authenticatie vereist' });
+};
+
+// Middleware: vereist admin-rol
+const vereisAdmin = async (req, res, next) => {
+    // Eerst authenticatie-check
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: 'Authenticatie vereist' });
+    }
+
+    // API key gebruikers zijn altijd admin
+    if (req.session.userId === 'admin-api-user') return next();
+
+    // Gebruik de rol die bij login in de sessie is opgeslagen
+    const role = req.session.role;
+    if (role === 'admin') return next();
+
+    // Fallback: haal rol op uit database (als sessie geen rol bevat)
+    try {
+        const user = await db.getUserById(req.session.userId);
+        if (user && user.role === 'admin') return next();
+    } catch (e) {
+        // Stil falen
+    }
+
+    res.status(403).json({ error: 'Adminrechten vereist voor deze actie' });
 };
 
 // LOGIN Route
@@ -33,11 +58,15 @@ router.post('/login', async (req, res) => {
         const user = await db.getUserByUsername(username);
         console.log(`[LOGIN] Gebruiker gevonden:`, user ? 'JA' : 'NEE');
 
-        if (user && await bcrypt.compare(password, user.password_hash)) {
+        if (user && !user.disabled && await bcrypt.compare(password, user.password_hash)) {
             req.session.userId = user.id;
             req.session.username = user.username;
-            console.log(`[LOGIN] Succes! Sessie ID: ${req.session.id}`);
-            res.json({ message: 'OK', user: { id: user.id, username: user.username } });
+            req.session.role = user.role || 'user';
+            console.log(`[LOGIN] Succes! Sessie ID: ${req.session.id}, Rol: ${req.session.role}`);
+            res.json({ message: 'OK', user: { id: user.id, username: user.username, role: user.role || 'user' } });
+        } else if (user && user.disabled) {
+            console.log(`[LOGIN] Mislukt - Account uitgeschakeld`);
+            res.status(403).json({ error: 'Account is uitgeschakeld. Neem contact op met een beheerder.' });
         } else {
             console.log(`[LOGIN] Mislukt - Ongeldige gegevens`);
             res.status(401).json({ error: 'Inloggen mislukt' });
@@ -121,4 +150,4 @@ router.get('/users', vereisAuthenticatie, async (req, res) => {
     }
 });
 
-module.exports = { router, vereisAuthenticatie };
+module.exports = { router, vereisAuthenticatie, vereisAdmin };

@@ -15,7 +15,7 @@ namespace VH_IFC_QR
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://vh-ifc-viewer.vercel.app/admin.html#/login",
+                    FileName = SettingsManager.Instance.AdminUrl,
                     UseShellExecute = true
                 });
                 return Result.Succeeded;

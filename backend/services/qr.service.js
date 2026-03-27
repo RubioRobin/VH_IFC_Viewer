@@ -66,11 +66,18 @@ module.exports = (supabase, logActivity) => {
             return data;
         },
 
-        async createShare(versionId, token) {
+        async createShare(versionId, token, expiresAt = null) {
             if (!supabase) return null;
-            const { data, error } = await supabase.from('shares').insert([{ model_version_id: versionId, token }]).select().single();
+            const record = { model_version_id: versionId, token };
+            if (expiresAt) record.expires_at = expiresAt;
+            const { data, error } = await supabase.from('shares').insert([record]).select().single();
             if (error) throw error;
             return data;
+        },
+
+        async deactivateShare(token) {
+            if (!supabase) return;
+            await supabase.from('shares').update({ is_active: false }).eq('token', token);
         },
 
         async getShareByToken(token) {

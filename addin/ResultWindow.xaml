@@ -95,8 +95,7 @@
 
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="btnClose" Style="{StaticResource SecondaryButtonStyle}" Content="Sluiten" Click="BtnClose_Click" Width="120" Height="40" Margin="0,0,15,0"/>
-                <Button x:Name="btnOpenProject" Style="{StaticResource PrimaryButtonStyle}" Content="Ga naar Project" Click="BtnOpenProject_Click" Width="160" Height="40"/>
+                <Button x:Name="btnClose" Style="{StaticResource PrimaryButtonStyle}" Content="Sluiten" Click="BtnClose_Click" Width="120" Height="40"/>
             </StackPanel>
         </Grid>
     </Border>

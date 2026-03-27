@@ -232,6 +232,7 @@ const [contentGrid] = BUI.Component.create(
   TEMPLATES.contentGridTemplate,
   {
     components,
+    world,
     viewportTemplate: viewportCardTemplate,
   }
 );
@@ -239,6 +240,65 @@ const [contentGrid] = BUI.Component.create(
 const app = document.getElementById("app");
 if (app) app.appendChild(contentGrid);
 // resizeWorld(); // REMOVED: Triggers WebGL zero-size warnings if called before layout is ready
+
+// ---- Mobiele paneel-drawers ----
+// Op mobiel verschijnen FAB-knoppen waarmee gebruikers de zijpanelen kunnen openen.
+// Dit gebruikt CSS-klassen (.mobile-panel-open) zodat de animaties via CSS lopen.
+const isMobile = () => window.innerWidth <= 768;
+
+const setupMobilePanelToggles = () => {
+  if (!isMobile()) return;
+
+  const leftPanel = document.querySelector('.app-side-panel--left') as HTMLElement | null;
+  const rightPanel = document.querySelector('.app-side-panel--right') as HTMLElement | null;
+  if (!leftPanel || !rightPanel) return;
+
+  // Scrim (overlay achter open paneel)
+  const scrim = document.createElement('div');
+  scrim.className = 'mobile-panel-scrim';
+  document.body.appendChild(scrim);
+
+  const closeAll = () => {
+    leftPanel.classList.remove('mobile-panel-open');
+    rightPanel.classList.remove('mobile-panel-open');
+    scrim.classList.remove('visible');
+  };
+
+  scrim.addEventListener('click', closeAll);
+
+  // FAB knop: Modellen (links)
+  const fabModels = document.createElement('button');
+  fabModels.className = 'mobile-fab mobile-fab--models';
+  fabModels.setAttribute('aria-label', 'Modellen tonen');
+  fabModels.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+  fabModels.addEventListener('click', () => {
+    const isOpen = leftPanel.classList.contains('mobile-panel-open');
+    closeAll();
+    if (!isOpen) {
+      leftPanel.classList.add('mobile-panel-open');
+      scrim.classList.add('visible');
+    }
+  });
+  document.body.appendChild(fabModels);
+
+  // FAB knop: Eigenschappen (rechts)
+  const fabProperties = document.createElement('button');
+  fabProperties.className = 'mobile-fab mobile-fab--properties';
+  fabProperties.setAttribute('aria-label', 'Eigenschappen tonen');
+  fabProperties.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  fabProperties.addEventListener('click', () => {
+    const isOpen = rightPanel.classList.contains('mobile-panel-open');
+    closeAll();
+    if (!isOpen) {
+      rightPanel.classList.add('mobile-panel-open');
+      scrim.classList.add('visible');
+    }
+  });
+  document.body.appendChild(fabProperties);
+};
+
+// Wacht op DOM zodat panelen beschikbaar zijn
+requestAnimationFrame(() => setupMobilePanelToggles());
 
 // 🚀 AUTO-LOAD LOGIC
 const init = async () => {

@@ -30,8 +30,19 @@ router.get('/:id', vereisAuthenticatie, async (req, res) => {
 // Maak nieuw project
 router.post('/', vereisAuthenticatie, async (req, res) => {
     const { name, description, status } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Projectnaam is verplicht.' });
+    }
+    if (name.trim().length > 200) {
+        return res.status(400).json({ error: 'Projectnaam mag maximaal 200 tekens zijn.' });
+    }
+
+    const allowedStatuses = ['actief', 'in-uitvoering', 'on-hold', 'planning', 'afgerond'];
+    const safeStatus = allowedStatuses.includes(status) ? status : 'actief';
+
     try {
-        const newProject = await db.createProject(uuidv4(), name, description || '', status || 'active', req.session.username);
+        const newProject = await db.createProject(uuidv4(), name.trim(), (description || '').slice(0, 1000), safeStatus, req.session.username);
         res.status(201).json(newProject);
     } catch (e) {
         res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
@@ -40,8 +51,23 @@ router.post('/', vereisAuthenticatie, async (req, res) => {
 
 // Update project
 router.put('/:id', vereisAuthenticatie, async (req, res) => {
+    const { name, description } = req.body;
+
+    if (name !== undefined) {
+        if (typeof name !== 'string' || name.trim().length === 0) {
+            return res.status(400).json({ error: 'Projectnaam mag niet leeg zijn.' });
+        }
+        if (name.trim().length > 200) {
+            return res.status(400).json({ error: 'Projectnaam mag maximaal 200 tekens zijn.' });
+        }
+    }
+
+    const cleanBody = {};
+    if (name) cleanBody.name = name.trim();
+    if (description !== undefined) cleanBody.description = (description || '').slice(0, 1000);
+
     try {
-        const updated = await db.updateProject(req.params.id, req.body);
+        const updated = await db.updateProject(req.params.id, cleanBody);
         if (updated) res.json(updated);
         else res.status(404).json({ error: "Project niet gevonden" });
     } catch (e) {
@@ -89,13 +115,40 @@ router.get('/:id/models', vereisAuthenticatie, async (req, res) => {
     }
 });
 
-// Upload file to specific revision
-// Note: This matches the frontend call in ProjectDetails.tsx
+// Upload initieren voor een specifieke model-revisie.
+// Geeft een ondertekende Supabase upload-URL terug zodat de frontend direct kan uploaden.
+// Na de upload: gebruik /api/upload/confirm om de bestandsregistratie af te ronden.
 router.post('/:id/models/:modelId/revisions/:revId/upload', vereisAuthenticatie, async (req, res) => {
+    const { id: projectId, modelId, revId } = req.params;
+    const { fileName } = req.body;
+
+    if (!fileName) {
+        return res.status(400).json({ error: 'Bestandsnaam (fileName) is verplicht.' });
+    }
+
     try {
-        // Implementation for manual upload logic goes here
-        // For now, let's just mock success to unblock the UI error
-        res.json({ success: true, message: "Upload geverifieerd (mock-modus)" });
+        // Controleer of het model bij dit project hoort
+        const models = await db.getModelsByProjectId(projectId);
+        const model = (models || []).find(m => m.id === modelId);
+        if (!model) {
+            return res.status(404).json({ error: 'Model niet gevonden in dit project.' });
+        }
+
+        const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const storagePath = `revit_exports/${modelId}/${revId}_${safeName}`;
+
+        const uploadData = await db.createSignedUploadUrl(storagePath);
+        if (!uploadData) {
+            return res.status(500).json({ error: 'Kon geen upload-URL genereren.' });
+        }
+
+        res.json({
+            success: true,
+            uploadUrl: uploadData.signedUrl,
+            storagePath,
+            fileId: revId,
+            message: 'Upload-URL gegenereerd. Upload het bestand en roep daarna /api/upload/confirm aan.'
+        });
     } catch (e) {
         res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }

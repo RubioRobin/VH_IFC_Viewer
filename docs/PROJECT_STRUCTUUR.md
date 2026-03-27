@@ -31,7 +31,7 @@ VH_IFC_Viewer/
 │       ├── 📁 components/          ← Herbruikbare UI-componenten
 │       └── 📁 viewer/              ← IFC viewer hulpmodules
 │
-├── 📁 revit-plugin/                ← C# Revit add-in (voorheen RevitPlugin)
+├── 📁 addin/                       ← C# Revit add-in (voorheen RevitPlugin)
 │   ├── 📄 Command.cs                   ← Hoofdcommando (export + QR)
 │   ├── 📄 PluginClient.cs              ← HTTP API client
 │   ├── 📄 VH_IFC_QR.csproj            ← C# project bestand
@@ -56,7 +56,7 @@ VH_IFC_Viewer/
 |---|---|
 | `backend/` | REST API, authenticatie, bestandsbeheer (Node.js/Express) |
 | `frontend/` | Dashboard en IFC-viewer (React/Vite) |
-| `revit-plugin/` | Revit add-in voor export en QR-tagging (C#) |
+| `addin/` | Revit add-in voor export en QR-tagging (C#) |
 | `docs/` | Centrale documentatie en handleidingen |
 
 ---

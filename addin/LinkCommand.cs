@@ -14,7 +14,7 @@ namespace VH_IFC_QR
     [Transaction(TransactionMode.Manual)]
     public class LinkQRCommand : IExternalCommand
     {
-        private const string BaseUrl = "https://vh-ifc-backend.onrender.com";
+        private static string BaseUrl => SettingsManager.Instance.BackendUrl;
         private const string ClientId = "revit_plugin";
         private const string ClientSecret = "0dfb4de62d095c839ed086630fef515454d4e2d374c73b3e";
 
@@ -69,57 +69,102 @@ namespace VH_IFC_QR
                 var validMatches = linkWin.ValidMatches;
                 List<string> results = new List<string>();
                 int totalSteps = validMatches.Count;
-                int currentStep = 0;
+                int completedDownloads = 0;
 
                 try
                 {
-                    foreach (var match in validMatches)
+                    // FASE 1: Download QRs in parallel (max 5 tegelijk om backend belasting te spreiden)
+                    // Partial success: elke download heeft een eigen resultaat (succes of fout)
+                    var semaphore = new SemaphoreSlim(5);
+                    var downloadTasks = validMatches.Select(async match =>
                     {
-                        currentStep++;
-                        progress.Update(
-                            $"({currentStep}/{totalSteps}) QR genereren: {match.AssemblyCode}...",
-                            (int)((double)currentStep / totalSteps * 100));
-
-                        // 1. Share + QR genereren via backend
-                        ShareQRResult qrResult = null;
-                        var bgTask = Task.Run(async () =>
+                        await semaphore.WaitAsync();
+                        try
                         {
-                            qrResult = await client.CreateShareAndQRAsync(
+                            if (string.IsNullOrEmpty(match.MatchedFileId))
+                                return new { Match = match, TempPath = (string)null, Error = $"Geen FileId voor {match.AssemblyCode}" };
+
+                            var qrResult = await client.CreateShareAndQRAsync(
                                 match.MatchedFileId,
                                 linkWin.SelectedProject.id);
-                        });
 
-                        while (!bgTask.IsCompleted)
-                        {
-                            DoEvents();
-                            Thread.Sleep(10);
+                            byte[] qrBytes = await client.DownloadQRAsync(qrResult.qrUrl);
+                            string qrTempPath = Path.Combine(Path.GetTempPath(), $"link_{match.AssemblyCode}_{DateTime.Now.Ticks}_qr.png");
+                            File.WriteAllBytes(qrTempPath, qrBytes);
+
+                            int current = Interlocked.Increment(ref completedDownloads);
+                            progress.Update(
+                                $"({current}/{totalSteps}) QR downloaden: {match.AssemblyCode}...",
+                                (int)((double)current / totalSteps * 50));
+
+                            return new { Match = match, TempPath = qrTempPath, Error = (string)null };
                         }
-                        bgTask.GetAwaiter().GetResult();
-
-                        // 2. QR downloaden
-                        byte[] qrBytes = Task.Run(() => client.DownloadQRAsync(qrResult.qrUrl)).GetAwaiter().GetResult();
-                        string qrTempPath = Path.Combine(Path.GetTempPath(), $"link_{match.AssemblyCode}_{DateTime.Now.Ticks}_qr.png");
-                        File.WriteAllBytes(qrTempPath, qrBytes);
-
-                        // 3. QR op Sheet plaatsen (als sheet geselecteerd)
-                        if (match.SelectedSheet != null)
+                        catch (Exception ex)
                         {
-                            using (Transaction t = new Transaction(doc, $"Place QR - {match.AssemblyCode}"))
-                            {
-                                t.Start();
-                                PlaceQrOnSheet(doc, match.SelectedSheet.Id, qrTempPath, match.AssemblyCode);
-                                t.Commit();
-                            }
+                            Interlocked.Increment(ref completedDownloads);
+                            return new { Match = match, TempPath = (string)null, Error = ex.Message };
                         }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    }).ToList();
 
-                        if (File.Exists(qrTempPath)) File.Delete(qrTempPath);
-                        results.Add($"{match.AssemblyCode} → {match.MatchedFileName}");
+                    var allDownloadsTask = Task.WhenAll(downloadTasks);
+
+                    while (!allDownloadsTask.IsCompleted)
+                    {
+                        DoEvents();
+                        Thread.Sleep(50);
                     }
+
+                    var downloadedItems = allDownloadsTask.GetAwaiter().GetResult();
+
+                    // Splits geslaagde en mislukte downloads
+                    var succeeded = downloadedItems.Where(x => x.TempPath != null).ToList();
+                    var failed    = downloadedItems.Where(x => x.Error != null).ToList();
+
+                    // FASE 2: Plaatsen — alleen geslaagde items, in 1 transactie
+                    int placedCount = 0;
+                    if (succeeded.Any())
+                    {
+                        using (Transaction t = new Transaction(doc, "Lijmen van QR codes"))
+                        {
+                            t.Start();
+
+                            foreach (var item in succeeded)
+                            {
+                                placedCount++;
+                                progress.Update(
+                                    $"({placedCount}/{succeeded.Count}) QR code plaatsen: {item.Match.AssemblyCode}...",
+                                    50 + (int)((double)placedCount / succeeded.Count * 45));
+
+                                DoEvents();
+
+                                if (item.Match.SelectedSheet != null)
+                                    PlaceQrOnSheet(doc, item.Match.SelectedSheet.Id, item.TempPath, item.Match.AssemblyCode);
+
+                                if (File.Exists(item.TempPath)) File.Delete(item.TempPath);
+                                results.Add($"✓ {item.Match.AssemblyCode} → {item.Match.MatchedFileName}");
+                            }
+
+                            t.Commit();
+                        }
+
+                        // Opslaan-prompt
+                        progress.Update("Opslaan...", 98);
+                        DoEvents();
+                        doc.Save();
+                    }
+
+                    // Voeg mislukte items toe aan resultatenlijst
+                    foreach (var item in failed)
+                        results.Add($"✗ {item.Match.AssemblyCode}: {item.Error}");
 
                     progress.Update("Klaar!", 100);
                     progress.Close();
 
-                    ResultWindow resWin = new ResultWindow(results, linkWin.SelectedProject.id);
+                    ResultWindow resWin = new ResultWindow(results);
                     resWin.ShowDialog();
                 }
                 catch (Exception ex)
@@ -127,7 +172,7 @@ namespace VH_IFC_QR
                     progress.Close();
                     string userMsg = ex.Message.Contains("502") || ex.Message.Contains("503") || ex.Message.Contains("connect")
                         ? "De server is tijdelijk niet bereikbaar.\n\nProbeer het over enkele minuten opnieuw."
-                        : "Er is een fout opgetreden bij het linken.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
+                        : $"Er is een fout opgetreden bij het linken:\n{ex.Message}\n\nProbeer het opnieuw of neem contact op met de beheerder.";
                     NotificationWindow.ShowError(userMsg);
                     return Result.Failed;
                 }
@@ -147,6 +192,27 @@ namespace VH_IFC_QR
         private void PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath, string label)
         {
             ViewSheet sheet = doc.GetElement(sheetId) as ViewSheet;
+
+            // Verwijder bestaande QR code(s) voor deze assembly code op deze sheet
+            try
+            {
+                var existingImages = new FilteredElementCollector(doc, sheet.Id)
+                    .OfCategory(BuiltInCategory.OST_RasterImages)
+                    .WhereElementIsNotElementType()
+                    .Cast<ImageInstance>()
+                    .ToList();
+
+                foreach (var img in existingImages)
+                {
+                    var imgType = doc.GetElement(img.GetTypeId()) as ImageType;
+                    if (imgType != null && imgType.Name.Contains($"link_{label}_"))
+                    {
+                        doc.Delete(img.Id);
+                    }
+                }
+            }
+            catch { }
+
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
 
@@ -183,14 +249,16 @@ namespace VH_IFC_QR
                     if (bbox != null)
                     {
                         string loc = SettingsManager.Instance.QrLocation;
+
                         if (loc == "BottomLeft")
                             placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
                         else if (loc == "TopRight")
                             placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
                         else if (loc == "TopLeft")
                             placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
-                        else
+                        else // BottomRight
                             placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
+
                         manualPlacement = true;
                     }
                 }
