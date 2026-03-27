@@ -25,6 +25,20 @@ interface Project {
     description: string;
 }
 
+interface ModelVersion {
+    id: string;
+    version_number?: number;
+    created_at: string;
+}
+
+interface RevitModel {
+    id: string;
+    name: string;
+    created_by: string;
+    created_at: string;
+    model_versions: ModelVersion[];
+}
+
 export function ProjectDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -33,6 +47,7 @@ export function ProjectDetailsPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [files, setFiles] = useState<FileData[]>([]);
+    const [models, setModels] = useState<RevitModel[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,12 +61,14 @@ export function ProjectDetailsPage() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [projectData, filesData] = await Promise.all([
+            const [projectData, filesData, modelsData] = await Promise.all([
                 fetchAPI(`/projects/${id}`),
-                fetchAPI(`/projects/${id}/files`)
+                fetchAPI(`/projects/${id}/files`),
+                fetchAPI(`/projects/${id}/models`).catch(() => [])
             ]);
             setProject(projectData);
             setFiles(filesData);
+            setModels(modelsData || []);
         } catch (error) {
             console.error(error);
             toast({ type: 'error', title: 'Fout', message: 'Kon projectgegevens niet laden.' });
@@ -268,8 +285,13 @@ export function ProjectDetailsPage() {
                         filteredFiles.map((f) => (
                             <div key={f.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors group gap-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0">
-                                        <FileText className="w-5 h-5" />
+                                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0 overflow-hidden">
+                                        {(() => {
+                                            const thumb = localStorage.getItem(`thumb_${f.id}`);
+                                            return thumb
+                                                ? <img src={thumb} alt="preview" className="w-full h-full object-cover rounded-lg" />
+                                                : <FileText className="w-5 h-5" />;
+                                        })()}
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-base group-hover:text-blue-600 transition-colors">
@@ -352,6 +374,39 @@ export function ProjectDetailsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Revit Models Section (3A) */}
+            {models.length > 0 && (
+                <div className="bg-white dark:bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div className="p-6 border-b bg-gray-50/50 dark:bg-muted/10">
+                        <h3 className="font-bold text-lg">Revit Modellen</h3>
+                        <p className="text-sm text-muted-foreground">Modellen geëxporteerd via de Revit plugin</p>
+                    </div>
+                    <div className="divide-y">
+                        {models.map((m) => (
+                            <div key={m.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 shrink-0">
+                                        <Database className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-base">{m.name}</h4>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                            <span>{m.model_versions?.length || 0} versie(s)</span>
+                                            <span className="hidden sm:inline">•</span>
+                                            <span>Door {m.created_by}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Calendar className="w-3 h-3" />
+                                    {m.created_at ? formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: nl }) : '-'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={isConfirmOpen}

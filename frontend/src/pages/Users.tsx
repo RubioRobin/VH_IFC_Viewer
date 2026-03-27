@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataTable, Column } from '../components/dashboard/DataTable';
 import { Button } from '../components/ui/button';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, KeyRound, UserX, UserCheck } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Dialog } from '../components/ui/dialog';
@@ -15,6 +15,7 @@ interface User {
     id: string;
     username: string;
     role: string;
+    disabled: boolean;
     created_at: string;
 }
 
@@ -29,6 +30,10 @@ export function UsersPage() {
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [newRole, setNewRole] = useState('user');
+    const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+    const [userToReset, setUserToReset] = useState<User | null>(null);
+    const [newResetPassword, setNewResetPassword] = useState('');
+    const [resetting, setResetting] = useState(false);
 
     const loadUsers = async () => {
         try {
@@ -103,18 +108,72 @@ export function UsersPage() {
         }
     };
 
+    const handleRoleChange = async (user: User, newRole: string) => {
+        try {
+            await fetchAPI(`/users/${user.id}/role`, { method: 'PATCH', body: JSON.stringify({ role: newRole }) });
+            setData(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u));
+            toast({ type: 'success', title: 'Rol gewijzigd', message: `${user.username} is nu ${newRole}.` });
+        } catch {
+            toast({ type: 'error', title: 'Fout', message: 'Kon rol niet wijzigen.' });
+        }
+    };
+
+    const handleToggleDisabled = async (user: User) => {
+        const newDisabled = !user.disabled;
+        try {
+            await fetchAPI(`/users/${user.id}/disabled`, { method: 'PATCH', body: JSON.stringify({ disabled: newDisabled }) });
+            setData(prev => prev.map(u => u.id === user.id ? { ...u, disabled: newDisabled } : u));
+            toast({ type: 'success', title: newDisabled ? 'Uitgeschakeld' : 'Ingeschakeld', message: `${user.username} is ${newDisabled ? 'uitgeschakeld' : 'ingeschakeld'}.` });
+        } catch {
+            toast({ type: 'error', title: 'Fout', message: 'Kon status niet wijzigen.' });
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!userToReset || !newResetPassword.trim()) return;
+        setResetting(true);
+        try {
+            await fetchAPI(`/users/${userToReset.id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword: newResetPassword }) });
+            toast({ type: 'success', title: 'Wachtwoord gereset', message: `Wachtwoord van ${userToReset.username} is gewijzigd.` });
+            setResetPasswordDialogOpen(false);
+            setNewResetPassword('');
+            setUserToReset(null);
+        } catch {
+            toast({ type: 'error', title: 'Fout', message: 'Kon wachtwoord niet resetten.' });
+        } finally {
+            setResetting(false);
+        }
+    };
+
     const columns: Column<User>[] = [
-        { key: 'username', label: 'Gebruikersnaam', sortable: true, render: (u) => <div className="font-medium">{u.username}</div> },
+        {
+            key: 'username',
+            label: 'Gebruikersnaam',
+            sortable: true,
+            render: (u) => (
+                <div className="flex items-center gap-2">
+                    <span className={`font-medium ${u.disabled ? 'text-muted-foreground line-through' : ''}`}>{u.username}</span>
+                    {u.disabled && <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-semibold">Uitgeschakeld</span>}
+                </div>
+            )
+        },
         {
             key: 'role',
             label: 'Rol',
             sortable: true,
             render: (u) => (
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-                ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                        'bg-blue-100 text-blue-800'}`}>
-                    {u.role}
-                </span>
+                <select
+                    value={u.role}
+                    onChange={(e) => handleRoleChange(u, e.target.value)}
+                    className="text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    style={{
+                        background: u.role === 'admin' ? '#f3e8ff' : '#dbeafe',
+                        color: u.role === 'admin' ? '#6b21a8' : '#1d4ed8'
+                    }}
+                >
+                    <option value="admin">admin</option>
+                    <option value="user">user</option>
+                </select>
             )
         },
         {
@@ -129,7 +188,25 @@ export function UsersPage() {
             render: (u) => {
                 const isLastUser = data.length <= 1;
                 return (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50"
+                            title="Wachtwoord resetten"
+                            onClick={() => { setUserToReset(u); setNewResetPassword(''); setResetPasswordDialogOpen(true); }}
+                        >
+                            <KeyRound className="w-4 h-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${u.disabled ? 'text-green-500 hover:bg-green-50 hover:text-green-600' : 'text-amber-500 hover:bg-amber-50 hover:text-amber-600'}`}
+                            title={u.disabled ? 'Inschakelen' : 'Uitschakelen'}
+                            onClick={() => handleToggleDisabled(u)}
+                        >
+                            {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                        </Button>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -215,6 +292,33 @@ export function UsersPage() {
                         />
                     </div>
                 </form>
+            </Dialog>
+
+            <Dialog
+                isOpen={resetPasswordDialogOpen}
+                onClose={() => setResetPasswordDialogOpen(false)}
+                onOpenChange={(open) => { if (!open) { setResetPasswordDialogOpen(false); setNewResetPassword(''); } }}
+                title={`Wachtwoord resetten — ${userToReset?.username}`}
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)}>Annuleren</Button>
+                        <Button onClick={handleResetPassword} disabled={resetting || !newResetPassword} className="bg-primary hover:bg-primary/90 min-w-[100px]">
+                            {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Opslaan
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Nieuw wachtwoord</label>
+                    <Input
+                        type="password"
+                        placeholder="••••••••"
+                        value={newResetPassword}
+                        onChange={(e) => setNewResetPassword(e.target.value)}
+                        autoFocus
+                    />
+                </div>
             </Dialog>
 
             <ConfirmDialog

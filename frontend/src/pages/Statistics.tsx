@@ -13,7 +13,8 @@ import {
     ArrowDownRight,
     Search,
     RotateCcw,
-    ExternalLink
+    ExternalLink,
+    Download
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
@@ -48,6 +49,26 @@ export function Statistics() {
         };
         load();
     }, [period]);
+
+    const handleExportCSV = () => {
+        if (!stats) return;
+        const rows: string[] = ['Datum,Scans'];
+        stats.timeline.forEach(t => rows.push(`${t.date},${t.count}`));
+        rows.push('', 'Project,Scans');
+        stats.projects.forEach(p => rows.push(`"${p.name.replace(/"/g, '""')}",${p.count}`));
+        rows.push('', 'Bestand,Scans');
+        stats.files.forEach(f => rows.push(`"${f.name.replace(/"/g, '""')}",${f.count}`));
+        const csv = rows.join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `statistieken-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
 
     const handleResetStats = async () => {
         try {
@@ -102,14 +123,25 @@ export function Statistics() {
                         </h2>
                         <p className="text-slate-500 mt-2 text-lg">Gedetailleerde inzichten in het gebruik van QR-codes en projectactiviteit.</p>
                     </div>
-                    <Button
-                        variant="outline"
-                        className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
-                        onClick={() => setResetDialogOpen(true)}
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                        Reset Statistieken
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all duration-300 shadow-sm"
+                            onClick={handleExportCSV}
+                            disabled={!stats}
+                        >
+                            <Download className="w-4 h-4" />
+                            Exporteer CSV
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
+                            onClick={() => setResetDialogOpen(true)}
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            Reset Statistieken
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Quick Stats */}

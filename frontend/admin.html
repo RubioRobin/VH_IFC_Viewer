@@ -12,6 +12,7 @@
 <body>
     <div id="admin-app"></div>
     <script type="module" src="/src/admin.tsx"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 
 </html>

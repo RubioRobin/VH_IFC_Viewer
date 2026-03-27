@@ -187,6 +187,23 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
     }, 500);
   }
 
+  // CAPTURE THUMBNAIL for dashboard preview
+  const thumbParams = new URLSearchParams(window.location.search);
+  const thumbFileId = thumbParams.get("fileId");
+  if (thumbFileId) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      const canvas = world.renderer.three.domElement;
+      world.renderer.three.render(world.scene.three, world.camera.three);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      if (dataUrl && dataUrl.length > 100) {
+        localStorage.setItem(`thumb_${thumbFileId}`, dataUrl);
+      }
+    } catch (e) {
+      console.warn('[Thumbnail] Capture failed:', e);
+    }
+  }
+
   // Verwerk URL-parameter voor element-markering (ID)
   const urlParams = new URLSearchParams(window.location.search);
   const elementId = urlParams.get("id");

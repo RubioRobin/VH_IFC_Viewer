@@ -87,6 +87,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
     val.style.wordBreak = "break-word";
+    val.style.flex = "1";
 
     if (Array.isArray(value)) {
       val.textContent = "";
@@ -94,8 +95,30 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
       val.textContent = startValue;
     }
 
+    const valueRow = document.createElement("div");
+    valueRow.style.display = "flex";
+    valueRow.style.alignItems = "center";
+    valueRow.style.gap = "0.25rem";
+    valueRow.appendChild(val);
+
+    if (!Array.isArray(value) && startValue !== "-" && startValue !== "") {
+      const copyBtn = document.createElement("button");
+      copyBtn.title = "Kopiëren";
+      copyBtn.style.cssText = "background:none;border:none;padding:2px;cursor:pointer;color:#d1d5db;flex-shrink:0;line-height:0;border-radius:3px;transition:color 0.15s;";
+      copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+      copyBtn.addEventListener('mouseenter', () => { copyBtn.style.color = '#6b7280'; });
+      copyBtn.addEventListener('mouseleave', () => { copyBtn.style.color = '#d1d5db'; });
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(startValue).then(() => {
+          copyBtn.style.color = '#22c55e';
+          setTimeout(() => { copyBtn.style.color = '#d1d5db'; }, 1500);
+        });
+      });
+      valueRow.appendChild(copyBtn);
+    }
+
     row.appendChild(label);
-    row.appendChild(val);
+    row.appendChild(valueRow);
 
     const container = document.createElement("div");
     container.style.display = "flex";
