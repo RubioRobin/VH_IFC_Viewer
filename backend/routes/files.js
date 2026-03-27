@@ -65,6 +65,19 @@ router.get('/:id/download', async (req, res) => {
     }
 });
 
+// Geeft Supabase signed URL terug als JSON (voor dashboard download)
+router.get('/:id/signed-url', vereisAuthenticatie, async (req, res) => {
+    try {
+        const file = await db.getFileById(req.params.id);
+        if (!file) return res.status(404).json({ error: 'Bestand niet gevonden' });
+        const url = await db.getFileDownloadUrl(file.path);
+        if (!url) return res.status(500).json({ error: 'Kon download URL niet genereren' });
+        res.json({ url, filename: file.filename });
+    } catch (e) {
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
+    }
+});
+
 // Verwijder bestand
 router.delete('/:id', vereisAuthenticatie, async (req, res) => {
     try {

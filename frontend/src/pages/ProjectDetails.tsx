@@ -139,13 +139,19 @@ export function ProjectDetailsPage() {
         setIsConfirmOpen(true);
     };
 
-    const handleDownload = (file: FileData) => {
-        const a = document.createElement('a');
-        a.href = `${BASE_URL}/api/files/${file.id}/download`;
-        a.download = file.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    const handleDownload = async (file: FileData) => {
+        try {
+            const { url, filename } = await fetchAPI(`/files/${file.id}/signed-url`);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch {
+            toast({ type: 'error', title: 'Fout', message: 'Kon bestand niet downloaden.' });
+        }
     };
 
     const confirmDelete = async () => {
