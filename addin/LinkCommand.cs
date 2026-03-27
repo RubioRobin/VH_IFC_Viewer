@@ -216,8 +216,8 @@ namespace VH_IFC_QR
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
 
-            double sizeInMm = SettingsManager.Instance.QrSizeMm;
-            if (sizeInMm <= 0) sizeInMm = 50;
+            // Vaste afmeting: 20.6x20.6 mm (altijd, ongeacht instellingen)
+            double sizeInMm = 20.6;
             double targetSizeInFeet = sizeInMm / 304.8;
 
             try
@@ -231,10 +231,6 @@ namespace VH_IFC_QR
 
             XYZ placementPoint = XYZ.Zero;
             bool manualPlacement = false;
-            double offsetMm = SettingsManager.Instance.QrOffsetMm;
-            if (offsetMm <= 0) offsetMm = 10.0;
-            double marginFeet = offsetMm / 304.8;
-            double halfSize = targetSizeInFeet / 2.0;
 
             try
             {
@@ -248,17 +244,15 @@ namespace VH_IFC_QR
                     BoundingBoxXYZ bbox = titleBlock.get_BoundingBox(sheet);
                     if (bbox != null)
                     {
-                        string loc = SettingsManager.Instance.QrLocation;
+                        // Vaste positie: linkerbovenhoek van het QR-vakje in de titelblok
+                        double cornerRightOffsetMm = 249.5 - 0.1; // 249.4 mm
+                        double cornerDownOffsetMm  = 245.5 - 0.5; // 245.0 mm
 
-                        if (loc == "BottomLeft")
-                            placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
-                        else if (loc == "TopRight")
-                            placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
-                        else if (loc == "TopLeft")
-                            placementPoint = new XYZ(bbox.Min.X + marginFeet + halfSize, bbox.Max.Y - marginFeet - halfSize, 0);
-                        else // BottomRight
-                            placementPoint = new XYZ(bbox.Max.X - marginFeet - halfSize, bbox.Min.Y + marginFeet + halfSize, 0);
+                        double halfSizeMm = sizeInMm / 2.0;
+                        double rightOffsetFeet = (cornerRightOffsetMm + halfSizeMm) / 304.8;
+                        double downOffsetFeet  = (cornerDownOffsetMm  + halfSizeMm) / 304.8;
 
+                        placementPoint = new XYZ(bbox.Min.X + rightOffsetFeet, bbox.Max.Y - downOffsetFeet, 0);
                         manualPlacement = true;
                     }
                 }
@@ -275,11 +269,7 @@ namespace VH_IFC_QR
             else
             {
                 ImagePlacementOptions placement = new ImagePlacementOptions();
-                string loc = SettingsManager.Instance.QrLocation;
-                if (loc == "BottomLeft") placement.PlacementPoint = BoxPlacement.BottomLeft;
-                else if (loc == "TopRight") placement.PlacementPoint = BoxPlacement.TopRight;
-                else if (loc == "TopLeft") placement.PlacementPoint = BoxPlacement.TopLeft;
-                else placement.PlacementPoint = BoxPlacement.BottomRight;
+                placement.PlacementPoint = BoxPlacement.TopLeft;
                 instance = ImageInstance.Create(doc, sheet, type.Id, placement);
             }
 
