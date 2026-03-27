@@ -5,6 +5,7 @@ import * as BUI from "@thatopen/ui";
 import * as TEMPLATES from "./ui-templates";
 import { ModelAligner, AlignmentStrategy, BoundsCalculationMethod } from "./viewer/alignment";
 import { TransparencyManager } from "./viewer/transparency-manager";
+import { setDownloadInfo } from "./viewer/download-store";
 import "./style.css";
 
 // UI Manager initialiseren
@@ -331,6 +332,7 @@ const init = async () => {
       if (!modelResponse.ok) throw new Error(`Fout bij downloaden model: ${modelResponse.status}`);
 
       const blob = await modelResponse.blob();
+      setDownloadInfo(blob, filename);
       const file = new File([blob], filename, { type: 'application/octet-stream' });
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
@@ -359,6 +361,7 @@ const init = async () => {
       if (!response.ok) throw new Error(`Ophalen mislukt: ${response.status}`);
 
       const blob = await response.blob();
+      setDownloadInfo(blob, displayTitle);
       const file = new File([blob], displayTitle, { type: 'application/octet-stream' });
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);

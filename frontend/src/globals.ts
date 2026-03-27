@@ -25,6 +25,7 @@ export const appIcons = {
   LAYOUT: "tabler:layout-filled",
   DELETE: "mdi:trash-can",
   AREA: "mdi:ruler-square",
+  DOWNLOAD: "mdi:download",
 };
 
 export const tooltips = {

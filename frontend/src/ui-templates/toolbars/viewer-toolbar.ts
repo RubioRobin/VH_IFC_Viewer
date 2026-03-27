@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { appIcons } from "../../globals";
 import { customButton } from "../components/custom-button";
 import { TransparencyManager } from "../../viewer/transparency-manager";
+import { triggerDownload } from "../../viewer/download-store";
 
 export interface ViewerToolbarState {
   components: OBC.Components;
@@ -213,6 +214,10 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
       <bim-toolbar-section>
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
+      </bim-toolbar-section>
+
+      <bim-toolbar-section>
+        ${customButton({ icon: appIcons.DOWNLOAD, label: "Download IFC", onClick: triggerDownload })}
       </bim-toolbar-section>
     </bim-toolbar>
   `;

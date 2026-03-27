@@ -711,6 +711,31 @@ bim-viewport {
   gap: 0.5rem;
 }
 
+/* Viewport Logo */
+.viewport-logo {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.viewport-logo__text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
 /* Viewport UI Overlay */
 .viewport-ui-overlay {
   position: absolute;
