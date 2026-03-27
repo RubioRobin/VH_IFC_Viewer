@@ -4,8 +4,8 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: cd src/backend && npm install
-    startCommand: cd src/backend && node app.js
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node app.js
     envVars:
       - key: PORT
         value: 10000

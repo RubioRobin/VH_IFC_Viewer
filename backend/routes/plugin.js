@@ -211,4 +211,81 @@ router.post('/models/:modelId/versions/:versionId/qr', authenticatePlugin, async
     }
 });
 
+// 8. Bestanden ophalen per project (voor assembly code matching)
+router.get('/projects/:projectId/files', authenticatePlugin, async (req, res) => {
+    const { projectId } = req.params;
+    try {
+        const files = await db.getFilesByProjectId(projectId);
+        const simplified = files.map(f => ({
+            id: f.id,
+            filename: f.filename || f.original_name,
+            path: f.path,
+            size: f.size,
+            created_at: f.created_at || f.upload_date
+        }));
+        res.json(simplified);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 9. Share + QR genereren voor een bestaand bestand (assembly code link workflow)
+router.post('/files/:fileId/share-qr', authenticatePlugin, async (req, res) => {
+    const { fileId } = req.params;
+    const { projectId } = req.body;
+
+    try {
+        // 1. Haal bestand op
+        const file = await db.getFileById(fileId);
+        if (!file) return res.status(404).json({ error: 'Bestand niet gevonden' });
+
+        // 2. Maak model + versie aan (hergebruik bestaand bestand in storage)
+        const modelName = file.filename || file.original_name || 'Unnamed';
+        const model = await db.createModel(projectId, modelName, 'Plugin-Link');
+        const version = await db.createModelVersion(model.id, file.path, file.size, null);
+
+        // 3. Share link genereren
+        const shareToken = uuidv4();
+        await db.createShare(version.id, shareToken);
+        const baseUrl = process.env.VIEWER_URL || 'http://localhost:5173';
+        const viewerUrl = `${baseUrl}/v/${shareToken}`;
+
+        // 4. QR code genereren als buffer
+        const qrBuffer = await QRCode.toBuffer(viewerUrl, {
+            errorCorrectionLevel: 'H',
+            type: 'png',
+            margin: 1,
+            width: 1024
+        });
+
+        // 5. QR opslaan in Supabase Storage
+        const qrStoragePath = `qr_codes/${model.id}/${version.id}_qr.png`;
+        const { error: uploadError } = await db.supabase.storage
+            .from('qr-public')
+            .upload(qrStoragePath, qrBuffer, {
+                contentType: 'image/png',
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+        await db.createQRAsset(projectId, version.id, qrStoragePath);
+
+        // 6. QR public URL ophalen
+        const { data: urlData } = db.supabase.storage
+            .from('qr-public')
+            .getPublicUrl(qrStoragePath);
+
+        res.json({
+            viewerUrl,
+            shareToken,
+            qrUrl: urlData.publicUrl,
+            modelId: model.id,
+            versionId: version.id
+        });
+    } catch (e) {
+        console.error('Share-QR generation failed:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

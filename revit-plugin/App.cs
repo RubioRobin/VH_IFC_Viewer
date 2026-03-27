@@ -27,6 +27,11 @@ namespace VH_IFC_QR
                 "Export IFC", thisAssemblyPath, "VH_IFC_QR.ExportIFCCommand");
             buttonData.ToolTip = "Export current view to IFC locally and link with VH Viewer.";
             
+            // 1b. Link QR Button (Assembly Code Matching)
+            PushButtonData linkData = new PushButtonData("cmdLinkQR",
+                "Link QR", thisAssemblyPath, "VH_IFC_QR.LinkQRCommand");
+            linkData.ToolTip = "Koppel QR codes aan bestaande IFC bestanden via assembly codes.";
+
             // 2. Admin Button
             PushButtonData adminData = new PushButtonData("cmdAdmin",
                 "Admin Dashboard", thisAssemblyPath, "VH_IFC_QR.AdminCommand");
@@ -51,14 +56,17 @@ namespace VH_IFC_QR
             }
 
             var exportIcon = LoadIcon("icon_export.png");
+            var linkIcon = LoadIcon("icon_export.png"); // Hergebruik export icon; vervang later door eigen icoon
             var adminIcon = LoadIcon("icon_admin.png");
             var settingsIcon = LoadIcon("icon_settings.png");
 
             if (exportIcon != null) buttonData.LargeImage = exportIcon;
+            if (linkIcon != null) linkData.LargeImage = linkIcon;
             if (adminIcon != null) adminData.LargeImage = adminIcon;
             if (settingsIcon != null) settingsData.LargeImage = settingsIcon;
 
             panel.AddItem(buttonData);
+            panel.AddItem(linkData);
             panel.AddItem(adminData);
             panel.AddItem(settingsData);
 

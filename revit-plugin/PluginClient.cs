@@ -64,7 +64,10 @@ namespace VH_IFC_QR
                 _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _pluginToken);
                 return true;
             }
-            return false;
+            
+            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            string detail = string.IsNullOrEmpty(errorBody) ? response.ReasonPhrase : errorBody;
+            throw new Exception($"Plugin login mislukt ({(int)response.StatusCode}): {detail}");
         }
 
         public async Task<bool> LoginUserAsync(string username, string password)
@@ -245,6 +248,34 @@ namespace VH_IFC_QR
         {
             return await _client.GetByteArrayAsync(qrUrl).ConfigureAwait(false);
         }
+
+        // --- ASSEMBLY LINK WORKFLOW ---
+
+        public async Task<List<ProjectFileInfo>> GetProjectFilesAsync(string projectId)
+        {
+            var response = await _client.GetAsync($"{_baseUrl}/api/plugin/projects/{projectId}/files").ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Bestanden ophalen mislukt ({(int)response.StatusCode}): {error}");
+            }
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return JsonConvert.DeserializeObject<List<ProjectFileInfo>>(content);
+        }
+
+        public async Task<ShareQRResult> CreateShareAndQRAsync(string fileId, string projectId)
+        {
+            var payload = new { projectId };
+            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/files/{fileId}/share-qr", content).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Share-QR genereren mislukt ({(int)response.StatusCode}): {error}");
+            }
+            var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return JsonConvert.DeserializeObject<ShareQRResult>(result);
+        }
     }
 
     public class ProjectInfo
@@ -272,5 +303,23 @@ namespace VH_IFC_QR
         public string Token { get; set; }
         public string Username { get; set; }
         public DateTime Expiry { get; set; }
+    }
+
+    public class ProjectFileInfo
+    {
+        public string id { get; set; }
+        public string filename { get; set; }
+        public string path { get; set; }
+        public long size { get; set; }
+        public string created_at { get; set; }
+    }
+
+    public class ShareQRResult
+    {
+        public string viewerUrl { get; set; }
+        public string shareToken { get; set; }
+        public string qrUrl { get; set; }
+        public string modelId { get; set; }
+        public string versionId { get; set; }
     }
 }

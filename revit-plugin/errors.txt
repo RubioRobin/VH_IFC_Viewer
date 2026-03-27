@@ -1,0 +1,1 @@
+     1>c:\Users\Robin\Downloads\Coderen\VH\VH_IFC_Viewer\revit-plugin\Command.cs(108,53): error CS1729: 'FileInfo' does not contain a constructor that takes 1 arguments [c:\Users\Robin\Downloads\Coderen\VH\VH_IFC_Viewer\revit-plugin\VH_IFC_QR.csproj]
