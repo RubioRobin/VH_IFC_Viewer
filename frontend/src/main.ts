@@ -232,7 +232,7 @@ const [contentGrid] = BUI.Component.create(
   TEMPLATES.contentGridTemplate,
   {
     components,
-    world,
+    world, // kept for ContentGridState interface compatibility
     viewportTemplate: viewportCardTemplate,
   }
 );
