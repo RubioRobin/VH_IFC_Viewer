@@ -141,14 +141,17 @@ export function ProjectDetailsPage() {
 
     const handleDownload = async (file: FileData) => {
         try {
-            const { url, filename } = await fetchAPI(`/files/${file.id}/signed-url`);
+            const response = await fetch(`${BASE_URL}/api/files/${file.id}/download`);
+            if (!response.ok) throw new Error();
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename;
-            a.target = '_blank';
+            a.download = file.filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch {
             toast({ type: 'error', title: 'Fout', message: 'Kon bestand niet downloaden.' });
         }
