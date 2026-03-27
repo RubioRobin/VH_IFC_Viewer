@@ -216,9 +216,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
       </bim-toolbar-section>
 
-      <bim-toolbar-section>
-        ${customButton({ icon: appIcons.DOWNLOAD, label: "Download IFC", onClick: triggerDownload })}
-      </bim-toolbar-section>
     </bim-toolbar>
   `;
 };
