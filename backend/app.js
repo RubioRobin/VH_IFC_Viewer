@@ -75,8 +75,20 @@ app.get('/', (req, res) => {
     res.send('VH IFC Viewer Backend is ONLINE! 🚀');
 });
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+    let dbStatus = 'not_initialized';
+    let dbError = null;
+    if (db.supabase) {
+        try {
+            const { data, error } = await db.supabase.from('users').select('count').limit(1);
+            dbStatus = error ? 'error' : 'ok';
+            if (error) dbError = error.message;
+        } catch (e) {
+            dbStatus = 'error';
+            dbError = e.message;
+        }
+    }
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), db: dbStatus, dbError });
 });
 
 // --- MIDDLEWARE ---
