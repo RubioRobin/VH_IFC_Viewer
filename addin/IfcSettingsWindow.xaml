@@ -1,7 +1,7 @@
 <Window x:Class="VH_IFC_QR.IfcSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Instellingen" Height="540" Width="420"
+        Title="Instellingen" Height="640" Width="420"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         FontFamily="Segoe UI" MouseDown="Window_MouseDown">
@@ -132,8 +132,17 @@
 
             <!-- Content Section -->
             <StackPanel Grid.Row="1" VerticalAlignment="Top">
+                <!-- Plugin Auth -->
+                <TextBlock Text="Plugin verbinding" FontSize="13" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,6"/>
+                <Label Content="Client Secret (beheerder):" Margin="0,0,0,5"/>
+                <PasswordBox x:Name="txtClientSecret" Height="32" Padding="8,5" Background="White"
+                             BorderBrush="#BDC3C7" BorderThickness="1"
+                             VerticalContentAlignment="Center"
+                             ToolTip="Wordt opgeslagen in AppData, nooit in broncode of git."/>
+                <TextBlock Text="Laat leeg om de huidige waarde te bewaren." FontSize="11" Foreground="#9CA3AF" Margin="0,3,0,0"/>
+
                 <!-- QR Size -->
-                <Label Content="QR Code Grootte (mm):" Margin="0,0,0,5"/>
+                <Label Content="QR Code Grootte (mm):" Margin="0,12,0,5"/>
                 <TextBox x:Name="txtQrSize" Text="50"/>
 
                 <!-- QR Offset -->

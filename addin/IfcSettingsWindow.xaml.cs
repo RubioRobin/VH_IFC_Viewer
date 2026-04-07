@@ -24,6 +24,8 @@ namespace VH_IFC_QR
         private void LoadSettingsToUI()
         {
             var settings = SettingsManager.Instance;
+            // PasswordBox toont bestaande waarde niet — dit is bewust gedrag voor security
+            txtClientSecret.Password = settings.ClientSecret;
             txtQrSize.Text = settings.QrSizeMm.ToString();
             txtQrOffset.Text = settings.QrOffsetMm.ToString();
             
@@ -87,6 +89,10 @@ namespace VH_IFC_QR
             }
 
             SettingsManager.Instance.ExportOnlyVisible = chkVisibleOnly.IsChecked == true;
+
+            string secret = txtClientSecret.Password.Trim();
+            if (!string.IsNullOrEmpty(secret))
+                SettingsManager.Instance.ClientSecret = secret;
 
             SettingsManager.Save();
             this.DialogResult = true;
