@@ -7,14 +7,14 @@ const { vereisAuthenticatie } = require('./auth');
 // 1. Get Upload Ticket (Signed URL)
 router.post('/ticket', vereisAuthenticatie, async (req, res) => {
     try {
-        const { projectId, fileId, fileName } = req.body;
+        const { projectId, fileName } = req.body;
 
         if (!projectId || !fileName) {
             return res.status(400).json({ error: "Project ID en bestandsnaam zijn verplicht" });
         }
 
-        // Generate or recycle ID
-        const id = fileId || uuidv4();
+        // Server genereert altijd zelf het UUID
+        const id = uuidv4();
 
         // Clean filename for storage
         const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
@@ -34,8 +34,8 @@ router.post('/ticket', vereisAuthenticatie, async (req, res) => {
         });
 
     } catch (e) {
-        console.error('Upload Ticket Error:', e);
-        res.status(500).json({ error: e.message });
+        console.error('[Upload] Ticket fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -63,7 +63,8 @@ router.post('/reserve', vereisAuthenticatie, async (req, res) => {
         });
 
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Upload] Reserve fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -88,8 +89,8 @@ router.post('/confirm', vereisAuthenticatie, async (req, res) => {
 
         res.json({ status: 'ok', fileId });
     } catch (e) {
-        console.error('Confirm Error:', e);
-        res.status(500).json({ error: e.message });
+        console.error('[Upload] Confirm fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

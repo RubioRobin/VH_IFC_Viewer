@@ -73,8 +73,8 @@ router.get('/:token', async (req, res) => {
         return res.status(404).json({ error: 'Link niet gevonden of verlopen' });
 
     } catch (e) {
-        console.error('Share access error:', e);
-        res.status(500).json({ error: 'Fout bij toegang tot deellaag: ' + e.message });
+        console.error('[Share] Toegangsfout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

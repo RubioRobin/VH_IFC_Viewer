@@ -359,7 +359,16 @@ const init = async () => {
       console.error("Publieke viewer fout:", e);
       const loader = document.getElementById('initial-loading-overlay');
       if (loader) {
-        loader.innerHTML = `<div style="color:white;text-align:center;padding:2rem"><h2>❌ Fout bij laden</h2><p>${(e as any).message}</p><small style="opacity:0.7">ID: ${publicId}</small></div>`;
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'color:white;text-align:center;padding:2rem';
+        const title = document.createElement('h2');
+        title.textContent = 'Fout bij laden';
+        const msg = document.createElement('p');
+        msg.textContent = (e as any).message || 'Kon model niet laden.';
+        wrapper.appendChild(title);
+        wrapper.appendChild(msg);
+        while (loader.firstChild) loader.removeChild(loader.firstChild);
+        loader.appendChild(wrapper);
       }
     }
   } else if (modelName || fileId) {
@@ -388,7 +397,16 @@ const init = async () => {
       console.error("Laden mislukt:", e);
       const loader = document.getElementById('initial-loading-overlay');
       if (loader) {
-        loader.innerHTML = `<div style="color:white;text-align:center;padding:2rem"><h2>❌ Fout bij laden</h2><p>Kon model niet laden.</p><small style="opacity:0.7">URL: ${modelUrl}</small></div>`;
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'color:white;text-align:center;padding:2rem';
+        const title = document.createElement('h2');
+        title.textContent = 'Fout bij laden';
+        const msg = document.createElement('p');
+        msg.textContent = 'Kon model niet laden.';
+        wrapper.appendChild(title);
+        wrapper.appendChild(msg);
+        while (loader.firstChild) loader.removeChild(loader.firstChild);
+        loader.appendChild(wrapper);
       }
     }
   } else {

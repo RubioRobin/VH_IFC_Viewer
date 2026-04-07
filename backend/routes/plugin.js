@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const db = require('../database');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
@@ -10,10 +11,12 @@ const PLUGIN_CLIENT_ID = process.env.PLUGIN_CLIENT_ID || 'revit_plugin';
 const PLUGIN_CLIENT_SECRET = process.env.PLUGIN_CLIENT_SECRET;
 
 if (!JWT_SECRET) {
-    console.error('❌ KRITIEK: JWT_SECRET is niet ingesteld! Plugin-authenticatie is niet veilig.');
+    console.error('❌ KRITIEK: JWT_SECRET is niet ingesteld! Plugin-authenticatie is onmogelijk. Applicatie stopt.');
+    process.exit(1);
 }
 if (!PLUGIN_CLIENT_SECRET) {
-    console.error('❌ KRITIEK: PLUGIN_CLIENT_SECRET is niet ingesteld! Plugin-authenticatie is niet veilig.');
+    console.error('❌ KRITIEK: PLUGIN_CLIENT_SECRET is niet ingesteld! Plugin-authenticatie is onmogelijk. Applicatie stopt.');
+    process.exit(1);
 }
 
 // Middleware om Plugin JWT te verifiëren
@@ -25,7 +28,7 @@ const authenticatePlugin = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, JWT_SECRET || 'fallback-onveilig');
+        const decoded = jwt.verify(token, JWT_SECRET);
         req.plugin = decoded; // Bevat client_id
         next();
     } catch (err) {
@@ -40,7 +43,7 @@ const authenticatePluginUser = (req, res, next) => {
     // Indien verplicht, controleer per route.
     if (userToken) {
         try {
-            const decoded = jwt.verify(userToken, JWT_SECRET || 'fallback-onveilig');
+            const decoded = jwt.verify(userToken, JWT_SECRET);
             req.user = decoded;
         } catch (e) {
             console.warn('Ongeldig gebruikerstoken:', e.message);
@@ -54,7 +57,7 @@ router.post('/login', (req, res) => {
     const { client_id, client_secret } = req.body;
 
     if (client_id === PLUGIN_CLIENT_ID && client_secret === PLUGIN_CLIENT_SECRET) {
-        const token = jwt.sign({ client_id }, JWT_SECRET || 'fallback-onveilig', { expiresIn: '1h' });
+        const token = jwt.sign({ client_id }, JWT_SECRET, { expiresIn: '1h' });
         return res.json({ access_token: token, expires_in: 3600 });
     }
 
@@ -66,11 +69,11 @@ router.post('/user-login', authenticatePlugin, async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await db.getUserByUsername(username);
-        if (user && await require('bcryptjs').compare(password, user.password_hash)) {
+        if (user && !user.disabled && await bcrypt.compare(password, user.password_hash)) {
             // Geef een langdurig token uit voor de plugin-gebruiker
             const token = jwt.sign(
                 { userId: user.id, username: user.username },
-                JWT_SECRET || 'fallback-onveilig',
+                JWT_SECRET,
                 { expiresIn: '7d' } // 7 dagen persistentie
             );
             return res.json({
@@ -79,9 +82,13 @@ router.post('/user-login', authenticatePlugin, async (req, res) => {
                 expires_in: 7 * 24 * 3600
             });
         }
+        if (user && user.disabled) {
+            return res.status(403).json({ error: 'Account is uitgeschakeld. Neem contact op met een beheerder.' });
+        }
         res.status(401).json({ error: 'Ongeldige gebruikersnaam of wachtwoord.' });
     } catch (e) {
-        res.status(500).json({ error: 'Login fout: ' + e.message });
+        console.error('[Plugin] User-login fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -96,7 +103,8 @@ router.get('/projects', authenticatePlugin, async (req, res) => {
         }));
         res.json(simplified);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Projecten ophalen fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -108,7 +116,8 @@ router.post('/models/create', authenticatePlugin, authenticatePluginUser, async 
         const model = await db.createModel(projectId, modelName, createdBy);
         res.json({ modelId: model.id });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Model aanmaken fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -146,7 +155,8 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, auth
             storagePath: storagePath
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Upload-sessie fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -167,7 +177,8 @@ router.post('/models/:modelId/versions/:versionId/share', authenticatePlugin, as
         const viewerUrl = `${baseUrl}/v/${shareToken}`;
         res.json({ token: shareToken, viewerUrl });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Deellink aanmaken fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -206,8 +217,8 @@ router.post('/models/:modelId/versions/:versionId/qr', authenticatePlugin, async
 
         res.json({ qrUrl: urlData.publicUrl });
     } catch (e) {
-        console.error('QR Generation Failed:', e);
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] QR genereren mislukt:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -225,7 +236,8 @@ router.get('/projects/:projectId/files', authenticatePlugin, async (req, res) =>
         }));
         res.json(simplified);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Projecten ophalen fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 
@@ -283,8 +295,8 @@ router.post('/files/:fileId/share-qr', authenticatePlugin, async (req, res) => {
             versionId: version.id
         });
     } catch (e) {
-        console.error('Share-QR generation failed:', e);
-        res.status(500).json({ error: e.message });
+        console.error('[Plugin] Share-QR genereren mislukt:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
     }
 });
 

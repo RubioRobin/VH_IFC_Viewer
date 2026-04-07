@@ -106,7 +106,28 @@ router.put('/profile', vereisAuthenticatie, async (req, res) => {
         const userId = req.session.userId;
         const { username, email, password, avatar_url } = req.body;
 
-        // Validations can be added here (e.g. check if username unique if changed)
+        // Validatie
+        if (username !== undefined) {
+            if (typeof username !== 'string' || username.trim().length < 2 || username.trim().length > 50) {
+                return res.status(400).json({ error: 'Gebruikersnaam moet tussen 2 en 50 tekens lang zijn.' });
+            }
+        }
+        if (email !== undefined && email !== null && email !== '') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ error: 'Ongeldig e-mailadres.' });
+            }
+        }
+        if (password !== undefined && password !== '') {
+            if (typeof password !== 'string' || password.length < 6) {
+                return res.status(400).json({ error: 'Wachtwoord moet minimaal 6 tekens lang zijn.' });
+            }
+        }
+        if (avatar_url !== undefined && avatar_url !== null && avatar_url !== '') {
+            try { new URL(avatar_url); } catch {
+                return res.status(400).json({ error: 'Avatar URL is geen geldig URL.' });
+            }
+        }
 
         const updatedUser = await db.updateUserProfile(userId, {
             username,
