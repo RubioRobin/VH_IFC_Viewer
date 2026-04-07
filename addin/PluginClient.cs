@@ -16,6 +16,9 @@ namespace VH_IFC_QR
         private readonly string _baseUrl;
         private string _pluginToken;
         private string _userToken;
+        private string _pluginClientId;
+        private string _pluginClientSecret;
+        private DateTime _pluginTokenExpiry = DateTime.MinValue;
         public string CurrentUsername { get; private set; }
 
         private string _tokenPath;
@@ -40,6 +43,48 @@ namespace VH_IFC_QR
             _tokenPath = Path.Combine(folder, "auth.json");
         }
 
+        // Retry helper: 3 pogingen met exponential backoff (1s, 2s, 4s) voor transient HTTP-fouten
+        private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, int maxAttempts = 3)
+        {
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    return await operation().ConfigureAwait(false);
+                }
+                catch (HttpRequestException) when (attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1))).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException) when (attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1))).ConfigureAwait(false);
+                }
+            }
+            return await operation().ConfigureAwait(false); // Laatste poging — laat exception doorgaan
+        }
+
+        // Error sanitization: haal 'message' of 'error' uit JSON, anders generieke tekst
+        private string SanitizeErrorMessage(string body, System.Net.HttpStatusCode status)
+        {
+            try
+            {
+                var j = JObject.Parse(body);
+                return j["message"]?.ToString() ?? j["error"]?.ToString() ?? $"Server fout ({(int)status})";
+            }
+            catch
+            {
+                return $"Server fout ({(int)status})";
+            }
+        }
+
+        // Zorg dat plugin-token geldig is; herverbind automatisch als token bijna verlopen is
+        private async Task EnsurePluginAuthAsync()
+        {
+            if (DateTime.Now >= _pluginTokenExpiry && !string.IsNullOrEmpty(_pluginClientId))
+                await LoginPluginAsync(_pluginClientId, _pluginClientSecret).ConfigureAwait(false);
+        }
+
         public async Task<string> GetHealthAsync()
         {
             try {
@@ -52,6 +97,10 @@ namespace VH_IFC_QR
 
         public async Task<bool> LoginPluginAsync(string clientId, string clientSecret)
         {
+            // Sla credentials op voor automatische herverbinding bij token-verloop
+            _pluginClientId = clientId;
+            _pluginClientSecret = clientSecret;
+
             var payload = new { client_id = clientId, client_secret = clientSecret };
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
 
@@ -60,14 +109,15 @@ namespace VH_IFC_QR
             {
                 var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var data = JObject.Parse(result);
-                _pluginToken = data["access_token"].ToString();
+                _pluginToken = data["access_token"]?.ToString() ?? throw new Exception("Ongeldig serverantwoord: access_token ontbreekt");
                 _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _pluginToken);
+                // Token is 1 uur geldig; vernieuw 5 minuten voor verloop
+                _pluginTokenExpiry = DateTime.Now.AddMinutes(55);
                 return true;
             }
-            
+
             var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            string detail = string.IsNullOrEmpty(errorBody) ? response.ReasonPhrase : errorBody;
-            throw new Exception($"Plugin login mislukt ({(int)response.StatusCode}): {detail}");
+            throw new Exception(SanitizeErrorMessage(errorBody, response.StatusCode));
         }
 
         public async Task<bool> LoginUserAsync(string username, string password)
@@ -88,9 +138,9 @@ namespace VH_IFC_QR
             {
                 var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var data = JObject.Parse(result);
-                
-                _userToken = data["access_token"].ToString();
-                CurrentUsername = data["username"].ToString();
+
+                _userToken = data["access_token"]?.ToString() ?? throw new Exception("Ongeldig serverantwoord: access_token ontbreekt");
+                CurrentUsername = data["username"]?.ToString() ?? throw new Exception("Ongeldig serverantwoord: username ontbreekt");
                 
                 SaveToken(new AuthData { Token = _userToken, Username = CurrentUsername, Expiry = DateTime.Now.AddDays(7) });
                 
@@ -103,7 +153,7 @@ namespace VH_IFC_QR
             }
 
             var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new Exception($"Login fout check ({(int)response.StatusCode}): {errorBody}");
+            throw new Exception(SanitizeErrorMessage(errorBody, response.StatusCode));
         }
 
         public bool LoadToken()
@@ -145,38 +195,38 @@ namespace VH_IFC_QR
 
         public async Task<List<ProjectInfo>> GetProjectsAsync()
         {
-            var response = await _client.GetAsync($"{_baseUrl}/api/plugin/projects").ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            await EnsurePluginAuthAsync().ConfigureAwait(false);
+            return await ExecuteWithRetryAsync(async () =>
             {
-                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Projecten ophalen mislukt ({(int)response.StatusCode}): {error}");
-            }
-            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JsonConvert.DeserializeObject<List<ProjectInfo>>(content);
+                var response = await _client.GetAsync($"{_baseUrl}/api/plugin/projects").ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    throw new Exception($"Projecten ophalen mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
+                }
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return JsonConvert.DeserializeObject<List<ProjectInfo>>(content);
+            }).ConfigureAwait(false);
         }
 
         public async Task<string> CreateModelAsync(string projectId, string modelName, string uploaderName = null)
         {
-            // Gebruiker Token Header toevoegen
-            if (!string.IsNullOrEmpty(_userToken))
-            {
-                _client.DefaultRequestHeaders.Remove("x-user-token");
-                _client.DefaultRequestHeaders.Add("x-user-token", _userToken);
-            }
-
             var payload = new { projectId, modelName, uploaderName };
-            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/create", content).ConfigureAwait(false);
-            
-            _client.DefaultRequestHeaders.Remove("x-user-token"); // Opschonen
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/plugin/models/create")
+            {
+                Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json")
+            };
+            if (!string.IsNullOrEmpty(_userToken))
+                request.Headers.Add("x-user-token", _userToken);
 
+            var response = await _client.SendAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Model aanmaken mislukt ({(int)response.StatusCode}): {error}");
+                throw new Exception($"Model aanmaken mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
             }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JObject.Parse(result)["modelId"].ToString();
+            return JObject.Parse(result)["modelId"]?.ToString() ?? throw new Exception("Ongeldig serverantwoord: modelId ontbreekt");
         }
 
         public async Task<UploadSessionInfo> CreateUploadSessionAsync(string modelId, string fileName, long fileSize, string checksum, string uploaderName = null)
@@ -187,7 +237,7 @@ namespace VH_IFC_QR
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Upload sessie mislukt ({(int)response.StatusCode}): {error}");
+                throw new Exception($"Upload sessie mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
             }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UploadSessionInfo>(result);
@@ -203,50 +253,60 @@ namespace VH_IFC_QR
                 if (!response.IsSuccessStatusCode)
                 {
                     var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    throw new Exception($"Bestand uploaden mislukt ({(int)response.StatusCode}): {error}");
+                    throw new Exception($"Bestand uploaden mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
                 }
             }
         }
 
         public async Task CompleteVersionAsync(string modelId, string versionId)
         {
-            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/complete", null).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            await ExecuteWithRetryAsync<bool>(async () =>
             {
-                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Versie voltooien mislukt ({(int)response.StatusCode}): {error}");
-            }
+                var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/complete", null).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    throw new Exception($"Versie voltooien mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
+                }
+                return true;
+            }).ConfigureAwait(false);
         }
 
         public async Task<ShareInfo> CreateShareAsync(string modelId, string versionId)
         {
-            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/share", null).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            return await ExecuteWithRetryAsync(async () =>
             {
-                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Share link maken mislukt ({(int)response.StatusCode}): {error}");
-            }
-            var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JsonConvert.DeserializeObject<ShareInfo>(result);
+                var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/share", null).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    throw new Exception($"Share link maken mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
+                }
+                var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return JsonConvert.DeserializeObject<ShareInfo>(result);
+            }).ConfigureAwait(false);
         }
 
         public async Task<string> GenerateQRAsync(string modelId, string versionId, string viewerUrl, string projectId)
         {
-            var payload = new { viewerUrl, projectId };
-            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/qr", content).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            return await ExecuteWithRetryAsync(async () =>
             {
-                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"QR genereren mislukt ({(int)response.StatusCode}): {error}");
-            }
-            var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JObject.Parse(result)["qrUrl"].ToString();
+                var payload = new { viewerUrl, projectId };
+                var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+                var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/{versionId}/qr", content).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    throw new Exception($"QR genereren mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
+                }
+                var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return JObject.Parse(result)["qrUrl"].ToString();
+            }).ConfigureAwait(false);
         }
 
         public async Task<byte[]> DownloadQRAsync(string qrUrl)
         {
-            return await _client.GetByteArrayAsync(qrUrl).ConfigureAwait(false);
+            return await ExecuteWithRetryAsync(() => _client.GetByteArrayAsync(qrUrl)).ConfigureAwait(false);
         }
 
         // --- ASSEMBLY LINK WORKFLOW ---
@@ -257,7 +317,7 @@ namespace VH_IFC_QR
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Bestanden ophalen mislukt ({(int)response.StatusCode}): {error}");
+                throw new Exception($"Bestanden ophalen mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
             }
             var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<List<ProjectFileInfo>>(content);
@@ -271,7 +331,7 @@ namespace VH_IFC_QR
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new Exception($"Share-QR genereren mislukt ({(int)response.StatusCode}): {error}");
+                throw new Exception($"Share-QR genereren mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
             }
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<ShareQRResult>(result);

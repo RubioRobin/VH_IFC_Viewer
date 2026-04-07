@@ -18,6 +18,10 @@ if (!PLUGIN_CLIENT_SECRET) {
     console.error('❌ KRITIEK: PLUGIN_CLIENT_SECRET is niet ingesteld! Plugin-authenticatie is onmogelijk. Applicatie stopt.');
     process.exit(1);
 }
+if (process.env.NODE_ENV === 'production' && !process.env.VIEWER_URL) {
+    console.error('❌ KRITIEK: VIEWER_URL is niet ingesteld in productie! QR-codes verwijzen naar localhost. Applicatie stopt.');
+    process.exit(1);
+}
 
 // Middleware om Plugin JWT te verifiëren
 const authenticatePlugin = (req, res, next) => {

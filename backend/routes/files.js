@@ -24,7 +24,7 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
 
 
 // Download redirect (Supports File ID OR Public Link ID)
-router.get('/:id/download', async (req, res) => {
+router.get('/:id/download', vereisAuthenticatie, async (req, res) => {
     try {
         let publicUrl;
 

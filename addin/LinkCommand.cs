@@ -15,8 +15,8 @@ namespace VH_IFC_QR
     public class LinkQRCommand : IExternalCommand
     {
         private static string BaseUrl => SettingsManager.Instance.BackendUrl;
-        private const string ClientId = "revit_plugin";
-        private const string ClientSecret = "0dfb4de62d095c839ed086630fef515454d4e2d374c73b3e";
+        private static string ClientId => SettingsManager.Instance.ClientId;
+        private static string ClientSecret => SettingsManager.Instance.ClientSecret;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {

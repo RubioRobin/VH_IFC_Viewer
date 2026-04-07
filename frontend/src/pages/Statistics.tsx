@@ -32,6 +32,7 @@ export function Statistics() {
     const [stats, setStats] = useState<DetailedStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    const [resetting, setResetting] = useState(false);
     const [period, setPeriod] = useState(7); // Default to 7 days as requested
 
     useEffect(() => {
@@ -72,12 +73,14 @@ export function Statistics() {
 
     const handleResetStats = async () => {
         try {
+            setResetting(true);
             await fetchAPI('/statistics/reset', { method: 'POST' });
-            // Refresh data
             const data = await fetchAPI('/statistics/detailed');
             setStats(data);
         } catch (error: any) {
             console.error('Fout bij resetten:', error);
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -137,9 +140,10 @@ export function Statistics() {
                             variant="outline"
                             className="flex items-center gap-2 border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-300 shadow-sm"
                             onClick={() => setResetDialogOpen(true)}
+                            disabled={resetting}
                         >
-                            <RotateCcw className="w-4 h-4" />
-                            Reset Statistieken
+                            <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+                            {resetting ? 'Bezig...' : 'Reset Statistieken'}
                         </Button>
                     </div>
                 </div>

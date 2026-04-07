@@ -53,7 +53,7 @@ namespace VH_IFC_QR
                     }
                 }
             }
-            catch { /* Fallback to defaults */ }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SettingsManager] Laden mislukt, standaardwaarden gebruikt: {ex.Message}"); }
         }
 
         public static void Save()
@@ -64,7 +64,7 @@ namespace VH_IFC_QR
                 string json = JsonSerializer.Serialize(Instance, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsFile, json);
             }
-            catch { /* Ignore */ }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SettingsManager] Opslaan mislukt: {ex.Message}"); }
         }
     }
 }

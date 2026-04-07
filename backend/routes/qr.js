@@ -22,22 +22,8 @@ router.get('/', vereisAuthenticatie, async (req, res) => {
     }
 });
 
-// Genereer QR Code - GEBRUIKT DOOR REVIT PLUGIN EN DASHBOARD
-router.post('/generate', async (req, res) => {
-    // Note: Revit Plugin authentication might be specific. 
-    // For now we allow authenticated users (like Admin or Plugin session)
-    // If Plugin fails, we might need to relax auth or use API Key.
-    // Plugin sends cookie, so simple session check "conceptually" works IF plugin logged in.
-
-    // Check Auth (Plugin logs in first, so req.session.userId should be set)
-    if (!req.session || !req.session.userId) {
-        // console.log('[QR] Unauthorized access attempt');
-        // return res.status(401).json({ error: 'Niet ingelogd' });
-        // DEV: Allow public generation? No, security risk.
-        // Plugin does login in lines 209-243 of Command.cs! So we are good.
-    }
-    // Double check auth
-    if (!req.session.userId) return res.status(401).json({ error: 'Niet ingelogd' });
+// Genereer QR Code - GEBRUIKT DOOR DASHBOARD
+router.post('/generate', vereisAuthenticatie, async (req, res) => {
 
     const { project_id, file_id, element_id } = req.body;
 

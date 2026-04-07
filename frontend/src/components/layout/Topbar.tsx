@@ -1,4 +1,4 @@
-import { Menu } from 'lucide-react';
+import { Menu, User } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface TopbarProps {
@@ -26,9 +26,9 @@ export function Topbar({ toggleMobile }: TopbarProps) {
 
             {/* Search & Actions */}
             <div className="flex flex-1 items-center justify-end gap-2 md:gap-4">
-                {/* Mobile Profile Avater (simplified) */}
-                <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden shrink-0 md:hidden">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="User" />
+                {/* Mobile Profile Avatar (simplified) */}
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 md:hidden">
+                    <User className="w-4 h-4 text-muted-foreground" />
                 </div>
             </div>
         </header>
