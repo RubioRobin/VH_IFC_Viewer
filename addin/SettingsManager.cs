@@ -15,7 +15,7 @@ namespace VH_IFC_QR
 
         // Plugin Auth — stel in via Instellingen venster, wordt NOOIT in source code opgeslagen
         public string ClientId { get; set; } = "revit_plugin";
-        public string ClientSecret { get; set; } = "";
+        public string ClientSecret { get; set; } = "0a50db56042b384daa545b904c1d76bae3ad9437a23fa620431e2d5844f8d3c9";
 
         // QR Settings
         public double QrSizeMm { get; set; } = 50.0;
