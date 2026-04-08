@@ -369,7 +369,8 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="lblSelectionSummary" Text="Niets geselecteerd" FontWeight="Bold" Foreground="#374151"/>
+                            <TextBlock x:Name="lblSelectionSummary" Text="Niets geselecteerd" FontWeight="Bold" Foreground="#374151"
+                                       TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
     
                         <StackPanel Grid.Column="1" Orientation="Horizontal">

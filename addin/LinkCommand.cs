@@ -151,10 +151,13 @@ namespace VH_IFC_QR
                             t.Commit();
                         }
 
-                        // Opslaan-prompt
-                        progress.Update("Opslaan...", 98);
-                        DoEvents();
-                        doc.Save();
+                        // Opslaan — alleen als het document al een bestandspad heeft
+                        if (!string.IsNullOrEmpty(doc.PathName))
+                        {
+                            progress.Update("Opslaan...", 98);
+                            DoEvents();
+                            doc.Save();
+                        }
                     }
 
                     // Voeg mislukte items toe aan resultatenlijst

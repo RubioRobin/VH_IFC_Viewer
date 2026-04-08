@@ -25,4 +25,10 @@
     <OutputPath>bin\Release\</OutputPath>
     <Optimize>true</Optimize>
   </PropertyGroup>
+
+  <Target Name="CopyToRevitAddins" AfterTargets="Build">
+    <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
+  </Target>
 </Project>

@@ -180,8 +180,6 @@ namespace VH_IFC_QR
             else
             {
                 lblSelectionSummary.Text = $"{selected} items geselecteerd voor QR linking";
-                if (missingSheet > 0)
-                    lblSelectionSummary.Text += $" ({missingSheet} zonder sheet!)";
             }
 
             btnLink.Content = selected > 0 ? $"Link QR Codes ({selected})" : "Link QR Codes";
