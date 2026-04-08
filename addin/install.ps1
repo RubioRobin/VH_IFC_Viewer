@@ -7,7 +7,7 @@ $addinDir   = $PSScriptRoot
 $targetDir  = "$env:APPDATA\Autodesk\Revit\Addins\2025\VH_IFC_QR"
 $addinFile  = "$env:APPDATA\Autodesk\Revit\Addins\2025\VH_IFC_QR.addin"
 
-Write-Host "=== VH IFC QR — Build & Install ===" -ForegroundColor Cyan
+Write-Host "=== VH IFC QR - Build en Install ===" -ForegroundColor Cyan
 
 # 1. Build
 Write-Host "`n[1/3] Building Release..." -ForegroundColor Yellow
@@ -30,4 +30,4 @@ Write-Host "`n[3/3] Kopieer .addin manifest..." -ForegroundColor Yellow
 Copy-Item -Path "$addinDir\VH_IFC_QR.addin" -Destination $addinFile -Force
 Write-Host "Manifest gekopieerd naar: $addinFile" -ForegroundColor Green
 
-Write-Host "`n=== Klaar! Start Revit 2025 om de addin te testen. ===" -ForegroundColor Cyan
+Write-Host "`n=== Klaar! Start Revit 2025 om de addin te testen. ===" -ForegroundColor Green
