@@ -25,10 +25,12 @@ Get-ChildItem -Path $addinDir -Filter "*.png" | ForEach-Object {
 }
 Write-Host "Bestanden gekopieerd naar: $targetDir" -ForegroundColor Green
 
-# 3. Kopieer .addin manifest
-Write-Host "`n[3/3] Kopieer .addin manifest..." -ForegroundColor Yellow
-Copy-Item -Path "$addinDir\VH_IFC_QR.addin" -Destination $addinFile -Force
-Write-Host "Manifest gekopieerd naar: $addinFile" -ForegroundColor Green
+# 3. Schrijf .addin manifest met Assembly-pad voor deze gebruiker
+Write-Host "`n[3/3] Schrijf .addin manifest..." -ForegroundColor Yellow
+$addinXml = Get-Content "$addinDir\VH_IFC_QR.addin" -Raw
+$addinXml = $addinXml -replace '<Assembly>.*?</Assembly>', "<Assembly>$targetDir\VH_IFC_QR.dll</Assembly>"
+$addinXml | Set-Content $addinFile -Encoding UTF8
+Write-Host "Manifest geschreven naar: $addinFile" -ForegroundColor Green
 
 # 4. Schrijf settings.json als ClientSecret nog niet ingesteld is
 $settingsDir  = "$env:APPDATA\VH_IFC_Viewer"
