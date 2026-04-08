@@ -24,7 +24,7 @@ const world = worlds.create<
 world.name = "Main";
 world.scene = new OBC.SimpleScene(components);
 world.scene.setup();
-world.scene.three.background = new THREE.Color(0xffffff);
+world.scene.three.background = new THREE.Color(0xf3f4f6); // Match app-content achtergrond zodat viewport-rand niet vervagt
 
 // Viewport aanmaken
 const viewport = BUI.Component.create<BUI.Viewport>(() => {
@@ -359,14 +359,36 @@ const init = async () => {
       console.error("Publieke viewer fout:", e);
       const loader = document.getElementById('initial-loading-overlay');
       if (loader) {
+        const errorMsg = (e as any).message || 'Kon model niet laden.';
+        const is404 = errorMsg.includes('ongeldig') || errorMsg.includes('verlopen');
+
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'color:white;text-align:center;padding:2rem';
+        wrapper.style.cssText = 'text-align:center;padding:2rem;max-width:400px';
+
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.setAttribute('width', '48'); icon.setAttribute('height', '48');
+        icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', '#ef4444'); icon.setAttribute('stroke-width', '1.5');
+        icon.setAttribute('stroke-linecap', 'round'); icon.setAttribute('stroke-linejoin', 'round');
+        icon.style.cssText = 'display:block;margin:0 auto 1rem';
+        icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+
         const title = document.createElement('h2');
-        title.textContent = 'Fout bij laden';
+        title.textContent = is404 ? 'Link niet gevonden' : 'Fout bij laden';
+        title.style.cssText = 'color:#111827;font-size:1.25rem;font-weight:600;margin:0 0 0.5rem';
+
         const msg = document.createElement('p');
-        msg.textContent = (e as any).message || 'Kon model niet laden.';
+        msg.textContent = errorMsg;
+        msg.style.cssText = 'color:#6b7280;font-size:0.95rem;margin:0 0 1.5rem;line-height:1.5';
+
+        const contact = document.createElement('p');
+        contact.style.cssText = 'color:#9ca3af;font-size:0.8rem;margin:0';
+        contact.textContent = 'Neem contact op als dit probleem aanhoudt.';
+
+        wrapper.appendChild(icon);
         wrapper.appendChild(title);
         wrapper.appendChild(msg);
+        wrapper.appendChild(contact);
         while (loader.firstChild) loader.removeChild(loader.firstChild);
         loader.appendChild(wrapper);
       }
@@ -398,11 +420,16 @@ const init = async () => {
       const loader = document.getElementById('initial-loading-overlay');
       if (loader) {
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'color:white;text-align:center;padding:2rem';
+        wrapper.style.cssText = 'text-align:center;padding:2rem;max-width:400px';
+
         const title = document.createElement('h2');
         title.textContent = 'Fout bij laden';
+        title.style.cssText = 'color:#111827;font-size:1.25rem;font-weight:600;margin:0 0 0.5rem';
+
         const msg = document.createElement('p');
-        msg.textContent = 'Kon model niet laden.';
+        msg.textContent = 'Kon model niet laden. Probeer de pagina opnieuw te laden.';
+        msg.style.cssText = 'color:#6b7280;font-size:0.95rem;margin:0;line-height:1.5';
+
         wrapper.appendChild(title);
         wrapper.appendChild(msg);
         while (loader.firstChild) loader.removeChild(loader.firstChild);

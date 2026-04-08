@@ -1,0 +1,39 @@
+name: Revit Add-in Build
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - 'addin/**'
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - 'addin/**'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore NuGet Packages
+      run: nuget restore addin/*.sln
+
+    - name: Build Solution (Release)
+      run: msbuild addin/*.sln /p:Configuration=Release /t:Rebuild
+
+    - name: Upload Artifact (DLL and Addin)
+      uses: actions/upload-artifact@v4
+      with:
+        name: vh-ifc-viewer-addin-Release
+        path: |
+          addin/**/bin/Release/**/*.dll
+          addin/**/bin/Release/**/*.addin

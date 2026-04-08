@@ -236,7 +236,7 @@ namespace VH_IFC_QR
                     }
                 }
             }
-            catch { }
+            catch { /* Opzettelijk genegeerd: bestaande QR verwijderen is optioneel, hoofdflow gaat door */ }
 
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
@@ -256,7 +256,7 @@ namespace VH_IFC_QR
                 if (tWidth != null && !tWidth.IsReadOnly) tWidth.Set(targetSizeInFeet);
                 if (tHeight != null && !tHeight.IsReadOnly) tHeight.Set(targetSizeInFeet);
             }
-            catch { }
+            catch { /* Opzettelijk genegeerd: type-resize is optioneel, Revit API gooit soms exception op read-only params */ }
 
             // Exacte plaatsing logica
             XYZ placementPoint = XYZ.Zero;
@@ -294,7 +294,7 @@ namespace VH_IFC_QR
                     }
                 }
             }
-            catch { }
+            catch { /* Opzettelijk genegeerd: titleblock ophalen is optioneel, fallback BoxPlacement wordt gebruikt */ }
 
             ImageInstance instance;
             if (manualPlacement)
@@ -346,7 +346,7 @@ namespace VH_IFC_QR
                     if (pScaleV != null && !pScaleV.IsReadOnly) pScaleV.Set(scaleFactor);
                 }
             }
-            catch (Exception) { }
+            catch (Exception) { /* Opzettelijk genegeerd: instance-resize is optioneel, QR is al geplaatst */ }
         }
         public void DoEvents()
         {

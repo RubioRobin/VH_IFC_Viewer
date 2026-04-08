@@ -2,14 +2,15 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Inloggen - VH Engineering"
-        Height="520" Width="440"
+        Height="390" Width="420"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
         FontFamily="Segoe UI"
-        MouseDown="Window_MouseDown">
+        MouseDown="Window_MouseDown"
+        KeyDown="Window_KeyDown">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
@@ -73,25 +74,25 @@
         <Border.Effect>
             <DropShadowEffect BlurRadius="15" Direction="270" RenderingBias="Quality" ShadowDepth="3" Opacity="0.15"/>
         </Border.Effect>
-        <Grid Margin="30">
+        <Grid Margin="24,16">
             <ScrollViewer VerticalScrollBarVisibility="Auto" VerticalAlignment="Center">
-                <StackPanel Margin="0,10">
-                    <TextBlock Text="VH Engineering" FontSize="22" FontWeight="Bold" Foreground="#111827" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                    <TextBlock Text="Inloggen om te exporteren" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+                <StackPanel Margin="0,4">
+                    <TextBlock Text="VH Engineering" FontSize="20" FontWeight="Bold" Foreground="#111827" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <TextBlock Text="Inloggen om te exporteren" FontSize="13" Foreground="#6B7280" HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
-                    <TextBlock Text="Gebruikersnaam" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,6"/>
-                    <TextBox x:Name="txtUsername" Height="45" Margin="0,0,0,20"/>
+                    <TextBlock Text="Gebruikersnaam" FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtUsername" Height="38" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Wachtwoord" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,6"/>
-                    <PasswordBox x:Name="txtPassword" Height="45" Margin="0,0,0,30"/>
+                    <TextBlock Text="Wachtwoord" FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="0,0,0,5"/>
+                    <PasswordBox x:Name="txtPassword" Height="38" Margin="0,0,0,18"/>
 
-                    <Button x:Name="btnLogin" Content="Inloggen" Height="50" Click="BtnLogin_Click" IsDefault="True" FontSize="15">
+                    <Button x:Name="btnLogin" Content="Inloggen" Height="42" Click="BtnLogin_Click" IsDefault="True" FontSize="14">
                         <Button.Effect>
                             <DropShadowEffect Color="#3498DB" Direction="270" ShadowDepth="2" Opacity="0.3" BlurRadius="8"/>
                         </Button.Effect>
                     </Button>
-                    
-                    <TextBlock x:Name="lblStatus" Text="" Foreground="#DC2626" HorizontalAlignment="Center" Margin="0,20,0,0" TextWrapping="Wrap" FontSize="13" FontWeight="SemiBold"/>
+
+                    <TextBlock x:Name="lblStatus" Text="" Foreground="#DC2626" HorizontalAlignment="Center" Margin="0,12,0,0" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

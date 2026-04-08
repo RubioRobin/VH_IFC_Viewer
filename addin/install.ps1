@@ -15,10 +15,14 @@ dotnet build "$addinDir\VH_IFC_QR.csproj" -c Release
 if ($LASTEXITCODE -ne 0) { throw "Build mislukt!" }
 Write-Host "Build geslaagd." -ForegroundColor Green
 
-# 2. Kopieer DLL en afhankelijkheden
+# 2. Kopieer DLL, afhankelijkheden én iconen
 Write-Host "`n[2/3] Kopieer naar Revit Addins..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 Copy-Item -Path "$addinDir\bin\Release\net8.0-windows\*" -Destination $targetDir -Recurse -Force
+# Iconen staan naast de bronbestanden (niet in bin/), dus apart kopiëren
+Get-ChildItem -Path $addinDir -Filter "*.png" | ForEach-Object {
+    Copy-Item -Path $_.FullName -Destination $targetDir -Force
+}
 Write-Host "Bestanden gekopieerd naar: $targetDir" -ForegroundColor Green
 
 # 3. Kopieer .addin manifest

@@ -238,10 +238,36 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
     if (!hasSelection) {
       const placeholder = document.createElement("div");
-      placeholder.style.padding = "1rem";
-      placeholder.style.color = "#9ca3af";
-      placeholder.style.textAlign = "center";
-      placeholder.textContent = "Selecteer een element om eigenschappen te zien";
+      placeholder.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem;gap:0.75rem;";
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const iconWrap = document.createElementNS(svgNS, "svg");
+      iconWrap.setAttribute("width", "32"); iconWrap.setAttribute("height", "32");
+      iconWrap.setAttribute("viewBox", "0 0 24 24"); iconWrap.setAttribute("fill", "none");
+      iconWrap.setAttribute("stroke", "#d1d5db"); iconWrap.setAttribute("stroke-width", "1.5");
+      iconWrap.setAttribute("stroke-linecap", "round"); iconWrap.setAttribute("stroke-linejoin", "round");
+      const pathDoc = document.createElementNS(svgNS, "path");
+      pathDoc.setAttribute("d", "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z");
+      const polyFold = document.createElementNS(svgNS, "polyline");
+      polyFold.setAttribute("points", "14 2 14 8 20 8");
+      const lineH = document.createElementNS(svgNS, "line");
+      lineH.setAttribute("x1", "16"); lineH.setAttribute("y1", "13"); lineH.setAttribute("x2", "8"); lineH.setAttribute("y2", "13");
+      const lineH2 = document.createElementNS(svgNS, "line");
+      lineH2.setAttribute("x1", "16"); lineH2.setAttribute("y1", "17"); lineH2.setAttribute("x2", "8"); lineH2.setAttribute("y2", "17");
+      iconWrap.appendChild(pathDoc); iconWrap.appendChild(polyFold);
+      iconWrap.appendChild(lineH); iconWrap.appendChild(lineH2);
+
+      const text = document.createElement("span");
+      text.textContent = "Selecteer een element";
+      text.style.cssText = "color:#9ca3af;font-size:0.85rem;font-weight:500;text-align:center;";
+
+      const sub = document.createElement("span");
+      sub.textContent = "Klik op een element in het 3D model om de eigenschappen te zien";
+      sub.style.cssText = "color:#d1d5db;font-size:0.75rem;text-align:center;line-height:1.4;max-width:200px;";
+
+      placeholder.appendChild(iconWrap);
+      placeholder.appendChild(text);
+      placeholder.appendChild(sub);
       container.appendChild(placeholder);
     }
   };
@@ -285,7 +311,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         </div>
         
         <div id="bim-props-dynamic-container" style="display: flex; flex-direction: column; gap: 0.25rem; width: 100%; max-width: 100%;">
-          <div style="padding: 1rem; color: #9ca3af; text-align: center;">Selecteer een element om eigenschappen te zien</div>
+          <div style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; text-align: center; padding: 2rem 1rem;">Selecteer een element om eigenschappen te zien</div>
         </div>
       </div>
     </div>

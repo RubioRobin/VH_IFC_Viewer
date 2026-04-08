@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using System.Threading.Tasks;
 
 namespace VH_IFC_QR
@@ -64,10 +65,23 @@ using System.Windows.Media;
             }
         }
 
-        private void Window_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+            if (e.ChangedButton == MouseButton.Left)
                 this.DragMove();
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                this.DialogResult = false;
+                this.Close();
+            }
+            else if (e.Key == Key.Enter && btnLogin.IsEnabled)
+            {
+                BtnLogin_Click(sender, e);
+            }
         }
     }
 }
