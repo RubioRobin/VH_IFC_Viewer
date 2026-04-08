@@ -30,4 +30,36 @@ Write-Host "`n[3/3] Kopieer .addin manifest..." -ForegroundColor Yellow
 Copy-Item -Path "$addinDir\VH_IFC_QR.addin" -Destination $addinFile -Force
 Write-Host "Manifest gekopieerd naar: $addinFile" -ForegroundColor Green
 
+# 4. Schrijf settings.json als ClientSecret nog niet ingesteld is
+$settingsDir  = "$env:APPDATA\VH_IFC_Viewer"
+$settingsFile = "$settingsDir\settings.json"
+$clientSecret = "0a50db56042b384daa545b904c1d76bae3ad9437a23fa620431e2d5844f8d3c9"
+
+New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+
+$needsWrite = $true
+if (Test-Path $settingsFile) {
+    $existing = Get-Content $settingsFile -Raw | ConvertFrom-Json
+    if ($existing.ClientSecret -and $existing.ClientSecret -ne "") {
+        $needsWrite = $false
+        Write-Host "Settings al aanwezig, ClientSecret ongewijzigd." -ForegroundColor DarkGray
+    }
+}
+
+if ($needsWrite) {
+    $settings = @{
+        BackendUrl       = "https://vh-ifc-backend.onrender.com"
+        AdminUrl         = "https://vh-ifc-viewer.vercel.app/admin.html#/login"
+        ClientId         = "revit_plugin"
+        ClientSecret     = $clientSecret
+        QrSizeMm         = 50.0
+        QrOffsetMm       = 10.0
+        QrLocation       = "BottomRight"
+        IfcVersion       = "IFC4"
+        ExportOnlyVisible = $true
+    }
+    $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+    Write-Host "Settings aangemaakt met ClientSecret." -ForegroundColor Green
+}
+
 Write-Host "`n=== Klaar! Start Revit 2025 om de addin te testen. ===" -ForegroundColor Green
