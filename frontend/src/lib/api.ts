@@ -1,7 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'https://vh-ifc-backend.onrender.com';
-
-// Global flag to prevent multiple redirects during parallel requests (e.g. multi-upload)
-let isRedirecting = false;
+export const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     const res = await fetch(`${API_URL}/api${endpoint}`, {
@@ -15,11 +12,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
     if (!res.ok) {
         if (res.status === 401 && !endpoint.includes('/auth/login')) {
-            // Redirect to login if unauthorized and not currently logging in
-            const currentHash = window.location.hash;
-            if (currentHash !== '#/login' && !currentHash.startsWith('#/login') && !isRedirecting) {
-                isRedirecting = true;
-                console.warn('Niet geautoriseerde toegang gedetecteerd, doorverwijzen naar inlogpagina...');
+            if (!window.location.hash.startsWith('#/login')) {
                 window.location.href = '/admin.html#/login';
             }
             throw new Error("Unauthorized");

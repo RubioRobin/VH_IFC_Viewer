@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './admin.css'
 import { AdminLayout } from './components/layout/AdminLayout'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { Dashboard } from './pages/Dashboard'
 import { UsersPage } from './pages/Users'
 import { ProjectsPage } from './pages/Projects'
@@ -18,7 +19,7 @@ ReactDOM.createRoot(document.getElementById('admin-app')!).render(
             <Router>
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/" element={<AdminLayout />}>
+                    <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                         <Route index element={<Dashboard />} />
                         <Route path="projects" element={<ProjectsPage />} />
                         <Route path="projects/:id" element={<ProjectDetailsPage />} />
