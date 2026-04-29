@@ -34,7 +34,8 @@ vh-ifc-viewer/
 
 ### Revit Plugin (`addin/`)
 - C# plugin voor Revit
-- Targets: net48 (Revit 2023/2024), net8.0-windows (Revit 2025)
+- Actieve build target op deze machine: `net8.0-windows`
+- Oude Revit 2023/2024 `net48` context alleen als legacy behandelen
 
 ## Commando's (vanuit root)
 ```bash
@@ -63,8 +64,15 @@ Backend vereist `.env`:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 - `JWT_SECRET`, `SESSION_SECRET`
 
+## Deployment URLs
+- **Frontend:** Vercel (zie Vercel dashboard voor live URL)
+- **Backend:** Render.com (zie `render.yaml` voor configuratie)
+
+> `Procfile` in de root is legacy (origineel Heroku). De actieve deploy gaat via `render.yaml`.
+
 ## Veiligheidsregels
 - NOOIT `.env` committen naar git
 - NOOIT bestanden verwijderen zonder bevestiging
 - `git status` uitvoeren voor je begint
 - Backend heeft security-middleware — pas hier voorzichtig aan
+- Runtime mappen `backend/uploads/`, `backend/qr-codes/` en `backend/temp/` blijven buiten Git

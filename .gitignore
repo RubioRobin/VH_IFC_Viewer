@@ -49,5 +49,7 @@ release/
 scripts/
 
 # Runtime-mappen (aangemaakt door de server, nooit committen)
-src/backend/qr-codes/
-src/backend/uploads/
+backend/qr-codes/
+backend/uploads/
+backend/temp/
+frontend/.env.local
