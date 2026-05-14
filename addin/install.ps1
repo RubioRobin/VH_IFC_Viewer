@@ -23,6 +23,16 @@ Copy-Item -Path "$addinDir\bin\Release\net8.0-windows\*" -Destination $targetDir
 Get-ChildItem -Path $addinDir -Filter "*.png" | ForEach-Object {
     Copy-Item -Path $_.FullName -Destination $targetDir -Force
 }
+
+$exporterSource = Join-Path $addinDir "Exporter"
+$exporterTarget = Join-Path $targetDir "Exporter"
+if (Test-Path $exporterSource) {
+    New-Item -ItemType Directory -Force -Path $exporterTarget | Out-Null
+    Copy-Item -Path "$exporterSource\*" -Destination $exporterTarget -Recurse -Force
+    Write-Host "IFC exporter dependencies gekopieerd naar: $exporterTarget" -ForegroundColor Green
+} else {
+    Write-Host "WAARSCHUWING: Exporter-map niet gevonden: $exporterSource" -ForegroundColor Yellow
+}
 Write-Host "Bestanden gekopieerd naar: $targetDir" -ForegroundColor Green
 
 # 3. Schrijf .addin manifest met Assembly-pad voor deze gebruiker

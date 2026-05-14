@@ -31,14 +31,16 @@ namespace VH_IFC_QR
         private readonly List<ProjectInfo> _projects;
         private readonly List<ViewSheet> _sheets;
         private readonly string _defaultProjectId;
+        private readonly string _initialFolder;
 
-        public UploadExportWindow(List<ProjectInfo> projects, List<ViewSheet> sheets, string username, string defaultProjectId = null)
+        public UploadExportWindow(List<ProjectInfo> projects, List<ViewSheet> sheets, string username, string defaultProjectId = null, string initialFolder = null)
         {
             InitializeComponent();
 
             _projects = projects;
             _sheets = sheets;
             _defaultProjectId = defaultProjectId;
+            _initialFolder = initialFolder;
 
             comboProjects.ItemsSource = _projects;
             if (!string.IsNullOrEmpty(defaultProjectId))
@@ -62,10 +64,14 @@ namespace VH_IFC_QR
                 if (project != null) comboProjects.SelectedItem = project;
             }
 
-            if (!string.IsNullOrEmpty(SettingsManager.Instance.LastExportFolder) &&
-                Directory.Exists(SettingsManager.Instance.LastExportFolder))
+            string folder = !string.IsNullOrWhiteSpace(_initialFolder)
+                ? _initialFolder
+                : SettingsManager.Instance.LastExportFolder;
+
+            if (!string.IsNullOrEmpty(folder) &&
+                Directory.Exists(folder))
             {
-                LoadFolder(SettingsManager.Instance.LastExportFolder);
+                LoadFolder(folder);
             }
         }
 

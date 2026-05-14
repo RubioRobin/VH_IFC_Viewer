@@ -61,95 +61,78 @@ namespace VH_IFC_QR
                     }
                 }
 
-                var projects = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
-                if (defaultProject != null && projects.All(p => p.id != defaultProject.id))
-                    projects.Insert(0, defaultProject);
-
                 var sheets = new FilteredElementCollector(doc)
                     .OfClass(typeof(ViewSheet))
                     .Cast<ViewSheet>()
                     .Where(s => !s.IsPlaceholder)
                     .ToList();
 
-                UploadExportWindow uploadWin = new UploadExportWindow(
-                    projects,
-                    sheets,
-                    client.CurrentUsername,
-                    defaultProject?.id);
-                uploadWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
-
-                if (uploadWin.ShowDialog() != true) return Result.Cancelled;
-
-                ProgressWindow progress = new ProgressWindow();
-                progress.Show();
-
-                List<string> results = new List<string>();
-                var items = uploadWin.ValidItems;
-                int completed = 0;
-
-                try
+                if (defaultProject == null)
                 {
-                    foreach (var item in items)
-                    {
-                        int startPercent = (int)((double)completed / items.Count * 100);
-                        progress.Update($"Uploaden: {item.FileName}...", startPercent);
-
-                        UploadQrPlacement uploadResult = UploadAndCreateQr(
-                            client,
-                            uploadWin.SelectedProject.id,
-                            item,
-                            progress,
-                            startPercent,
-                            items.Count).GetAwaiter().GetResult();
-
-                        if (!string.IsNullOrEmpty(uploadResult.Error))
-                        {
-                            results.Add($"Mislukt: {item.FileName} - {uploadResult.Error}");
-                            completed++;
-                            continue;
-                        }
-
-                        if (item.SelectedSheet != null && !string.IsNullOrEmpty(uploadResult.QrTempPath))
-                        {
-                            using (Transaction t = new Transaction(doc, "Plaats QR code"))
-                            {
-                                t.Start();
-                                PlaceQrOnSheet(doc, item.SelectedSheet.Id, uploadResult.QrTempPath, item.AssemblyCode);
-                                t.Commit();
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(uploadResult.QrTempPath) && File.Exists(uploadResult.QrTempPath))
-                            File.Delete(uploadResult.QrTempPath);
-
-                        results.Add(item.SelectedSheet == null
-                            ? $"OK: {item.FileName} geupload, geen sheet gekoppeld"
-                            : $"OK: {item.FileName} geupload en QR geplaatst");
-
-                        completed++;
-                    }
-
-                    if (!string.IsNullOrEmpty(doc.PathName))
-                    {
-                        progress.Update("Opslaan...", 98);
-                        DoEvents();
-                        doc.Save();
-                    }
-
-                    progress.Update("Klaar!", 100);
-                    progress.Close();
-
-                    ResultWindow resultWindow = new ResultWindow(results);
-                    resultWindow.ShowDialog();
-                }
-                catch (Exception ex)
-                {
-                    progress.Close();
-                    NotificationWindow.ShowError($"Er is een fout opgetreden bij uploaden:\n{ex.Message}");
+                    NotificationWindow.ShowError("Kan geen project bepalen uit Revit Project Information.\n\nVul Project Number en/of Project Name in en probeer opnieuw.");
                     return Result.Failed;
                 }
 
-                return Result.Succeeded;
+                ProgressWindow progress = new ProgressWindow();
+                progress.Show();
+                try
+                {
+                    progress.Update("IFC exporter starten...", 2);
+                    DoEvents();
+                    progress.Close();
+
+                    ExternalIfcExportResult exportResult = ExternalIfcExporterBridge.Run(
+                        commandData,
+                        elements,
+                        doc,
+                        SettingsManager.Instance.LastExportFolder);
+
+                    if (exportResult.Result == Result.Cancelled)
+                        return Result.Cancelled;
+
+                    if (exportResult.Result == Result.Failed)
+                    {
+                        NotificationWindow.ShowError($"IFC export mislukt.\n\n{exportResult.Message}");
+                        return Result.Failed;
+                    }
+
+                    List<LocalIfcUploadItem> exportedItems = BuildUploadItems(exportResult.ExportedFiles, sheets);
+                    if (exportedItems.Count > 0)
+                    {
+                        SettingsManager.Instance.LastProjectId = defaultProject.id;
+                        SettingsManager.Instance.LastExportFolder = exportResult.ExportFolder ?? Path.GetDirectoryName(exportedItems[0].FilePath);
+                        SettingsManager.Save();
+
+                        return UploadItems(doc, client, defaultProject.id, exportedItems);
+                    }
+
+                    var projects = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
+                    if (defaultProject != null && projects.All(p => p.id != defaultProject.id))
+                        projects.Insert(0, defaultProject);
+
+                    UploadExportWindow uploadWin = new UploadExportWindow(
+                        projects,
+                        sheets,
+                        client.CurrentUsername,
+                        defaultProject?.id,
+                        exportResult.ExportFolder);
+                    uploadWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
+
+                    NotificationWindow.ShowInfo("De IFC exporter is afgerond, maar ik kon geen nieuwe IFC-bestanden automatisch vinden.\n\nControleer de exportmap en upload daarna de bestanden.");
+
+                    if (uploadWin.ShowDialog() != true) return Result.Cancelled;
+                    return UploadItems(doc, client, uploadWin.SelectedProject.id, uploadWin.ValidItems);
+                }
+                catch (Exception ex)
+                {
+                    if (progress != null && progress.IsVisible) progress.Close();
+                    NotificationWindow.ShowError($"Er is een fout opgetreden bij exporteren of uploaden:\n{ex.Message}");
+                    return Result.Failed;
+                }
+                finally
+                {
+                    if (progress != null && progress.IsVisible) progress.Close();
+                }
             }
             catch (Exception ex)
             {
@@ -158,6 +141,123 @@ namespace VH_IFC_QR
                     : "Er is een onverwachte fout opgetreden.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
                 NotificationWindow.ShowError(userMsg);
                 return Result.Failed;
+            }
+        }
+
+        private List<LocalIfcUploadItem> BuildUploadItems(IEnumerable<string> filePaths, List<ViewSheet> sheets)
+        {
+            return (filePaths ?? Enumerable.Empty<string>())
+                .Where(File.Exists)
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .Select(path =>
+                {
+                    string assemblyCode = AssemblyUploadNaming.ExtractAssemblyCode(path);
+                    return new LocalIfcUploadItem
+                    {
+                        IsSelected = true,
+                        FilePath = path,
+                        AssemblyCode = assemblyCode,
+                        AllSheets = sheets,
+                        SelectedSheet = FindSheetForAssemblyCode(sheets, assemblyCode)
+                    };
+                })
+                .ToList();
+        }
+
+        private ViewSheet FindSheetForAssemblyCode(List<ViewSheet> sheets, string assemblyCode)
+        {
+            if (string.IsNullOrWhiteSpace(assemblyCode)) return null;
+
+            return sheets.FirstOrDefault(sheet =>
+                ContainsIgnoreCase(sheet.SheetNumber, assemblyCode) ||
+                ContainsIgnoreCase(sheet.Name, assemblyCode));
+        }
+
+        private static bool ContainsIgnoreCase(string value, string search)
+        {
+            return !string.IsNullOrEmpty(value) &&
+                   value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private Result UploadItems(Document doc, PluginClient client, string projectId, List<LocalIfcUploadItem> items)
+        {
+            if (items == null || items.Count == 0)
+            {
+                NotificationWindow.ShowError("Er zijn geen IFC-bestanden om te uploaden.");
+                return Result.Cancelled;
+            }
+
+            ProgressWindow progress = new ProgressWindow();
+            progress.Show();
+
+            List<string> results = new List<string>();
+            int completed = 0;
+
+            try
+            {
+                foreach (var item in items)
+                {
+                    int startPercent = (int)((double)completed / items.Count * 100);
+                    progress.Update($"Uploaden: {item.FileName}...", startPercent);
+
+                    UploadQrPlacement uploadResult = UploadAndCreateQr(
+                        client,
+                        projectId,
+                        item,
+                        progress,
+                        startPercent,
+                        items.Count).GetAwaiter().GetResult();
+
+                    if (!string.IsNullOrEmpty(uploadResult.Error))
+                    {
+                        results.Add($"Mislukt: {item.FileName} - {uploadResult.Error}");
+                        completed++;
+                        continue;
+                    }
+
+                    if (item.SelectedSheet != null && !string.IsNullOrEmpty(uploadResult.QrTempPath))
+                    {
+                        using (Transaction t = new Transaction(doc, "Plaats QR code"))
+                        {
+                            t.Start();
+                            PlaceQrOnSheet(doc, item.SelectedSheet.Id, uploadResult.QrTempPath, item.AssemblyCode);
+                            t.Commit();
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(uploadResult.QrTempPath) && File.Exists(uploadResult.QrTempPath))
+                        File.Delete(uploadResult.QrTempPath);
+
+                    results.Add(item.SelectedSheet == null
+                        ? $"OK: {item.FileName} geupload, geen sheet gekoppeld"
+                        : $"OK: {item.FileName} geupload en QR geplaatst");
+
+                    completed++;
+                }
+
+                if (!string.IsNullOrEmpty(doc.PathName))
+                {
+                    progress.Update("Opslaan...", 98);
+                    DoEvents();
+                    doc.Save();
+                }
+
+                progress.Update("Klaar!", 100);
+                progress.Close();
+
+                ResultWindow resultWindow = new ResultWindow(results);
+                resultWindow.ShowDialog();
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                progress.Close();
+                NotificationWindow.ShowError($"Er is een fout opgetreden bij uploaden:\n{ex.Message}");
+                return Result.Failed;
+            }
+            finally
+            {
+                if (progress != null && progress.IsVisible) progress.Close();
             }
         }
 

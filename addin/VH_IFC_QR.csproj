@@ -28,7 +28,14 @@
 
   <Target Name="CopyToRevitAddins" AfterTargets="Build">
     <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
+    <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\Exporter\" />
     <Copy SourceFiles="$(TargetPath)"
           DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
+    <ItemGroup>
+      <ExporterRuntimeFiles Include="$(MSBuildThisFileDirectory)Exporter\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ExporterRuntimeFiles)"
+          DestinationFiles="@(ExporterRuntimeFiles->'$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\Exporter\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
   </Target>
 </Project>
