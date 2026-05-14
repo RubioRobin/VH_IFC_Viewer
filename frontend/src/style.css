@@ -1281,6 +1281,123 @@ html,
   gap: 1rem !important;
 }
 
+.app-side-panel {
+  background: linear-gradient(180deg, #1b1c1d 0%, #141516 100%) !important;
+  border: 1px solid rgba(193, 169, 121, 0.28) !important;
+  box-shadow: none !important;
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-panel,
+.app-side-panel .custom-panel--fixed {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-panel__header {
+  background: rgba(16, 17, 18, 0.78) !important;
+  border-bottom: 1px solid rgba(193, 169, 121, 0.18) !important;
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-panel__header:hover {
+  background: rgba(25, 26, 27, 0.92) !important;
+}
+
+.app-side-panel .custom-panel__label {
+  color: #f4efe4 !important;
+  letter-spacing: 0 !important;
+}
+
+.app-side-panel .custom-panel__header-icon {
+  color: var(--vh-brand-gold) !important;
+  background: rgba(193, 169, 121, 0.12) !important;
+  border: 1px solid rgba(193, 169, 121, 0.22) !important;
+}
+
+.app-side-panel .custom-panel__content {
+  background: transparent !important;
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-input,
+.app-side-panel bim-text-input {
+  background: rgba(16, 17, 18, 0.68) !important;
+  border: 1px solid rgba(193, 169, 121, 0.24) !important;
+  color: #f4efe4 !important;
+  box-shadow: none !important;
+}
+
+.app-side-panel .custom-input::placeholder {
+  color: rgba(244, 239, 228, 0.58) !important;
+}
+
+.app-side-panel .custom-input:focus,
+.app-side-panel bim-text-input:focus-within {
+  background: rgba(16, 17, 18, 0.92) !important;
+  border-color: rgba(193, 169, 121, 0.72) !important;
+  box-shadow: 0 0 0 3px rgba(193, 169, 121, 0.14) !important;
+}
+
+.app-side-panel bim-table,
+.app-side-panel bim-tree {
+  --bim-ui_bg-contrast-40: rgba(193, 169, 121, 0.2) !important;
+  --bim-ui_bg-contrast-60: rgba(244, 239, 228, 0.62) !important;
+  --bim-ui_bg-contrast-80: rgba(244, 239, 228, 0.84) !important;
+  --bim-ui_bg-contrast-100: #f4efe4 !important;
+  background: transparent !important;
+  color: #f4efe4 !important;
+}
+
+.app-side-panel--right bim-table {
+  background: transparent !important;
+}
+
+.app-side-panel--right bim-table tr {
+  border-bottom-color: rgba(193, 169, 121, 0.12) !important;
+}
+
+.app-side-panel--right bim-table tr:hover {
+  background-color: rgba(193, 169, 121, 0.08) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container,
+.app-side-panel #bim-props-dynamic-container * {
+  color: rgba(244, 239, 228, 0.72) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container [style*="color:#111827"],
+.app-side-panel #bim-props-dynamic-container [style*="color: #111827"] {
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-panel__content [style*="border:1px solid #e5e7eb"],
+.app-side-panel .custom-panel__content [style*="border: 1px solid #e5e7eb"] {
+  border-color: rgba(193, 169, 121, 0.18) !important;
+}
+
+.app-side-panel .custom-panel__content [style*="background:#f8fafc"],
+.app-side-panel .custom-panel__content [style*="background: #f8fafc"],
+.app-side-panel .custom-panel__content [style*="background-color: #f9fafb"] {
+  background: rgba(193, 169, 121, 0.08) !important;
+}
+
+.app-side-panel .custom-panel__content [style*="color:#1e293b"],
+.app-side-panel .custom-panel__content [style*="color: #1e293b"],
+.app-side-panel .custom-panel__content [style*="color:#374151"],
+.app-side-panel .custom-panel__content [style*="color: #374151"],
+.app-side-panel .custom-panel__content [style*="color:#4b5563"],
+.app-side-panel .custom-panel__content [style*="color: #4b5563"] {
+  color: #f4efe4 !important;
+}
+
+.app-side-panel .custom-panel__content [style*="color:#4f46e5"],
+.app-side-panel .custom-panel__content [style*="color: #4f46e5"] {
+  color: var(--vh-brand-gold) !important;
+}
+
 .app-viewer-container {
   background: var(--vh-brand-ink) !important;
   border: 1px solid rgba(193, 169, 121, 0.28) !important;
