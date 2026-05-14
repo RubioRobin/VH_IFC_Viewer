@@ -21,16 +21,11 @@ namespace VH_IFC_QR
             RibbonPanel panel = application.CreateRibbonPanel(tabName, "Tools");
 
             string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
-            
-            // 1. Link QR Button (Assembly Code Matching)
-            PushButtonData linkData = new PushButtonData("cmdLinkQR",
-                "Link QR", thisAssemblyPath, "VH_IFC_QR.LinkQRCommand");
-            linkData.ToolTip = "Koppel QR codes aan bestaande IFC bestanden via assembly codes.";
 
-            // 2. Admin Button
-            PushButtonData adminData = new PushButtonData("cmdAdmin",
-                "Admin Dashboard", thisAssemblyPath, "VH_IFC_QR.AdminCommand");
-            adminData.ToolTip = "Open backend admin dashboard.";
+            // 1. Main IFC workflow
+            PushButtonData uploadData = new PushButtonData("cmdUploadExport",
+                "IFC Exporteren", thisAssemblyPath, "VH_IFC_QR.UploadExportCommand");
+            uploadData.ToolTip = "Upload geexporteerde IFC bestanden naar de VH Viewer en plaats QR codes op sheets.";
 
             // Laad iconen vanuit dezelfde map als de DLL
             string dllDir = Path.GetDirectoryName(thisAssemblyPath);
@@ -45,14 +40,11 @@ namespace VH_IFC_QR
                 return img;
             }
 
-            var linkIcon = LoadIcon("icon_export.png"); // Hergebruik export icon; vervang later door eigen icoon
-            var adminIcon = LoadIcon("icon_admin.png");
+            var uploadIcon = LoadIcon("icon_export.png");
 
-            if (linkIcon != null) linkData.LargeImage = linkIcon;
-            if (adminIcon != null) adminData.LargeImage = adminIcon;
+            if (uploadIcon != null) uploadData.LargeImage = uploadIcon;
 
-            panel.AddItem(linkData);
-            panel.AddItem(adminData);
+            panel.AddItem(uploadData);
 
             return Result.Succeeded;
         }

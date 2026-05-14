@@ -194,7 +194,7 @@ bim-icon[icon*="info"],
 /* Aggressive hide all icons in table parts that could be emojis */
 bim-table::part(empty-icon),
 bim-table::part(icon),
-bim-table::part(empty-container) bim-icon,
+bim-table::part(empty-container),
 bim-table bim-icon,
 bim-label bim-icon[icon*="warning"],
 bim-label bim-icon[icon*="alert"] {
@@ -981,18 +981,6 @@ bim-table::part(cell) {
   vertical-align: top;
 }
 
-/* Force Column Widths to prevent squeezing */
-bim-table::part(cell):first-child {
-  width: 45%;
-  word-break: break-word !important;
-}
-
-bim-table::part(cell):last-child {
-  width: 55%;
-  word-break: break-all !important;
-  /* Ensure GUIDs break */
-}
-
 bim-table::part(header-cell) {
   font-weight: 600;
   color: var(--bim-ui_bg-contrast-80);
@@ -1268,4 +1256,114 @@ bim-viewport canvas {
 }
 /* Watermark Background */
 
+/* VH Engineering styling */
+:root,
+html.bim-ui-light,
+html.bim-ui-dark {
+  --vh-brand-gold: #c1a979;
+  --vh-brand-gold-dark: #a98f5f;
+  --vh-brand-ink: #101112;
+  --vh-brand-panel: #18191b;
+  --vh-brand-panel-soft: #242526;
+  --bim-ui_accent-base: var(--vh-brand-gold);
+  --bim-ui_main-base: var(--vh-brand-gold);
+  --bim-ui_accent-contrast: var(--vh-brand-ink);
+  --bim-ui_main-contrast: var(--vh-brand-ink);
+}
+
+body,
+html,
+.app-content {
+  background-color: var(--vh-brand-ink) !important;
+}
+
+.app-content {
+  gap: 1rem !important;
+}
+
+.app-viewer-container {
+  background: var(--vh-brand-ink) !important;
+  border: 1px solid rgba(193, 169, 121, 0.34) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28) !important;
+}
+
+bim-viewport,
+bim-viewport canvas {
+  background: var(--vh-brand-ink) !important;
+}
+
+.viewport-logo {
+  background: rgba(16, 17, 18, 0.82) !important;
+  border-color: rgba(193, 169, 121, 0.4) !important;
+}
+
+.viewport-logo__text {
+  color: var(--vh-brand-gold) !important;
+}
+
+bim-button,
+.custom-btn {
+  --bim-ui_main-base: var(--vh-brand-gold) !important;
+  background-color: var(--vh-brand-gold) !important;
+  color: var(--vh-brand-ink) !important;
+  --bim-icon--c: var(--vh-brand-ink) !important;
+  --bim-label--c: var(--vh-brand-ink) !important;
+}
+
+bim-button:hover,
+.custom-btn:hover {
+  background-color: var(--vh-brand-gold-dark) !important;
+  box-shadow: 0 4px 12px rgba(193, 169, 121, 0.24) !important;
+}
+
+bim-button:active,
+.custom-btn:active {
+  background-color: #8d774f !important;
+}
+
+.custom-btn--subtle {
+  background-color: transparent !important;
+  color: #6f6042 !important;
+}
+
+.custom-btn--subtle:hover {
+  background-color: rgba(193, 169, 121, 0.14) !important;
+  color: #2b2418 !important;
+}
+
+bim-panel-section {
+  --bim-panel-section_hc: var(--vh-brand-gold) !important;
+}
+
+.global-loader {
+  border-top-color: var(--vh-brand-gold) !important;
+}
+
+.custom-input:focus,
+bim-text-input:focus-within {
+  border-color: var(--vh-brand-gold) !important;
+  box-shadow: 0 0 0 3px rgba(193, 169, 121, 0.16) !important;
+}
+
+.viewer-message-label {
+  background-color: rgba(193, 169, 121, 0.2) !important;
+  color: #2f291c !important;
+}
+
+@media (max-width: 768px) {
+  .app-content,
+  .app-viewer-container {
+    background-color: var(--vh-brand-ink) !important;
+  }
+
+  .mobile-fab {
+    background: var(--vh-brand-gold) !important;
+    color: var(--vh-brand-ink) !important;
+    border-color: rgba(16, 17, 18, 0.22) !important;
+  }
+
+  .viewport-ui-bottom bim-toolbar {
+    border-color: rgba(193, 169, 121, 0.34) !important;
+  }
+}
 

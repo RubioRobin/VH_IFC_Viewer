@@ -168,7 +168,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     box.getSize(sizeVec);
     const diagonal = Math.sqrt(sizeVec.x ** 2 + sizeVec.y ** 2 + sizeVec.z ** 2);
     clipper.size = diagonal * 1.2;
-    clipper.config.color = new THREE.Color("#ff0000");
+    clipper.config.color = new THREE.Color("#c1a979");
     clipper.config.opacity = 0.25;
 
     // Expand box slightly to avoid z-fighting

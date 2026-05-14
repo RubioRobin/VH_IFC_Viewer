@@ -8,6 +8,7 @@ namespace VH_IFC_QR
     {
         public string LastProjectId { get; set; }
         public string LastPrefix { get; set; }
+        public string LastExportFolder { get; set; }
 
         // Server Settings
         public string BackendUrl { get; set; } = "https://vh-ifc-backend.onrender.com";

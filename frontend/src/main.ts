@@ -24,7 +24,7 @@ const world = worlds.create<
 world.name = "Main";
 world.scene = new OBC.SimpleScene(components);
 world.scene.setup();
-world.scene.three.background = new THREE.Color(0xf3f4f6); // Match app-content achtergrond zodat viewport-rand niet vervagt
+world.scene.three.background = new THREE.Color(0x101112);
 
 // Viewport aanmaken
 const viewport = BUI.Component.create<BUI.Viewport>(() => {
@@ -48,7 +48,7 @@ world.camera.controls.infinityZoom = true;
 
 // Raster
 const worldGrid = components.get(OBC.Grids).create(world);
-worldGrid.material.uniforms.uColor.value = new THREE.Color(0xd1d5db);
+worldGrid.material.uniforms.uColor.value = new THREE.Color(0x5b5244);
 worldGrid.material.uniforms.uSize1.value = 1;
 worldGrid.material.uniforms.uSize2.value = 5;
 
@@ -116,7 +116,7 @@ const highlighter = components.get(OBF.Highlighter);
 highlighter.setup({
   world,
   selectMaterialDefinition: {
-    color: new THREE.Color("#4f46e5"),
+    color: new THREE.Color("#c1a979"),
     renderedFaces: 1,
     opacity: 1,
     transparent: false,
@@ -132,7 +132,7 @@ if (postproduction) {
     settings.customEffects.ao.enabled = true;
     settings.customEffects.ao.opacity = 0.3;
     settings.customEffects.outline.enabled = true;
-    settings.customEffects.outline.color = 0x333333;
+    settings.customEffects.outline.color = 0xc1a979;
     settings.customEffects.outline.opacity = 0.8;
     settings.customEffects.outline.thickness = 0.5;
   }

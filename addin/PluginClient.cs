@@ -209,6 +209,29 @@ namespace VH_IFC_QR
             }).ConfigureAwait(false);
         }
 
+        public async Task<ProjectInfo> EnsureProjectAsync(string projectNumber, string projectName)
+        {
+            await EnsurePluginAuthAsync().ConfigureAwait(false);
+
+            var payload = new { projectNumber, projectName };
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/plugin/projects/ensure")
+            {
+                Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json")
+            };
+            if (!string.IsNullOrEmpty(_userToken))
+                request.Headers.Add("x-user-token", _userToken);
+
+            var response = await _client.SendAsync(request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new Exception($"Project zoeken of aanmaken mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
+            }
+
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return JsonConvert.DeserializeObject<ProjectInfo>(content);
+        }
+
         public async Task<string> CreateModelAsync(string projectId, string modelName, string uploaderName = null)
         {
             var payload = new { projectId, modelName, uploaderName };
@@ -232,8 +255,14 @@ namespace VH_IFC_QR
         public async Task<UploadSessionInfo> CreateUploadSessionAsync(string modelId, string fileName, long fileSize, string checksum, string uploaderName = null)
         {
             var payload = new { fileName, contentType = "application/octet-stream", fileSize, checksumSha256 = checksum, uploaderName };
-            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            var response = await _client.PostAsync($"{_baseUrl}/api/plugin/models/{modelId}/versions/upload-session", content).ConfigureAwait(false);
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/plugin/models/{modelId}/versions/upload-session")
+            {
+                Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json")
+            };
+            if (!string.IsNullOrEmpty(_userToken))
+                request.Headers.Add("x-user-token", _userToken);
+
+            var response = await _client.SendAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);

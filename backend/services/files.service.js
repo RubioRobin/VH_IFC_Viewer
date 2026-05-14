@@ -74,8 +74,15 @@ module.exports = (supabase, logActivity) => {
         async createFile(id, projectId, filename, path, size, user = 'Admin') {
             if (!supabase) return null;
             const finalName = filename || 'unnamed_file_' + Date.now();
-            const newFile = {
-                id: id || uuidv4(),
+
+            const { data: existing } = await supabase
+                .from('files')
+                .select('*')
+                .eq('project_id', projectId)
+                .eq('filename', finalName)
+                .maybeSingle();
+
+            const fileData = {
                 project_id: projectId,
                 filename: finalName,
                 original_name: finalName,
@@ -83,11 +90,30 @@ module.exports = (supabase, logActivity) => {
                 size: size
             };
 
-            const { data, error } = await supabase.from('files').insert([newFile]).select().single();
+            let data;
+            let error;
+
+            if (existing) {
+                ({ data, error } = await supabase
+                    .from('files')
+                    .update(fileData)
+                    .eq('id', existing.id)
+                    .select()
+                    .single());
+            } else {
+                ({ data, error } = await supabase
+                    .from('files')
+                    .insert([{ ...fileData, id: id || uuidv4() }])
+                    .select()
+                    .single());
+            }
+
             if (error) throw error;
 
             if (logActivity) {
-                await logActivity(projectId, user || 'Admin', 'upload_file', `File "${filename}" uploaded`);
+                const action = existing ? 'update_file' : 'upload_file';
+                const label = existing ? 'updated' : 'uploaded';
+                await logActivity(projectId, user || 'Admin', action, `File "${filename}" ${label}`);
             }
             return mapFile(data);
         },

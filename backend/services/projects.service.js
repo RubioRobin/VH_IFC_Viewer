@@ -51,13 +51,14 @@ module.exports = (supabase, logActivity) => {
             } catch (e) { return null; }
         },
 
-        async createProject(id, name, description, status, user = 'Admin') {
+        async createProject(id, name, description, status, user = 'Admin', code = null) {
             if (!supabase) return null;
             const newProject = {
                 id: id || uuidv4(),
                 name,
                 description,
-                status: status || 'actief'
+                status: status || 'actief',
+                code: code || null
             };
 
             const { data: existing } = await supabase
@@ -83,6 +84,38 @@ module.exports = (supabase, logActivity) => {
             }
 
             return { ...data, files: [] };
+        },
+
+        async ensureProject(projectNumber, projectName, user = 'Plugin') {
+            if (!supabase) return null;
+
+            const code = (projectNumber || '').trim();
+            const rawName = (projectName || '').trim();
+            const name = [code, rawName].filter(Boolean).join(' ').trim();
+
+            if (!name) {
+                throw new Error('Projectnummer of projectnaam is verplicht.');
+            }
+
+            if (code) {
+                const { data: byCode } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('code', code)
+                    .maybeSingle();
+
+                if (byCode) return { ...byCode, files: [] };
+            }
+
+            const { data: byName } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('name', name)
+                .maybeSingle();
+
+            if (byName) return { ...byName, files: [] };
+
+            return this.createProject(uuidv4(), name, '', 'actief', user, code || null);
         },
 
         async updateProjectStatus(projectId, status, user = 'Admin') {

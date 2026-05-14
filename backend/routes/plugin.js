@@ -112,6 +112,23 @@ router.get('/projects', authenticatePlugin, async (req, res) => {
     }
 });
 
+// 2b. Project zoeken of aanmaken vanuit Revit Project Information
+router.post('/projects/ensure', authenticatePlugin, authenticatePluginUser, async (req, res) => {
+    const { projectNumber, projectName } = req.body;
+    try {
+        const createdBy = req.user ? req.user.username : 'Plugin';
+        const project = await db.ensureProject(projectNumber, projectName, createdBy);
+        res.json({
+            id: project.id,
+            name: project.name,
+            code: project.code || projectNumber || ''
+        });
+    } catch (e) {
+        console.error('[Plugin] Project zoeken/aanmaken fout:', e);
+        res.status(500).json({ error: 'Er is een onverwachte fout opgetreden.' });
+    }
+});
+
 // 3. Model aanmaken
 router.post('/models/create', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { projectId, modelName, uploaderName } = req.body;
