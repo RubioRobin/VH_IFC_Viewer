@@ -77,20 +77,16 @@ namespace VH_IFC_QR
                 progress.Show();
                 try
                 {
-                    progress.Update("IFC exporter starten...", 2);
+                    progress.Update("IFC bestanden exporteren...", 2);
                     DoEvents();
-                    progress.Close();
 
-                    ExternalIfcExportResult exportResult = ExternalIfcExporterBridge.Run(
-                        commandData,
-                        elements,
+                    VhAssemblyIfcExportResult exportResult = VhAssemblyIfcExporter.Export(
                         doc,
                         SettingsManager.Instance.LastExportFolder);
 
-                    if (exportResult.Result == Result.Cancelled)
-                        return Result.Cancelled;
+                    progress.Close();
 
-                    if (exportResult.Result == Result.Failed)
+                    if (exportResult.Status == ResultStatus.Failed)
                     {
                         NotificationWindow.ShowError($"IFC export mislukt.\n\n{exportResult.Message}");
                         return Result.Failed;
