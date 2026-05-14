@@ -26,9 +26,10 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
 
-  <Target Name="CopyToRevitAddins" AfterTargets="Build">
+  <Target Name="CopyToRevitAddins" AfterTargets="Build" Condition="'$(CopyToRevitAddins)' != 'false'">
     <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
     <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\Exporter\" />
+    <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VHIFCExportSingleAssembly\" />
     <Copy SourceFiles="$(TargetPath)"
           DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
     <ItemGroup>
@@ -36,6 +37,9 @@
     </ItemGroup>
     <Copy SourceFiles="@(ExporterRuntimeFiles)"
           DestinationFiles="@(ExporterRuntimeFiles->'$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\Exporter\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ExporterRuntimeFiles)"
+          DestinationFiles="@(ExporterRuntimeFiles->'$(APPDATA)\Autodesk\Revit\Addins\2025\VHIFCExportSingleAssembly\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
   </Target>
 </Project>

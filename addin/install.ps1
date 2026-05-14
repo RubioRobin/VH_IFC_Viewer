@@ -26,14 +26,25 @@ Get-ChildItem -Path $addinDir -Filter "*.png" | ForEach-Object {
 
 $exporterSource = Join-Path $addinDir "Exporter"
 $exporterTarget = Join-Path $targetDir "Exporter"
+$standaloneExporterTarget = "$env:APPDATA\Autodesk\Revit\Addins\2025\VHIFCExportSingleAssembly"
 if (Test-Path $exporterSource) {
     New-Item -ItemType Directory -Force -Path $exporterTarget | Out-Null
+    New-Item -ItemType Directory -Force -Path $standaloneExporterTarget | Out-Null
     Copy-Item -Path "$exporterSource\*" -Destination $exporterTarget -Recurse -Force
+    Copy-Item -Path "$exporterSource\*" -Destination $standaloneExporterTarget -Recurse -Force
     Write-Host "IFC exporter dependencies gekopieerd naar: $exporterTarget" -ForegroundColor Green
+    Write-Host "IFC exporter runtime gekopieerd naar: $standaloneExporterTarget" -ForegroundColor Green
 } else {
     Write-Host "WAARSCHUWING: Exporter-map niet gevonden: $exporterSource" -ForegroundColor Yellow
 }
 Write-Host "Bestanden gekopieerd naar: $targetDir" -ForegroundColor Green
+
+$securityDir = "$env:APPDATA\Autodesk\Security"
+$securityFile = Join-Path $securityDir "securitydatalog.txt"
+New-Item -ItemType Directory -Force -Path $securityDir | Out-Null
+if (-not (Test-Path $securityFile)) {
+    Write-Host "LET OP: VHPrefab autorisatiebestand ontbreekt: $securityFile" -ForegroundColor Yellow
+}
 
 # 3. Schrijf .addin manifest met Assembly-pad voor deze gebruiker
 Write-Host "`n[3/3] Schrijf .addin manifest..." -ForegroundColor Yellow

@@ -19,9 +19,16 @@ namespace VH_IFC_QR
     public static class ExternalIfcExporterBridge
     {
         private const string ExporterAssemblyName = "IFCExportSingleAssembly.dll";
+        private const string ExporterInstallFolderName = "VHIFCExportSingleAssembly";
         private const string ExporterCommandType = "IFCExportSingleAssembly.ExecuteAddin";
         private const string ExporterUiAssemblyName = "IFCExportSingleAssemblyUI";
         private const string ExporterConfigType = "IFCExportSingleAssemblyUI.Services.AddinConfigSettings";
+
+        public static string AuthorizationFilePath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Autodesk",
+            "Security",
+            "securitydatalog.txt");
 
         public static ExternalIfcExportResult Run(
             ExternalCommandData commandData,
@@ -37,6 +44,19 @@ namespace VH_IFC_QR
                 {
                     Result = Result.Failed,
                     Message = "De IFC exporter is niet gevonden naast de VH add-in."
+                };
+            }
+
+            if (!File.Exists(AuthorizationFilePath))
+            {
+                return new ExternalIfcExportResult
+                {
+                    Result = Result.Failed,
+                    Message =
+                        "De bestaande VHPrefab IFC exporter is nog niet vrijgegeven voor deze Windows-gebruiker.\n\n" +
+                        "Ontbrekend autorisatiebestand:\n" +
+                        AuthorizationFilePath + "\n\n" +
+                        "Activeer de originele VHPrefab add-in of plaats het geldige autorisatiebestand op deze locatie en probeer opnieuw."
                 };
             }
 
@@ -88,11 +108,19 @@ namespace VH_IFC_QR
         private static string GetExporterDirectory()
         {
             string addinDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            if (string.IsNullOrWhiteSpace(addinDir)) return null;
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
-            string exporterDir = Path.Combine(addinDir, "Exporter");
-            string exporterPath = Path.Combine(exporterDir, ExporterAssemblyName);
-            return File.Exists(exporterPath) ? exporterDir : null;
+            string[] candidates =
+            {
+                string.IsNullOrWhiteSpace(appData)
+                    ? null
+                    : Path.Combine(appData, "Autodesk", "Revit", "Addins", "2025", ExporterInstallFolderName),
+                string.IsNullOrWhiteSpace(addinDir) ? null : Path.Combine(addinDir, "Exporter")
+            };
+
+            return candidates
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .FirstOrDefault(path => File.Exists(Path.Combine(path, ExporterAssemblyName)));
         }
 
         private static ResolveEventHandler CreateResolver(string exporterDir)
