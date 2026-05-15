@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using WinForms = System.Windows.Forms;
 
 namespace VH_IFC_QR
@@ -98,6 +99,12 @@ namespace VH_IFC_QR
         {
             DialogResult = false;
             Close();
+        }
+
+        private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
         }
     }
 }

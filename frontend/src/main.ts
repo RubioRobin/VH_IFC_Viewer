@@ -106,9 +106,10 @@ world.camera.controls.addEventListener("rest", () => {
 
 // IFC Loader instellen
 const ifcLoader = components.get(OBC.IfcLoader);
+const webIfcWasmPath = new URL("/web-ifc/", window.location.origin).toString();
 await ifcLoader.setup({
   autoSetWasm: false,
-  wasm: { absolute: true, path: "https://unpkg.com/web-ifc@0.0.72/" },
+  wasm: { absolute: true, path: webIfcWasmPath },
 });
 
 // Highlighter instellen

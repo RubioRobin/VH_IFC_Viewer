@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vh-ifc-viewer-v1';
+const CACHE_NAME = 'vh-ifc-viewer-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
