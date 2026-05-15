@@ -346,7 +346,7 @@ const init = async () => {
       console.log(`Model laden: ${filename}`);
 
       // Het IFC-bestand ophalen (via ondertekende URL of proxy)
-      const modelResponse = await fetch(modelUrl);
+      const modelResponse = await fetch(modelUrl, { credentials: "include" });
       if (!modelResponse.ok) throw new Error(`Fout bij downloaden model: ${modelResponse.status}`);
 
       const blob = await modelResponse.blob();
@@ -406,7 +406,7 @@ const init = async () => {
     const displayTitle = modelName || 'Model';
 
     try {
-      const response = await fetch(modelUrl);
+      const response = await fetch(modelUrl, { credentials: "include" });
       if (!response.ok) throw new Error(`Ophalen mislukt: ${response.status}`);
 
       const blob = await response.blob();

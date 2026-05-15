@@ -158,7 +158,9 @@ export function ProjectDetailsPage() {
 
     const handleDownload = async (file: FileData) => {
         try {
-            const response = await fetch(`${BASE_URL}/api/files/${file.id}/download`);
+            const response = await fetch(`${BASE_URL}/api/files/${file.id}/download`, {
+                credentials: 'include'
+            });
             if (!response.ok) throw new Error();
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
