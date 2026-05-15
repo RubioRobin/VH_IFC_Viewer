@@ -1,6 +1,51 @@
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (supabase, logActivity) => {
+    function extractProjectCode(value) {
+        if (!value || typeof value !== 'string') return null;
+        const match = value.match(/P\d+[A-Z0-9]*/i);
+        return match ? match[0].toUpperCase() : null;
+    }
+
+    function cleanProjectName(value, code) {
+        if (!value || typeof value !== 'string') return null;
+        let name = value.trim();
+
+        if (code) {
+            const codeIndex = name.toLowerCase().indexOf(code.toLowerCase());
+            if (codeIndex >= 0) {
+                name = name.slice(codeIndex + code.length);
+            }
+        }
+
+        name = name.replace(/^[\s\-_:.,]+/, '').replace(/\s+/g, ' ').trim();
+        return name || null;
+    }
+
+    function normalizeProject(project) {
+        if (!project) return project;
+
+        const code = extractProjectCode(project.code) || extractProjectCode(project.name);
+        const cleanedName = cleanProjectName(project.name, code);
+
+        if (!code || !cleanedName) return project;
+
+        return {
+            ...project,
+            code,
+            name: `${code} - ${cleanedName}`
+        };
+    }
+
+    function buildProjectFields(projectNumber, projectName) {
+        const code = extractProjectCode(projectNumber) || extractProjectCode(projectName);
+        const rawName = cleanProjectName(projectName, code) || cleanProjectName(projectNumber, code);
+        const name = code && rawName
+            ? `${code} - ${rawName}`
+            : [code, rawName].filter(Boolean).join(' ').trim();
+
+        return { code, name };
+    }
 
     function mapFile(f) {
         if (!f) return null;
@@ -23,7 +68,7 @@ module.exports = (supabase, logActivity) => {
                 if (error) throw error;
 
                 return data.map(p => ({
-                    ...p,
+                    ...normalizeProject(p),
                     files: (p.files || []).map(mapFile),
                     file_count: (p.files || []).length,
                     total_size: (p.files || []).reduce((acc, f) => acc + (f.size || 0), 0)
@@ -45,7 +90,7 @@ module.exports = (supabase, logActivity) => {
 
                 if (error) return null;
                 return {
-                    ...data,
+                    ...normalizeProject(data),
                     files: (data.files || []).map(mapFile)
                 };
             } catch (e) { return null; }
@@ -89,9 +134,8 @@ module.exports = (supabase, logActivity) => {
         async ensureProject(projectNumber, projectName, user = 'Plugin') {
             if (!supabase) return null;
 
-            const code = (projectNumber || '').trim();
-            const rawName = (projectName || '').trim();
-            const name = [code, rawName].filter(Boolean).join(' ').trim();
+            const rawCode = (projectNumber || '').trim();
+            const { code, name } = buildProjectFields(projectNumber, projectName);
 
             if (!name) {
                 throw new Error('Projectnummer of projectnaam is verplicht.');
@@ -104,7 +148,26 @@ module.exports = (supabase, logActivity) => {
                     .eq('code', code)
                     .maybeSingle();
 
-                if (byCode) return { ...byCode, files: [] };
+                if (byCode) return { ...normalizeProject(byCode), files: [] };
+            }
+
+            if (rawCode && rawCode !== code) {
+                const { data: byRawCode } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('code', rawCode)
+                    .maybeSingle();
+
+                if (byRawCode) {
+                    const { data: updated } = await supabase
+                        .from('projects')
+                        .update({ code: code || rawCode, name })
+                        .eq('id', byRawCode.id)
+                        .select()
+                        .single();
+
+                    return { ...normalizeProject(updated || byRawCode), files: [] };
+                }
             }
 
             const { data: byName } = await supabase
@@ -113,7 +176,29 @@ module.exports = (supabase, logActivity) => {
                 .eq('name', name)
                 .maybeSingle();
 
-            if (byName) return { ...byName, files: [] };
+            if (byName) return { ...normalizeProject(byName), files: [] };
+
+            if (rawCode) {
+                const legacyName = [rawCode, (projectName || '').trim()].filter(Boolean).join(' ').trim();
+                if (legacyName && legacyName !== name) {
+                    const { data: byLegacyName } = await supabase
+                        .from('projects')
+                        .select('*')
+                        .eq('name', legacyName)
+                        .maybeSingle();
+
+                    if (byLegacyName) {
+                        const { data: updated } = await supabase
+                            .from('projects')
+                            .update({ code: code || rawCode, name })
+                            .eq('id', byLegacyName.id)
+                            .select()
+                            .single();
+
+                        return { ...normalizeProject(updated || byLegacyName), files: [] };
+                    }
+                }
+            }
 
             return this.createProject(uuidv4(), name, '', 'actief', user, code || null);
         },

@@ -158,15 +158,20 @@ export function ProjectDetailsPage() {
 
     const handleDownload = async (file: FileData) => {
         try {
-            const response = await fetch(`${BASE_URL}/api/files/${file.id}/download`, {
+            const signedResponse = await fetch(`${BASE_URL}/api/files/${file.id}/signed-url`, {
                 credentials: 'include'
             });
+            if (!signedResponse.ok) throw new Error();
+
+            const signedData = await signedResponse.json();
+            const response = await fetch(signedData.url);
             if (!response.ok) throw new Error();
+
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = file.filename;
+            a.download = signedData.filename || file.filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

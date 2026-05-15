@@ -346,7 +346,7 @@ const init = async () => {
       console.log(`Model laden: ${filename}`);
 
       // Het IFC-bestand ophalen (via ondertekende URL of proxy)
-      const modelResponse = await fetch(modelUrl, { credentials: "include" });
+      const modelResponse = await fetch(modelUrl);
       if (!modelResponse.ok) throw new Error(`Fout bij downloaden model: ${modelResponse.status}`);
 
       const blob = await modelResponse.blob();
@@ -398,15 +398,22 @@ const init = async () => {
     // Legacy / Admin Logic
     console.log(`Auto-loading: ${modelName || fileId}`);
 
-    // Determine URL: Static model (legacy) or API download (new)
-    const modelUrl = fileId
-      ? `${baseUrl}/api/files/${fileId}/download`
-      : `${baseUrl}/models/${modelName}`;
-
-    const displayTitle = modelName || 'Model';
+    let modelUrl = modelName ? `${baseUrl}/models/${modelName}` : '';
+    let displayTitle = modelName || 'Model';
 
     try {
-      const response = await fetch(modelUrl, { credentials: "include" });
+      if (fileId) {
+        const signedResponse = await fetch(`${baseUrl}/api/files/${fileId}/signed-url`, {
+          credentials: "include"
+        });
+        if (!signedResponse.ok) throw new Error(`Ophalen mislukt: ${signedResponse.status}`);
+
+        const signedData = await signedResponse.json();
+        modelUrl = signedData.url;
+        displayTitle = signedData.filename || displayTitle;
+      }
+
+      const response = await fetch(modelUrl);
       if (!response.ok) throw new Error(`Ophalen mislukt: ${response.status}`);
 
       const blob = await response.blob();
