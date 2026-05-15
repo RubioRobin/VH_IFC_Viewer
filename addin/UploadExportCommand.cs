@@ -75,9 +75,14 @@ namespace VH_IFC_QR
                     return Result.Failed;
                 }
 
+                string defaultExportFolder = ProjectExportFolder.BuildDefaultFolder(
+                    defaultProject,
+                    projectIdentity,
+                    SettingsManager.Instance.LastExportFolder);
+
                 var exportSelection = new VhExportSelectionWindow(
                     VhAssemblyIfcExporter.GetAvailableDesignPhases(doc),
-                    SettingsManager.Instance.LastExportFolder);
+                    defaultExportFolder);
                 if (exportSelection.ShowDialog() != true)
                     return Result.Cancelled;
 
