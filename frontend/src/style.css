@@ -1528,6 +1528,66 @@ bim-text-input:focus-within {
   box-shadow: none !important;
 }
 
+.app-side-panel,
+.app-side-panel .custom-panel__content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(193, 169, 121, 0.72) rgba(16, 17, 18, 0.86);
+}
+
+.app-side-panel::-webkit-scrollbar,
+.app-side-panel .custom-panel__content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-side-panel::-webkit-scrollbar-track,
+.app-side-panel .custom-panel__content::-webkit-scrollbar-track {
+  background: rgba(16, 17, 18, 0.86);
+  border-left: 1px solid rgba(193, 169, 121, 0.14);
+}
+
+.app-side-panel::-webkit-scrollbar-thumb,
+.app-side-panel .custom-panel__content::-webkit-scrollbar-thumb {
+  background: rgba(193, 169, 121, 0.66);
+  border: 2px solid rgba(16, 17, 18, 0.86);
+  border-radius: 999px;
+}
+
+.app-side-panel::-webkit-scrollbar-thumb:hover,
+.app-side-panel .custom-panel__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(193, 169, 121, 0.88);
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-row {
+  border-bottom-color: rgba(193, 169, 121, 0.2) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-row[style*="border-left"] {
+  border-left-color: rgba(193, 169, 121, 0.42) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-label {
+  color: rgba(244, 239, 228, 0.82) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-value {
+  color: #f4efe4 !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-copy {
+  color: rgba(193, 169, 121, 0.72) !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-copy:hover {
+  color: #f4efe4 !important;
+}
+
+.app-side-panel #bim-props-dynamic-container .vh-prop-group-header {
+  background: rgba(193, 169, 121, 0.14) !important;
+  border: 1px solid rgba(193, 169, 121, 0.28) !important;
+  border-radius: 6px !important;
+  color: #f4efe4 !important;
+}
+
 @media (max-width: 768px) {
   .app-content,
   .app-viewer-container {

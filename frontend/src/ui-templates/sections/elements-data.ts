@@ -54,6 +54,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     if ((startValue === "-" || startValue === "") && !isComplex) return null;
 
     const row = document.createElement("div");
+    row.className = "vh-prop-row";
     row.style.display = "flex";
     row.style.flexDirection = "column";
     row.style.borderBottom = "1px solid #f3f4f6";
@@ -65,6 +66,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     }
 
     const label = document.createElement("span");
+    label.className = "vh-prop-label";
     label.style.fontSize = "0.75rem";
     label.style.color = "#6b7280";
     label.style.fontWeight = "600";
@@ -84,6 +86,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     label.textContent = prettyKey;
 
     const val = document.createElement("span");
+    val.className = "vh-prop-value";
     val.style.fontSize = "0.875rem";
     val.style.color = "#111827";
     val.style.wordBreak = "break-word";
@@ -103,6 +106,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
     if (!Array.isArray(value) && startValue !== "-" && startValue !== "") {
       const copyBtn = document.createElement("button");
+      copyBtn.className = "vh-prop-copy";
       copyBtn.title = "Kopiëren";
       copyBtn.style.cssText = "background:none;border:none;padding:2px;cursor:pointer;color:#d1d5db;flex-shrink:0;line-height:0;border-radius:3px;transition:color 0.15s;";
       copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -134,6 +138,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
             const itemName = item.Name ? formatValue(item.Name) : (item._category || "Property Set");
 
             const header = document.createElement("div");
+            header.className = "vh-prop-group-header";
             header.textContent = itemName;
             header.style.fontWeight = "700";
             header.style.fontSize = "0.85rem";
