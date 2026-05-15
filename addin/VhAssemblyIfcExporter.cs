@@ -29,7 +29,20 @@ namespace VH_IFC_QR
         private const string PreferredBase3DViewName = "3D";
         private const string ExportConfigName = "VH Assembly Export";
 
-        public static VhAssemblyIfcExportResult Export(Document doc, string preferredFolder)
+        public static List<string> GetAvailableDesignPhases(Document doc)
+        {
+            if (doc == null) return new List<string>();
+
+            return GetSheets(doc)
+                .Select(sheet => GetStringParameter(sheet, DesignPhaseParameter))
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Where(value => value.StartsWith("15.", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        public static VhAssemblyIfcExportResult Export(Document doc, string preferredFolder, IList<string> selectedDesignPhases)
         {
             if (doc == null)
                 return Failed("Geen Revit document gevonden.");
@@ -38,7 +51,7 @@ namespace VH_IFC_QR
             string exportFolder = ResolveExportFolder(preferredFolder, doc);
             Directory.CreateDirectory(exportFolder);
 
-            List<AssemblyExportItem> exportItems = ResolveExportItems(doc);
+            List<AssemblyExportItem> exportItems = ResolveExportItems(doc, selectedDesignPhases);
             if (exportItems.Count == 0)
             {
                 return Failed(
@@ -156,18 +169,20 @@ namespace VH_IFC_QR
             HideElementsInChunks(view, hideIds);
         }
 
-        private static List<AssemblyExportItem> ResolveExportItems(Document doc)
+        private static List<AssemblyExportItem> ResolveExportItems(Document doc, IList<string> selectedDesignPhases)
         {
             var assemblyLookup = GetAssemblyLookup(doc);
             var sheets = GetSheets(doc);
-            var designPhaseSheets = sheets
-                .Where(sheet => !StartsWithDigit(sheet.SheetNumber))
-                .Where(sheet => GetStringParameter(sheet, DesignPhaseParameter)?.StartsWith("15.", StringComparison.OrdinalIgnoreCase) == true)
-                .ToList();
+            var phaseSet = new HashSet<string>(
+                (selectedDesignPhases ?? new List<string>()).Where(value => !string.IsNullOrWhiteSpace(value)),
+                StringComparer.OrdinalIgnoreCase);
 
-            var candidateSheets = designPhaseSheets.Count > 0
-                ? designPhaseSheets
-                : sheets.Where(sheet => !StartsWithDigit(sheet.SheetNumber)).ToList();
+            var candidateSheets = phaseSet.Count > 0
+                ? sheets
+                    .Where(sheet => !StartsWithDigit(sheet.SheetNumber))
+                    .Where(sheet => phaseSet.Contains(GetStringParameter(sheet, DesignPhaseParameter) ?? ""))
+                    .ToList()
+                : new List<ViewSheet>();
 
             var items = new List<AssemblyExportItem>();
             var usedAssemblies = new HashSet<ElementId>(new ElementIdComparer());
@@ -190,9 +205,10 @@ namespace VH_IFC_QR
             if (items.Count > 0)
                 return items;
 
+            if (phaseSet.Count > 0)
+                return items;
+
             IEnumerable<AssemblyInstance> fallbackAssemblies = GetAssembliesInActiveView(doc);
-            if (!fallbackAssemblies.Any())
-                fallbackAssemblies = assemblyLookup.Values;
 
             return fallbackAssemblies
                 .Where(assembly => assembly != null)
@@ -320,7 +336,15 @@ namespace VH_IFC_QR
         private static void ExportView(Document doc, View3D view, string exportFolder, string fileName)
         {
             IFCExportOptions options = BuildExportOptions(view);
-            bool exported = doc.Export(exportFolder, fileName, options);
+            bool exported;
+
+            using (Transaction transaction = new Transaction(doc, $"IFC export {fileName}"))
+            {
+                transaction.Start();
+                exported = doc.Export(exportFolder, fileName, options);
+                transaction.Commit();
+            }
+
             if (!exported)
                 throw new InvalidOperationException($"IFC export mislukt voor {fileName}.");
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -13,6 +14,7 @@ using Autodesk.Revit.UI;
 namespace VH_IFC_QR
 {
     [Transaction(TransactionMode.Manual)]
+    [SupportedOSPlatform("windows")]
     public class UploadExportCommand : IExternalCommand
     {
         private static string BaseUrl => SettingsManager.Instance.BackendUrl;
@@ -73,6 +75,15 @@ namespace VH_IFC_QR
                     return Result.Failed;
                 }
 
+                var exportSelection = new VhExportSelectionWindow(
+                    VhAssemblyIfcExporter.GetAvailableDesignPhases(doc),
+                    SettingsManager.Instance.LastExportFolder);
+                if (exportSelection.ShowDialog() != true)
+                    return Result.Cancelled;
+
+                SettingsManager.Instance.LastExportFolder = exportSelection.ExportFolder;
+                SettingsManager.Save();
+
                 ProgressWindow progress = new ProgressWindow();
                 progress.Show();
                 try
@@ -82,7 +93,8 @@ namespace VH_IFC_QR
 
                     VhAssemblyIfcExportResult exportResult = VhAssemblyIfcExporter.Export(
                         doc,
-                        SettingsManager.Instance.LastExportFolder);
+                        exportSelection.ExportFolder,
+                        exportSelection.SelectedDesignPhases);
 
                     progress.Close();
 
