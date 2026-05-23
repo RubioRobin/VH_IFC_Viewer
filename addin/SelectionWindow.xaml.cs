@@ -33,6 +33,7 @@ namespace VH_IFC_QR
         public SelectionWindow(List<ProjectInfo> projects, List<View3D> views, List<ViewSheet> sheets, string defaultName, string username)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
             _projects = projects;
             comboProjects.ItemsSource = _projects;
 
@@ -122,13 +123,13 @@ namespace VH_IFC_QR
             
             if (SelectedProject == null)
             {
-                MessageBox.Show("Selecteer een Project.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, "Selecteer een Project.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(txtModelName.Text))
             {
-                 MessageBox.Show("Vul een geldig prefix in.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
+                 RevitWindowHelper.ShowMessage(this, "Vul een geldig prefix in.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
                  return;
             }
 
@@ -138,7 +139,7 @@ namespace VH_IFC_QR
             var missingSheet = ValidMappings.FirstOrDefault(m => m.SelectedSheet == null);
             if (missingSheet != null)
             {
-                MessageBox.Show($"Selecteer een Sheet voor view: {missingSheet.ViewName}", "Sheet Ontbreekt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, $"Selecteer een Sheet voor view: {missingSheet.ViewName}", "Sheet Ontbreekt", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

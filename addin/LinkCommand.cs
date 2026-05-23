@@ -144,7 +144,7 @@ namespace VH_IFC_QR
                                 if (item.Match.SelectedSheet != null)
                                     PlaceQrOnSheet(doc, item.Match.SelectedSheet.Id, item.TempPath, item.Match.AssemblyCode);
 
-                                if (File.Exists(item.TempPath)) File.Delete(item.TempPath);
+                                TryDeleteTempFile(item.TempPath);
                                 results.Add($"✓ {item.Match.AssemblyCode} → {item.Match.MatchedFileName}");
                             }
 
@@ -189,6 +189,21 @@ namespace VH_IFC_QR
                     : "Er is een onverwachte fout opgetreden.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
                 NotificationWindow.ShowError(userMsg);
                 return Result.Failed;
+            }
+        }
+
+        private static void TryDeleteTempFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                // Tijdelijke QR-bestanden mogen een geslaagde link-flow niet alsnog laten mislukken.
             }
         }
 

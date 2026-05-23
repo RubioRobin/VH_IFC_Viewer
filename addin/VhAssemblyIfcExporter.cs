@@ -1,9 +1,12 @@
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.IFC;
+using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Xml.Linq;
 
 namespace VH_IFC_QR
 {
@@ -13,582 +16,236 @@ namespace VH_IFC_QR
         public string Message { get; set; }
         public string ExportFolder { get; set; }
         public List<string> ExportedFiles { get; set; } = new List<string>();
+        public List<VhExportedIfcFile> ExportedItems { get; set; } = new List<VhExportedIfcFile>();
+    }
+
+    public class VhExportedIfcFile
+    {
+        public string FilePath { get; set; }
+        public string AssemblyCode { get; set; }
+        public string SheetNumber { get; set; }
+        public string SheetName { get; set; }
     }
 
     public enum ResultStatus
     {
         Succeeded,
+        Cancelled,
         Failed
     }
 
     public static class VhAssemblyIfcExporter
     {
-        private const string AssemblyCodeParameter = "VH Assembly Code";
-        private const string CbAssemblyCodeParameter = "CB Assembly Code";
-        private const string DesignPhaseParameter = "VH Designphase";
-        private const string PreferredBase3DViewName = "3D";
-        private const string ExportConfigName = "VH Assembly Export";
+        private const string OriginalExporterAssemblyName = "IFCExportSingleAssembly.dll";
+        private const string OriginalExporterCommandType = "IFCExportSingleAssembly.ExecuteAddin";
+        private static readonly object ResolverLock = new object();
+        private static string _originalExporterFolder;
+        private static bool _resolverRegistered;
 
-        public static List<string> GetAvailableDesignPhases(Document doc)
+        public static VhAssemblyIfcExportResult Export(
+            ExternalCommandData commandData,
+            ref string message,
+            ElementSet elements)
         {
-            if (doc == null) return new List<string>();
-
-            return GetSheets(doc)
-                .Select(sheet => GetStringParameter(sheet, DesignPhaseParameter))
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Where(value => value.StartsWith("15.", StringComparison.OrdinalIgnoreCase))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-
-        public static VhAssemblyIfcExportResult Export(Document doc, string preferredFolder, IList<string> selectedDesignPhases)
-        {
-            if (doc == null)
-                return Failed("Geen Revit document gevonden.");
-
             DateTime startedAt = DateTime.Now.AddSeconds(-3);
-            string exportFolder = ResolveExportFolder(preferredFolder, doc);
-            Directory.CreateDirectory(exportFolder);
-
-            List<AssemblyExportItem> exportItems = ResolveExportItems(doc, selectedDesignPhases);
-            if (exportItems.Count == 0)
-            {
-                return Failed(
-                    "Geen assemblies gevonden om te exporteren.\n\n" +
-                    "Controleer of de sheets een sheetnummer hebben dat overeenkomt met de parameter 'VH Assembly Code' op de assembly.");
-            }
-
-            var exportedFiles = new List<string>();
-            TransactionGroup group = new TransactionGroup(doc, "VH IFC assembly export");
 
             try
             {
-                group.Start();
+                Result originalResult = ExecuteOriginalExporter(commandData, ref message, elements);
+                if (originalResult == Result.Cancelled)
+                    return Cancelled("IFC export geannuleerd.");
 
-                List<PreparedAssemblyView> preparedViews = PrepareAssemblyViews(doc, exportItems);
-                if (preparedViews.Count == 0)
-                    throw new InvalidOperationException("Er konden geen tijdelijke 3D views worden aangemaakt voor de IFC export.");
+                if (originalResult == Result.Failed)
+                    return Failed(string.IsNullOrWhiteSpace(message) ? "De originele IFC exporter is mislukt." : message);
 
-                foreach (PreparedAssemblyView prepared in preparedViews)
+                string exportFolder = ReadOriginalExporterFolder();
+                if (string.IsNullOrWhiteSpace(exportFolder) || !Directory.Exists(exportFolder))
                 {
-                    string fileName = MakeSafeFileName(prepared.Item.AssemblyCode);
-                    ExportView(doc, prepared.View, exportFolder, fileName);
-
-                    string exportedFile = FindExportedIfc(exportFolder, fileName, startedAt);
-                    if (!string.IsNullOrWhiteSpace(exportedFile))
-                        exportedFiles.Add(exportedFile);
+                    return Succeeded(null, new List<VhExportedIfcFile>());
                 }
 
-                return new VhAssemblyIfcExportResult
-                {
-                    Status = ResultStatus.Succeeded,
-                    ExportFolder = exportFolder,
-                    ExportedFiles = exportedFiles
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
-                        .ToList()
-                };
+                List<VhExportedIfcFile> exportedItems = FindExportedIfcFiles(exportFolder, startedAt)
+                    .Select(path =>
+                    {
+                        string assemblyCode = AssemblyUploadNaming.ExtractAssemblyCode(path);
+                        return new VhExportedIfcFile
+                        {
+                            FilePath = path,
+                            AssemblyCode = assemblyCode,
+                            SheetNumber = assemblyCode
+                        };
+                    })
+                    .ToList();
+
+                return Succeeded(exportFolder, exportedItems);
             }
             catch (Exception ex)
             {
-                return Failed(ex.Message, exportFolder);
-            }
-            finally
-            {
-                try
-                {
-                    if (group.HasStarted())
-                        group.RollBack();
-                }
-                catch
-                {
-                    // Export files are already written; rollback is only for temporary Revit views.
-                }
+                return Failed(ex.Message);
             }
         }
 
-        private static List<PreparedAssemblyView> PrepareAssemblyViews(Document doc, List<AssemblyExportItem> exportItems)
+        private static Result ExecuteOriginalExporter(
+            ExternalCommandData commandData,
+            ref string message,
+            ElementSet elements)
         {
-            var prepared = new List<PreparedAssemblyView>();
+            string exporterFolder = ResolveOriginalExporterFolder();
+            EnsureAssemblyResolver(exporterFolder);
 
-            using (Transaction transaction = new Transaction(doc, "Tijdelijke IFC views maken"))
-            {
-                transaction.Start();
+            string assemblyPath = Path.Combine(exporterFolder, OriginalExporterAssemblyName);
+            Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+            Type commandType = assembly.GetType(OriginalExporterCommandType, throwOnError: true);
+            object command = Activator.CreateInstance(commandType);
 
-                View3D baseView = FindBase3DView(doc) ?? CreateBase3DView(doc);
-                if (baseView == null)
-                    throw new InvalidOperationException("Geen bruikbare 3D view gevonden of aangemaakt.");
+            if (command is not IExternalCommand externalCommand)
+                throw new InvalidOperationException("De originele IFC exporter command kon niet worden gestart.");
 
-                foreach (AssemblyExportItem item in exportItems)
-                {
-                    ElementId duplicatedId = baseView.Duplicate(ViewDuplicateOption.Duplicate);
-                    View3D view = doc.GetElement(duplicatedId) as View3D;
-                    if (view == null)
-                        continue;
-
-                    view.Name = BuildTempViewName(doc, item);
-                    ConfigureViewForAssembly(doc, view, item.Assembly);
-                    prepared.Add(new PreparedAssemblyView(item, view));
-                }
-
-                transaction.Commit();
-            }
-
-            return prepared;
+            return externalCommand.Execute(commandData, ref message, elements);
         }
 
-        private static void ConfigureViewForAssembly(Document doc, View3D view, AssemblyInstance assembly)
+        private static string ResolveOriginalExporterFolder()
         {
-            BoundingBoxXYZ sectionBox = BuildSectionBox(doc, assembly);
-            if (sectionBox != null)
+            string addinFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            List<string> candidates = new List<string>
             {
-                view.IsSectionBoxActive = true;
-                view.SetSectionBox(sectionBox);
-            }
-
-            doc.Regenerate();
-
-            var visibleIds = new FilteredElementCollector(doc, view.Id)
-                .WhereElementIsNotElementType()
-                .ToElements();
-
-            var memberIds = new HashSet<ElementId>(assembly.GetMemberIds(), new ElementIdComparer())
-            {
-                assembly.Id
+                Path.Combine(addinFolder ?? "", "OriginalExporter")
             };
 
-            var hideIds = visibleIds
-                .Where(element => element != null)
-                .Where(element => !memberIds.Contains(element.Id))
-                .Where(element => CanHide(element, view))
-                .Select(element => element.Id)
-                .Distinct(new ElementIdComparer())
-                .ToList();
+            candidates.AddRange(FindVendoredExporterRuntimeFolders(addinFolder));
 
-            HideElementsInChunks(view, hideIds);
-        }
-
-        private static List<AssemblyExportItem> ResolveExportItems(Document doc, IList<string> selectedDesignPhases)
-        {
-            var assemblyLookup = GetAssemblyLookup(doc);
-            var sheets = GetSheets(doc);
-            var phaseSet = new HashSet<string>(
-                (selectedDesignPhases ?? new List<string>()).Where(value => !string.IsNullOrWhiteSpace(value)),
-                StringComparer.OrdinalIgnoreCase);
-
-            var candidateSheets = phaseSet.Count > 0
-                ? sheets
-                    .Where(sheet => !StartsWithDigit(sheet.SheetNumber))
-                    .Where(sheet => phaseSet.Contains(GetStringParameter(sheet, DesignPhaseParameter) ?? ""))
-                    .ToList()
-                : new List<ViewSheet>();
-
-            var items = new List<AssemblyExportItem>();
-            var usedAssemblies = new HashSet<ElementId>(new ElementIdComparer());
-
-            foreach (ViewSheet sheet in candidateSheets)
+            foreach (string candidate in candidates)
             {
-                string sheetNumber = sheet.SheetNumber?.Trim();
-                if (string.IsNullOrWhiteSpace(sheetNumber))
-                    continue;
-
-                if (!assemblyLookup.TryGetValue(sheetNumber, out AssemblyInstance assembly))
-                    continue;
-
-                if (!usedAssemblies.Add(assembly.Id))
-                    continue;
-
-                items.Add(new AssemblyExportItem(assembly, sheet, sheetNumber));
+                string fullPath = Path.GetFullPath(candidate);
+                if (File.Exists(Path.Combine(fullPath, OriginalExporterAssemblyName)))
+                    return fullPath;
             }
 
-            if (items.Count > 0)
-                return items;
-
-            if (phaseSet.Count > 0)
-                return items;
-
-            IEnumerable<AssemblyInstance> fallbackAssemblies = GetAssembliesInActiveView(doc);
-
-            return fallbackAssemblies
-                .Where(assembly => assembly != null)
-                .GroupBy(assembly => assembly.Id.Value)
-                .Select(group => group.First())
-                .Select(assembly =>
-                {
-                    string code = GetAssemblyCode(assembly);
-                    return new AssemblyExportItem(assembly, FindSheetForAssemblyCode(sheets, code), code);
-                })
-                .Where(item => !string.IsNullOrWhiteSpace(item.AssemblyCode))
-                .OrderBy(item => item.AssemblyCode, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            throw new FileNotFoundException(
+                "De originele IFC exporter bestanden zijn niet gevonden.",
+                OriginalExporterAssemblyName);
         }
 
-        private static Dictionary<string, AssemblyInstance> GetAssemblyLookup(Document doc)
+        private static IEnumerable<string> FindVendoredExporterRuntimeFolders(string startFolder)
         {
-            var lookup = new Dictionary<string, AssemblyInstance>(StringComparer.OrdinalIgnoreCase);
-            var assemblies = new FilteredElementCollector(doc)
-                .OfClass(typeof(AssemblyInstance))
-                .WhereElementIsNotElementType()
-                .Cast<AssemblyInstance>();
-
-            foreach (AssemblyInstance assembly in assemblies)
+            string current = startFolder;
+            while (!string.IsNullOrWhiteSpace(current))
             {
-                AddLookup(lookup, GetStringParameter(assembly, AssemblyCodeParameter), assembly);
-                AddLookup(lookup, GetStringParameter(assembly, CbAssemblyCodeParameter), assembly);
-                AddLookup(lookup, assembly.Name, assembly);
-            }
+                yield return Path.Combine(
+                    current,
+                    "OriginalExporter",
+                    "VHExportAssemblies",
+                    "IFCExportSingleAssembly",
+                    "bin",
+                    "Debug",
+                    "net8.0-windows7.0");
 
-            return lookup;
-        }
+                yield return Path.Combine(
+                    current,
+                    "OriginalExporter",
+                    "VHExportAssemblies",
+                    "IFCExportSingleAssembly",
+                    "bin",
+                    "Release",
+                    "net8.0-windows7.0");
 
-        private static List<ViewSheet> GetSheets(Document doc)
-        {
-            return new FilteredElementCollector(doc)
-                .OfClass(typeof(ViewSheet))
-                .Cast<ViewSheet>()
-                .Where(sheet => !sheet.IsPlaceholder)
-                .OrderBy(sheet => sheet.SheetNumber, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-
-        private static IEnumerable<AssemblyInstance> GetAssembliesInActiveView(Document doc)
-        {
-            if (doc.ActiveView == null)
-                return Enumerable.Empty<AssemblyInstance>();
-
-            try
-            {
-                return new FilteredElementCollector(doc, doc.ActiveView.Id)
-                    .OfClass(typeof(AssemblyInstance))
-                    .WhereElementIsNotElementType()
-                    .Cast<AssemblyInstance>()
-                    .ToList();
-            }
-            catch
-            {
-                return Enumerable.Empty<AssemblyInstance>();
+                DirectoryInfo parent = Directory.GetParent(current);
+                current = parent?.FullName;
             }
         }
 
-        private static ViewSheet FindSheetForAssemblyCode(IEnumerable<ViewSheet> sheets, string assemblyCode)
+        private static void EnsureAssemblyResolver(string exporterFolder)
         {
-            if (string.IsNullOrWhiteSpace(assemblyCode))
-                return null;
-
-            return sheets.FirstOrDefault(sheet =>
-                string.Equals(sheet.SheetNumber?.Trim(), assemblyCode, StringComparison.OrdinalIgnoreCase) ||
-                (!string.IsNullOrWhiteSpace(sheet.Name) &&
-                 sheet.Name.IndexOf(assemblyCode, StringComparison.OrdinalIgnoreCase) >= 0));
-        }
-
-        private static View3D FindBase3DView(Document doc)
-        {
-            var views = new FilteredElementCollector(doc)
-                .OfClass(typeof(View3D))
-                .Cast<View3D>()
-                .Where(view => !view.IsTemplate)
-                .Where(view => !view.IsPerspective)
-                .ToList();
-
-            return views.FirstOrDefault(view =>
-                       string.Equals(view.Name, PreferredBase3DViewName, StringComparison.OrdinalIgnoreCase)) ??
-                   views.FirstOrDefault();
-        }
-
-        private static View3D CreateBase3DView(Document doc)
-        {
-            ViewFamilyType type = new FilteredElementCollector(doc)
-                .OfClass(typeof(ViewFamilyType))
-                .Cast<ViewFamilyType>()
-                .FirstOrDefault(viewType => viewType.ViewFamily == ViewFamily.ThreeDimensional);
-
-            return type == null ? null : View3D.CreateIsometric(doc, type.Id);
-        }
-
-        private static BoundingBoxXYZ BuildSectionBox(Document doc, AssemblyInstance assembly)
-        {
-            var boxes = assembly.GetMemberIds()
-                .Select(id => doc.GetElement(id))
-                .Where(element => element != null)
-                .Select(element => element.get_BoundingBox(null))
-                .Where(box => box != null)
-                .ToList();
-
-            if (boxes.Count == 0)
-                return null;
-
-            double minX = boxes.Min(box => box.Min.X);
-            double minY = boxes.Min(box => box.Min.Y);
-            double minZ = boxes.Min(box => box.Min.Z);
-            double maxX = boxes.Max(box => box.Max.X);
-            double maxY = boxes.Max(box => box.Max.Y);
-            double maxZ = boxes.Max(box => box.Max.Z);
-            const double offsetFeet = 1.0;
-
-            return new BoundingBoxXYZ
+            lock (ResolverLock)
             {
-                Min = new XYZ(minX - offsetFeet, minY - offsetFeet, minZ - offsetFeet),
-                Max = new XYZ(maxX + offsetFeet, maxY + offsetFeet, maxZ + offsetFeet)
-            };
-        }
+                _originalExporterFolder = exporterFolder;
+                if (_resolverRegistered)
+                    return;
 
-        private static void ExportView(Document doc, View3D view, string exportFolder, string fileName)
-        {
-            IFCExportOptions options = BuildExportOptions(view);
-            bool exported;
-
-            using (Transaction transaction = new Transaction(doc, $"IFC export {fileName}"))
-            {
-                transaction.Start();
-                exported = doc.Export(exportFolder, fileName, options);
-                transaction.Commit();
+                AssemblyLoadContext.Default.Resolving += ResolveOriginalExporterDependency;
+                _resolverRegistered = true;
             }
-
-            if (!exported)
-                throw new InvalidOperationException($"IFC export mislukt voor {fileName}.");
         }
 
-        private static IFCExportOptions BuildExportOptions(View3D view)
+        private static Assembly ResolveOriginalExporterDependency(AssemblyLoadContext context, AssemblyName assemblyName)
         {
-            var options = new IFCExportOptions
-            {
-                FileVersion = MapIfcVersion(SettingsManager.Instance.IfcVersion),
-                FilterViewId = view.Id,
-                SpaceBoundaryLevel = 0,
-                WallAndColumnSplitting = false,
-                ExportBaseQuantities = false
-            };
+            string candidate = Path.Combine(_originalExporterFolder ?? "", assemblyName.Name + ".dll");
+            if (File.Exists(candidate))
+                return context.LoadFromAssemblyPath(candidate);
 
-            options.AddOption("ConfigName", ExportConfigName);
-            options.AddOption("UseActiveViewGeometry", "true");
-            options.AddOption("VisibleElementsOfCurrentView", "true");
-            options.AddOption("ExportRoomsInView", "false");
-            options.AddOption("Export2DElements", "false");
-            options.AddOption("ExportLinkedFiles", "DontExport");
-            options.AddOption("IncludeSteelElements", "false");
-            options.AddOption("TessellationLevelOfDetail", "0.2");
+            return null;
+        }
 
-            string propertySetFile = Path.Combine(
+        private static string ReadOriginalExporterFolder()
+        {
+            string configPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Autodesk",
                 "Revit",
                 "Addins",
-                "IFCExport",
-                "PropertySet.txt");
+                "IFCExportSingleAssembly",
+                "config.xml");
 
-            if (File.Exists(propertySetFile))
-            {
-                options.AddOption("ExportUserDefinedPsets", "true");
-                options.AddOption("ExportUserDefinedPsetsFileName", propertySetFile);
-            }
-            else
-            {
-                options.AddOption("ExportUserDefinedPsets", "false");
-            }
+            if (!File.Exists(configPath))
+                return null;
 
-            return options;
+            XDocument document = XDocument.Load(configPath);
+
+            string fileExportPath = document
+                .Descendants()
+                .FirstOrDefault(element =>
+                    string.Equals(element.Name.LocalName, "FileExportPath", StringComparison.OrdinalIgnoreCase) &&
+                    Directory.Exists((element.Value ?? "").Trim()))
+                ?.Value
+                ?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(fileExportPath))
+                return fileExportPath;
+
+            return document
+                .Descendants()
+                .Select(element => (element.Value ?? "").Trim())
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value) && Directory.Exists(value));
         }
 
-        private static IFCVersion MapIfcVersion(string value)
+        private static IEnumerable<string> FindExportedIfcFiles(string exportFolder, DateTime startedAt)
         {
-            if (string.Equals(value, "IFC2x3", StringComparison.OrdinalIgnoreCase))
-                return IFCVersion.IFC2x3;
-
-            return IFCVersion.IFC4;
-        }
-
-        private static string ResolveExportFolder(string preferredFolder, Document doc)
-        {
-            if (!string.IsNullOrWhiteSpace(preferredFolder))
-                return preferredFolder.Trim();
-
-            string downloads = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Downloads");
-            if (Directory.Exists(downloads))
-                return downloads;
-
-            if (!string.IsNullOrWhiteSpace(doc.PathName))
-                return Path.GetDirectoryName(doc.PathName);
-
-            return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        }
-
-        private static string FindExportedIfc(string folder, string fileName, DateTime startedAt)
-        {
-            string directPath = Path.Combine(folder, fileName + ".ifc");
-            if (File.Exists(directPath))
-                return directPath;
-
-            return Directory.GetFiles(folder, "*.ifc", SearchOption.TopDirectoryOnly)
+            return Directory
+                .GetFiles(exportFolder, "*.ifc", SearchOption.TopDirectoryOnly)
                 .Where(path => File.GetLastWriteTime(path) >= startedAt)
-                .Where(path => string.Equals(Path.GetFileNameWithoutExtension(path), fileName, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(File.GetLastWriteTime)
-                .FirstOrDefault();
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
-        private static void HideElementsInChunks(View view, List<ElementId> ids)
-        {
-            const int chunkSize = 1000;
-            for (int i = 0; i < ids.Count; i += chunkSize)
-            {
-                var chunk = ids.Skip(i).Take(chunkSize).ToList();
-                if (chunk.Count == 0)
-                    continue;
-
-                try
-                {
-                    view.HideElements(chunk);
-                }
-                catch
-                {
-                    foreach (ElementId id in chunk)
-                    {
-                        try { view.HideElements(new[] { id }); }
-                        catch { }
-                    }
-                }
-            }
-        }
-
-        private static bool CanHide(Element element, View view)
-        {
-            try { return element.CanBeHidden(view); }
-            catch { return false; }
-        }
-
-        private static void AddLookup(Dictionary<string, AssemblyInstance> lookup, string code, AssemblyInstance assembly)
-        {
-            code = code?.Trim();
-            if (string.IsNullOrWhiteSpace(code) || lookup.ContainsKey(code))
-                return;
-
-            lookup.Add(code, assembly);
-        }
-
-        private static string GetAssemblyCode(AssemblyInstance assembly)
-        {
-            return GetStringParameter(assembly, AssemblyCodeParameter)
-                   ?? GetStringParameter(assembly, CbAssemblyCodeParameter)
-                   ?? assembly.Name;
-        }
-
-        private static string GetStringParameter(Element element, string name)
-        {
-            Parameter parameter = element?.LookupParameter(name);
-            if (parameter == null || !parameter.HasValue)
-                return null;
-
-            string value = parameter.StorageType == StorageType.String
-                ? parameter.AsString()
-                : parameter.AsValueString();
-
-            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        }
-
-        private static bool StartsWithDigit(string value)
-        {
-            return !string.IsNullOrWhiteSpace(value) && char.IsDigit(value.Trim()[0]);
-        }
-
-        private static string BuildTempViewName(Document doc, AssemblyExportItem item)
-        {
-            string baseName = MakeSafeViewName($"VH IFC Export - {item.AssemblyCode}");
-            if (baseName.Length > 90)
-                baseName = baseName.Substring(0, 90).Trim();
-
-            var existingNames = new HashSet<string>(
-                new FilteredElementCollector(doc)
-                    .OfClass(typeof(View))
-                    .Cast<View>()
-                    .Select(view => view.Name),
-                StringComparer.OrdinalIgnoreCase);
-
-            string candidate = baseName;
-            int index = 1;
-            while (existingNames.Contains(candidate))
-            {
-                candidate = $"{baseName} ({index})";
-                index++;
-            }
-
-            return candidate;
-        }
-
-        private static string MakeSafeFileName(string name)
-        {
-            string safeName = MakeSafeToken(name);
-            return string.IsNullOrWhiteSpace(safeName) ? "assembly" : safeName;
-        }
-
-        private static string MakeSafeViewName(string name)
-        {
-            return MakeSafeToken(name);
-        }
-
-        private static string MakeSafeToken(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-
-            var invalidChars = new HashSet<char>(Path.GetInvalidFileNameChars())
-            {
-                '{', '}', '[', ']', '<', '>', '|', ';'
-            };
-
-            return new string(name.Trim().Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray()).Trim();
-        }
-
-        private static VhAssemblyIfcExportResult Failed(string message, string exportFolder = null)
+        private static VhAssemblyIfcExportResult Failed(string message)
         {
             return new VhAssemblyIfcExportResult
             {
                 Status = ResultStatus.Failed,
-                Message = message,
-                ExportFolder = exportFolder
+                Message = message
             };
         }
 
-        private class AssemblyExportItem
+        private static VhAssemblyIfcExportResult Succeeded(string exportFolder, List<VhExportedIfcFile> exportedItems)
         {
-            public AssemblyExportItem(AssemblyInstance assembly, ViewSheet sheet, string assemblyCode)
+            return new VhAssemblyIfcExportResult
             {
-                Assembly = assembly;
-                Sheet = sheet;
-                AssemblyCode = assemblyCode;
-            }
-
-            public AssemblyInstance Assembly { get; }
-            public ViewSheet Sheet { get; }
-            public string AssemblyCode { get; }
+                Status = ResultStatus.Succeeded,
+                ExportFolder = exportFolder,
+                ExportedItems = exportedItems ?? new List<VhExportedIfcFile>(),
+                ExportedFiles = (exportedItems ?? new List<VhExportedIfcFile>())
+                    .Select(item => item.FilePath)
+                    .ToList()
+            };
         }
 
-        private class PreparedAssemblyView
+        private static VhAssemblyIfcExportResult Cancelled(string message)
         {
-            public PreparedAssemblyView(AssemblyExportItem item, View3D view)
+            return new VhAssemblyIfcExportResult
             {
-                Item = item;
-                View = view;
-            }
-
-            public AssemblyExportItem Item { get; }
-            public View3D View { get; }
-        }
-
-        private class ElementIdComparer : IEqualityComparer<ElementId>
-        {
-            public bool Equals(ElementId x, ElementId y)
-            {
-                if (ReferenceEquals(x, y)) return true;
-                if (x is null || y is null) return false;
-                return x.Value == y.Value;
-            }
-
-            public int GetHashCode(ElementId obj)
-            {
-                return obj?.Value.GetHashCode() ?? 0;
-            }
+                Status = ResultStatus.Cancelled,
+                Message = message
+            };
         }
     }
 }

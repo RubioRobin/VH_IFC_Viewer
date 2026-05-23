@@ -68,7 +68,7 @@ module.exports = (supabase, logActivity) => {
 
         async createShare(versionId, token, expiresAt = null) {
             if (!supabase) return null;
-            const record = { model_version_id: versionId, token };
+            const record = { model_version_id: versionId, token, is_active: true };
             if (expiresAt) record.expires_at = expiresAt;
             const { data, error } = await supabase.from('shares').insert([record]).select().single();
             if (error) throw error;
@@ -82,7 +82,76 @@ module.exports = (supabase, logActivity) => {
 
         async getShareByToken(token) {
             if (!supabase) return null;
-            const { data, error } = await supabase.from('shares').select('*, model_versions(*, models(*, projects(*)))').eq('token', token).eq('is_active', true).single();
+            const { data, error } = await supabase
+                .from('shares')
+                .select('*, model_versions(*, models(*, projects(*)))')
+                .eq('token', token)
+                .or('is_active.eq.true,is_active.is.null')
+                .maybeSingle();
+
+            if (!error && data) return data;
+
+            if (error) {
+                console.warn('[Share] Geneste share-query mislukt, fallback wordt geprobeerd:', error.message);
+            }
+
+            const { data: share, error: shareError } = await supabase
+                .from('shares')
+                .select('*')
+                .eq('token', token)
+                .or('is_active.eq.true,is_active.is.null')
+                .maybeSingle();
+
+            if (shareError || !share) {
+                if (shareError) console.warn('[Share] Share-token niet gevonden:', shareError.message);
+                return null;
+            }
+
+            const { data: version, error: versionError } = await supabase
+                .from('model_versions')
+                .select('*')
+                .eq('id', share.model_version_id)
+                .maybeSingle();
+
+            if (versionError || !version) return null;
+
+            const { data: model, error: modelError } = await supabase
+                .from('models')
+                .select('*')
+                .eq('id', version.model_id)
+                .maybeSingle();
+
+            if (modelError || !model) return null;
+
+            const { data: project } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('id', model.project_id)
+                .maybeSingle();
+
+            return {
+                ...share,
+                model_versions: {
+                    ...version,
+                    models: {
+                        ...model,
+                        projects: project || { id: model.project_id, name: 'Project' }
+                    }
+                }
+            };
+        },
+
+        async getShareByVersionId(versionId) {
+            if (!supabase) return null;
+            const { data, error } = await supabase
+                .from('shares')
+                .select('*')
+                .eq('model_version_id', versionId)
+                .or('is_active.eq.true,is_active.is.null')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
             if (error) return null;
             return data;
         },

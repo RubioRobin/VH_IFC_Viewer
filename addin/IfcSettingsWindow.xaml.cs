@@ -12,6 +12,7 @@ namespace VH_IFC_QR
         public IfcSettingsWindow()
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
             LoadSettingsToUI();
         }
 
@@ -63,7 +64,7 @@ namespace VH_IFC_QR
             }
             else
             {
-                MessageBox.Show("Voer een geldige getalswaarde in voor de QR grootte (bijv. 25 of 25.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
+                RevitWindowHelper.ShowMessage(this, "Voer een geldige getalswaarde in voor de QR grootte (bijv. 25 of 25.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -74,7 +75,7 @@ namespace VH_IFC_QR
             }
             else
             {
-                MessageBox.Show("Voer een geldige getalswaarde in voor de QR afstand (bijv. 10 of 10.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
+                RevitWindowHelper.ShowMessage(this, "Voer een geldige getalswaarde in voor de QR afstand (bijv. 10 of 10.5).", "Fout", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 

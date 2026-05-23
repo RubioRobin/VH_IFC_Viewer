@@ -1,0 +1,26 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <SpecificVersion>False</SpecificVersion>
+	  <HintPath>..\..\..\API\2025\RevitAPI.dll</HintPath>
+	  <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\API\2025\RevitAPIUI.dll</HintPath>
+	  <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIIFC">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\API\2025\RevitAPIIFC.dll</HintPath>
+	  <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup />
+    <!--
+    Always Import the appropriate *.OutputPath.targets file BEFORE the
+    Revit.CSharp.targets file, otherwise VisualStudio will complain
+    about missing OutputPath tags.
+    -->
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.targets" />
+</Project>

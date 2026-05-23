@@ -4,7 +4,35 @@ const bcrypt = require('bcryptjs');
 const db = require('../database');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+const { buildRevitExportStoragePath } = require('../services/storage-paths');
 const router = express.Router();
+
+function getViewerBaseUrl() {
+    const rawBaseUrl = process.env.VIEWER_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    try {
+        const parsed = new URL(rawBaseUrl);
+        parsed.hash = '';
+        parsed.search = '';
+
+        if (parsed.pathname.endsWith('/admin.html') || parsed.pathname.endsWith('/index.html')) {
+            parsed.pathname = parsed.pathname.substring(0, parsed.pathname.lastIndexOf('/'));
+        }
+
+        const path = parsed.pathname.replace(/\/+$/, '');
+        return `${parsed.origin}${path}`;
+    } catch {
+        return rawBaseUrl
+            .split('#')[0]
+            .split('?')[0]
+            .replace(/\/(?:admin|index)\.html$/i, '')
+            .replace(/\/+$/, '');
+    }
+}
+
+function buildViewerUrl(token) {
+    return `${getViewerBaseUrl()}/v/${encodeURIComponent(token)}`;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const PLUGIN_CLIENT_ID = process.env.PLUGIN_CLIENT_ID || 'revit_plugin';
@@ -18,8 +46,8 @@ if (!PLUGIN_CLIENT_SECRET) {
     console.error('❌ KRITIEK: PLUGIN_CLIENT_SECRET is niet ingesteld! Plugin-authenticatie is onmogelijk. Applicatie stopt.');
     process.exit(1);
 }
-if (process.env.NODE_ENV === 'production' && !process.env.VIEWER_URL) {
-    console.error('❌ KRITIEK: VIEWER_URL is niet ingesteld in productie! QR-codes verwijzen naar localhost. Applicatie stopt.');
+if (process.env.NODE_ENV === 'production' && !process.env.VIEWER_URL && !process.env.FRONTEND_URL) {
+    console.error('❌ KRITIEK: VIEWER_URL of FRONTEND_URL is niet ingesteld in productie! QR-codes verwijzen naar localhost. Applicatie stopt.');
     process.exit(1);
 }
 
@@ -145,13 +173,26 @@ router.post('/models/create', authenticatePlugin, authenticatePluginUser, async 
 // 4. Upload-sessie aanmaken
 router.post('/models/:modelId/versions/upload-session', authenticatePlugin, authenticatePluginUser, async (req, res) => {
     const { modelId } = req.params;
-    const { fileName, contentType, fileSize, checksumSha256 } = req.body;
+    const { fileName, fileSize, checksumSha256 } = req.body;
 
     // Bestandsnaam sanitiseren om 'InvalidKey'-fouten in Supabase Storage te voorkomen
     const sanitizedFileName = (fileName || 'unnamed.ifc').replace(/[^a-zA-Z0-9.\-_]/g, '_');
 
     try {
-        const storagePath = `revit_exports/${modelId}/${uuidv4()}_${sanitizedFileName}`;
+        const { data: model, error: modelError } = await db.supabase
+            .from('models')
+            .select('project_id')
+            .eq('id', modelId)
+            .single();
+
+        if (modelError || !model) throw new Error('Model niet gevonden');
+
+        const storagePath = buildRevitExportStoragePath({
+            projectId: model.project_id,
+            modelId,
+            fileName: sanitizedFileName
+        });
+
         const uploadInfo = await db.createSignedUploadUrl(storagePath);
 
         if (!uploadInfo) throw new Error('Kon upload URL niet genereren');
@@ -161,11 +202,8 @@ router.post('/models/:modelId/versions/upload-session', authenticatePlugin, auth
 
         // SYNC: Also register in the 'files' table so it shows up in the project dashboard
         try {
-            const { data: model } = await db.supabase.from('models').select('project_id').eq('id', modelId).single();
-            if (model) {
-                const userName = req.user ? req.user.username : (req.body.uploaderName || 'Revit User');
-                await db.createFile(null, model.project_id, fileName, storagePath, fileSize, userName);
-            }
+            const userName = req.user ? req.user.username : (req.body.uploaderName || 'Revit User');
+            await db.createFile(null, model.project_id, fileName, storagePath, fileSize, userName);
         } catch (syncError) {
             console.warn('Dashboard sync failed (non-critical):', syncError.message);
         }
@@ -194,8 +232,7 @@ router.post('/models/:modelId/versions/:versionId/share', authenticatePlugin, as
     const shareToken = uuidv4();
     try {
         const share = await db.createShare(versionId, shareToken);
-        const baseUrl = process.env.VIEWER_URL || 'http://localhost:5173';
-        const viewerUrl = `${baseUrl}/v/${shareToken}`;
+        const viewerUrl = buildViewerUrl(share.token || shareToken);
         res.json({ token: shareToken, viewerUrl });
     } catch (e) {
         console.error('[Plugin] Deellink aanmaken fout:', e);
@@ -209,8 +246,15 @@ router.post('/models/:modelId/versions/:versionId/qr', authenticatePlugin, async
     const { viewerUrl, projectId } = req.body;
 
     try {
+        const share = await db.getShareByVersionId(versionId);
+        const qrViewerUrl = share?.token ? buildViewerUrl(share.token) : viewerUrl;
+
+        if (!qrViewerUrl) {
+            return res.status(400).json({ error: 'Viewerlink ontbreekt' });
+        }
+
         // Generate QR code as Buffer
-        const qrBuffer = await QRCode.toBuffer(viewerUrl, {
+        const qrBuffer = await QRCode.toBuffer(qrViewerUrl, {
             errorCorrectionLevel: 'H',
             type: 'png',
             margin: 1,
@@ -279,9 +323,8 @@ router.post('/files/:fileId/share-qr', authenticatePlugin, async (req, res) => {
 
         // 3. Share link genereren
         const shareToken = uuidv4();
-        await db.createShare(version.id, shareToken);
-        const baseUrl = process.env.VIEWER_URL || 'http://localhost:5173';
-        const viewerUrl = `${baseUrl}/v/${shareToken}`;
+        const share = await db.createShare(version.id, shareToken);
+        const viewerUrl = buildViewerUrl(share.token || shareToken);
 
         // 4. QR code genereren als buffer
         const qrBuffer = await QRCode.toBuffer(viewerUrl, {

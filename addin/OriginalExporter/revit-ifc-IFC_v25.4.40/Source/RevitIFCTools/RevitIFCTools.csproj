@@ -1,0 +1,48 @@
+﻿<Project Sdk="">
+  <PropertyGroup>
+    <RootNamespace>RevitIFCTools</RootNamespace>
+    <AssemblyName>RevitIFCTools</AssemblyName>
+    <OutputType>WinExe</OutputType>
+	<UseWPF>true</UseWPF>
+   <EnableDefaultPageItems>false</EnableDefaultPageItems>
+   <UseWindowsForms>False</UseWindowsForms>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.props" />
+  <ItemGroup>
+    <None Remove="App.xaml" />
+    <None Remove="GeneratePsetDefWin.xaml" />
+    <None Remove="IFCEntityListWin.xaml" />
+    <None Remove="MainWindow.xaml" />
+    <None Remove="PropertySet\ExprTester.xaml" />
+  </ItemGroup>
+   <ItemGroup>
+      <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+   </ItemGroup>
+   <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+   <ItemGroup>
+     <ProjectReference Include="..\Revit.IFC.Common\Revit.IFC.Common.csproj" />
+     <ProjectReference Include="..\Revit.IFC.Export\Revit.IFC.Export.csproj" />
+   </ItemGroup>
+  
+   <ItemGroup>
+         <PackageReference Include="Antlr4.Runtime">
+      <Version>4.6.6</Version>
+    </PackageReference>
+  </ItemGroup>
+   <ItemGroup>
+     <Page Include="App.xaml" />
+     <Page Include="GeneratePsetDefWin.xaml" />
+     <Page Include="IFCEntityListWin.xaml" />
+     <Page Include="MainWindow.xaml" />
+     <Page Include="ParameterExpr\ExprTester.xaml" />
+   </ItemGroup>
+   <ItemGroup>
+     <Reference Include="RevitAPI">
+       <HintPath>..\..\..\API\2025\RevitAPI.dll</HintPath>
+     </Reference>
+   </ItemGroup>
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.targets" />
+
+</Project>

@@ -6,6 +6,9 @@ build/
 .serverless/
 bin/
 obj/
+!addin/OriginalExporter/
+!addin/OriginalExporter/**
+addin/OriginalExporter/revit-ifc-IFC_v25.4.40/Source/RevitIFCTools/IFC_Schemas/*.zip
 
 # Environment
 .env

@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <TargetFramework>net8.0-windows7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Antlr4.Runtime">
+      <HintPath>bin\Debug\net8.0-windows7.0\Antlr4.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Autodesk.UI.Windows">
+      <HintPath>bin\Debug\net8.0-windows7.0\Autodesk.UI.Windows.dll</HintPath>
+    </Reference>
+    <Reference Include="Autodesk.Weave.Wpf">
+      <HintPath>bin\Debug\net8.0-windows7.0\Autodesk.Weave.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="CodeLibrary">
+      <HintPath>bin\Debug\net8.0-windows7.0\CodeLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="IFCExporterUIOverride">
+      <HintPath>bin\Debug\net8.0-windows7.0\IFCExporterUIOverride.dll</HintPath>
+    </Reference>
+    <Reference Include="IFCExportSingleAssemblyUI">
+      <HintPath>bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.dll</HintPath>
+    </Reference>
+    <Reference Include="IntfIFCAPI">
+      <HintPath>bin\Debug\net8.0-windows7.0\IntfIFCAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>bin\Debug\net8.0-windows7.0\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Revit.IFC.Common">
+      <HintPath>bin\Debug\net8.0-windows7.0\Revit.IFC.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Revit.IFC.Export">
+      <HintPath>bin\Debug\net8.0-windows7.0\Revit.IFC.Export.dll</HintPath>
+    </Reference>
+    <Reference Include="RevitAPI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIIFC">
+      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIIFC.dll</HintPath>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UserInterfaceUtility">
+      <HintPath>bin\Debug\net8.0-windows7.0\UserInterfaceUtility.dll</HintPath>
+    </Reference>
+    <Reference Include="VHCreateSheets">
+      <HintPath>bin\Debug\net8.0-windows7.0\VHCreateSheets.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

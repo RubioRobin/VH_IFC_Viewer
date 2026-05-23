@@ -14,6 +14,22 @@
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*" ExcludeAssets="runtime" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="VhExportSelectionWindow.xaml.cs" />
+    <ApplicationDefinition Remove="OriginalExporter\**\*.xaml" />
+    <Compile Remove="OriginalExporter\**\*.cs" />
+    <EmbeddedResource Remove="OriginalExporter\**\*.*" />
+    <None Remove="OriginalExporter\**\*.*" />
+    <Page Remove="VhExportSelectionWindow.xaml" />
+    <Page Remove="OriginalExporter\**\*.xaml" />
+    <Resource Remove="OriginalExporter\**\*.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\**\*.*">
+      <Link>OriginalExporter\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
@@ -27,8 +43,12 @@
   </PropertyGroup>
 
   <Target Name="CopyToRevitAddins" AfterTargets="Build" Condition="'$(CopyToRevitAddins)' != 'false'">
-    <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
-    <Copy SourceFiles="$(TargetPath)"
-          DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR\" />
+    <MakeDir Directories="$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR_bundled\" />
+    <ItemGroup>
+      <AddinOutput Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AddinOutput)"
+          DestinationFiles="@(AddinOutput->'$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR_bundled\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
   </Target>
 </Project>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../lib/api';
 
@@ -39,6 +39,39 @@ interface RevitModel {
     model_versions: ModelVersion[];
 }
 
+const naturalCollator = new Intl.Collator('nl-NL', {
+    numeric: true,
+    sensitivity: 'base'
+});
+
+const cleanFileName = (filename: string) => {
+    let name = filename || '';
+
+    name = name.replace(/_?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_?/g, '');
+    name = name.replace(/\.\.+/g, '.');
+
+    const parts = name.split('.');
+    if (parts.length >= 3) {
+        const ext = parts.pop();
+        const lastPart = parts[parts.length - 1];
+        const secondLastPart = parts[parts.length - 2];
+
+        if (lastPart === secondLastPart) {
+            parts.pop();
+        }
+
+        name = [...parts, ext].join('.');
+    }
+
+    return name;
+};
+
+const compareFilesByName = (a: FileData, b: FileData) =>
+    naturalCollator.compare(cleanFileName(a.filename), cleanFileName(b.filename));
+
+const compareModelsByName = (a: RevitModel, b: RevitModel) =>
+    naturalCollator.compare(a.name || '', b.name || '');
+
 export function ProjectDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -67,8 +100,8 @@ export function ProjectDetailsPage() {
                 fetchAPI(`/projects/${id}/models`).catch(() => [])
             ]);
             setProject(projectData);
-            setFiles(filesData);
-            setModels(modelsData || []);
+            setFiles([...(filesData || [])].sort(compareFilesByName));
+            setModels([...(modelsData || [])].sort(compareModelsByName));
         } catch (error) {
             console.error(error);
             toast({ type: 'error', title: 'Fout', message: 'Kon projectgegevens niet laden.' });
@@ -186,7 +219,7 @@ export function ProjectDetailsPage() {
         try {
             await fetchAPI(`/files/${fileToDelete}`, { method: 'DELETE' });
             toast({ type: 'success', title: 'Verwijderd', message: 'Bestand is verwijderd.' });
-            setFiles(files.filter(f => f.id !== fileToDelete));
+            setFiles(files.filter(f => f.id !== fileToDelete).sort(compareFilesByName));
         } catch (error) {
             toast({ type: 'error', title: 'Fout', message: 'Kon bestand niet verwijderen.' });
         } finally {
@@ -202,9 +235,13 @@ export function ProjectDetailsPage() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + indexes[i];
     };
 
-    const filteredFiles = files.filter(f =>
-        f.filename.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredFiles = useMemo(() => {
+        const query = searchTerm.toLowerCase();
+
+        return files
+            .filter(f => cleanFileName(f.filename).toLowerCase().includes(query))
+            .sort(compareFilesByName);
+    }, [files, searchTerm]);
 
     if (loading) return <div className="h-full flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
@@ -302,33 +339,7 @@ export function ProjectDetailsPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-base group-hover:text-blue-600 transition-colors">
-                                            {(() => {
-                                                // Clean filename: Remove UUIDs and clean up artifacts
-                                                // Pattern: "Name_UUID.ext" or "Name_UUID.Name.ext"
-                                                let name = f.filename || '';
-
-                                                // 1. Remove UUIDs (case insensitive)
-                                                name = name.replace(/_?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_?/g, '');
-
-                                                // 2. Remove double dots
-                                                name = name.replace(/\.\.+/g, '.');
-
-                                                // 3. Fix "Name.Name.ext" pattern (e.g. "Test.Test.ifc" -> "Test.ifc")
-                                                // Split by dot
-                                                const parts = name.split('.');
-                                                if (parts.length >= 3) {
-                                                    const ext = parts.pop(); // ifc
-                                                    const lastPart = parts[parts.length - 1]; // Test
-                                                    const secondLastPart = parts[parts.length - 2]; // Test
-
-                                                    if (lastPart === secondLastPart) {
-                                                        parts.pop(); // Remove duplicate
-                                                    }
-                                                    name = [...parts, ext].join('.');
-                                                }
-
-                                                return name;
-                                            })()}
+                                            {cleanFileName(f.filename)}
                                         </h4>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                                             <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" /> {formatBytes(f.size)}</span>

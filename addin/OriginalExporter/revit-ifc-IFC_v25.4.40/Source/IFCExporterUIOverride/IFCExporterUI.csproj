@@ -1,0 +1,144 @@
+﻿<Project Sdk="">
+  <PropertyGroup>
+    <AddinGUID>e78da2e3-7e89-464c-97cd-2212c8be3fa8</AddinGUID>
+    <AddinType>INT</AddinType>
+    <RootNamespace>BIM.IFC.Export.UI</RootNamespace>
+    <IFCExporterUIAssemblyName>Autodesk.IFC.Export.UI</IFCExporterUIAssemblyName>
+    <AssemblyName>$(IFCExporterUIAssemblyName)</AssemblyName>
+    <AssociatedParentPath>IFCExporterUI</AssociatedParentPath>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.props" />
+  <ItemGroup>
+    <Reference Include="Autodesk.UI.Windows">
+      <HintPath>$(RevitExePath)\Autodesk.UI.Windows.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Autodesk.Weave.Wpf">
+      <HintPath>$(RevitExePath)\Autodesk.Weave.Wpf.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="COBieCompanyInfoTab.xaml.cs">
+      <DependentUpon>COBieCompanyInfoTab.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="COBieProjectInfoTab.xaml.cs">
+      <DependentUpon>COBieProjectInfoTab.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCAddressInformationUI.xaml.cs">
+      <DependentUpon>IFCAddressInformationUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCClassificationUI.xaml.cs">
+      <DependentUpon>IFCClassificationUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCEntityTree\EntityTree.xaml.cs">
+      <DependentUpon>EntityTree.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCFileHeaderInformationUI.xaml.cs">
+      <DependentUpon>IFCFileHeaderInformationUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCRenameExportSetup.xaml.cs">
+      <DependentUpon>IFCRenameExportSetup.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCNewExportSetup.xaml.cs">
+      <DependentUpon>IFCNewExportSetup.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="IFCExport.xaml.cs">
+      <DependentUpon>IFCExport.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="IFCExporterUIWindow.xaml.cs">
+      <DependentUpon>IFCExporterUIWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icons\arrow_down.png" />
+    <Resource Include="icons\arrow_right.png" />
+    <Resource Include="icons\create.ico" />
+    <Resource Include="icons\data-refresh.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icons\delete.ico" />
+    <Resource Include="icons\duplicate_ico.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icons\rename.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icons\load.ico" />
+    <Resource Include="icons\save.ico" />
+    <Content Include="Autodesk.IFC.Export.UI.addin">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Foundation\UserInterfaceUtility\UserInterfaceUtility.csproj">
+      <Private>False</Private>
+      <ExcludeAssets>All</ExcludeAssets>
+      <PrivateAssets>All</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project=".\IFCExporterUI.props" />
+  <PropertyGroup>
+    <PostBuildEvent>
+      $(ProjectDir)CreateAddinFile.bat $(OutDir)$(TargetName).addin $(AssemblyName).dll $(AddinGUID)
+   </PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ItemGroup>
+    <Compile Remove="IFCVersionExtensions.cs" />
+    <Compile Remove="IFCEntityTree\PredefinedTypeSelection.xaml.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="icons\alert.png" />
+    <None Remove="icons\arrow_down.png" />
+    <None Remove="icons\arrow_right.png" />
+    <None Remove="icons\data-refresh.png" />
+    <None Remove="icons\duplicate_ico.ico" />
+    <None Remove="icons\search.png" />
+    <None Remove="icons\template_add.png" />
+    <None Remove="icons\template_copy.png" />
+    <None Remove="icons\template_delete.png" />
+    <None Remove="icons\template_export.png" />
+    <None Remove="icons\template_import.png" />
+    <None Remove="icons\template_save.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Remove="IFCEntityTree\PredefinedTypeSelection.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+</Project>

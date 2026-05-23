@@ -36,6 +36,7 @@ namespace VH_IFC_QR
         public UploadExportWindow(List<ProjectInfo> projects, List<ViewSheet> sheets, string username, string defaultProjectId = null, string initialFolder = null)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
 
             _projects = projects;
             _sheets = sheets;
@@ -92,7 +93,7 @@ namespace VH_IFC_QR
                 if (!string.IsNullOrEmpty(txtFolderPath.Text) && Directory.Exists(txtFolderPath.Text))
                     dialog.SelectedPath = txtFolderPath.Text;
 
-                if (dialog.ShowDialog() == Forms.DialogResult.OK)
+                if (RevitWindowHelper.ShowDialog(dialog, this) == Forms.DialogResult.OK)
                     LoadFolder(dialog.SelectedPath);
             }
         }
@@ -179,7 +180,7 @@ namespace VH_IFC_QR
             SelectedProject = comboProjects.SelectedItem as ProjectInfo;
             if (SelectedProject == null)
             {
-                MessageBox.Show("Selecteer een project.", "Project ontbreekt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, "Selecteer een project.", "Project ontbreekt", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -189,7 +190,8 @@ namespace VH_IFC_QR
             var missingSheet = ValidItems.FirstOrDefault(i => i.SelectedSheet == null);
             if (missingSheet != null)
             {
-                var result = MessageBox.Show(
+                var result = RevitWindowHelper.ShowMessage(
+                    this,
                     $"'{missingSheet.FileName}' heeft geen sheet toegewezen.\n\nDoorgaan zonder QR-plaatsing voor items zonder sheet?",
                     "Sheets ontbreken",
                     MessageBoxButton.YesNo,

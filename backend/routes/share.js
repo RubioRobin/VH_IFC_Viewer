@@ -17,7 +17,7 @@ router.get('/:token', async (req, res) => {
             }
 
             // Controleer of de share nog actief is
-            if (!share.is_active) {
+            if (share.is_active === false) {
                 return res.status(410).json({ error: 'Deze deellink is niet meer actief' });
             }
 

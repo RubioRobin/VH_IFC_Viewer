@@ -21,11 +21,20 @@ export const appIcons = {
   TRANSPARENT: "mdi:ghost",
   ISOLATE: "mdi:selection-ellipse",
   RULER: "solar:ruler-bold",
+  ANGLE: "mdi:angle-acute",
   MODEL: "mage:box-3d-fill",
   LAYOUT: "tabler:layout-filled",
   DELETE: "mdi:trash-can",
   AREA: "mdi:ruler-square",
+  VOLUME: "mdi:cube-outline",
   DOWNLOAD: "mdi:download",
+  TOP: "mdi:arrow-up-bold-box",
+  BOTTOM: "mdi:arrow-down-bold-box",
+  FRONT: "mdi:arrow-down-bold-box",
+  BACK: "mdi:arrow-up-bold-box-outline",
+  LEFT: "mdi:arrow-left-bold-box",
+  RIGHT: "mdi:arrow-right-bold-box",
+  THEME: "mdi:theme-light-dark",
 };
 
 export const tooltips = {

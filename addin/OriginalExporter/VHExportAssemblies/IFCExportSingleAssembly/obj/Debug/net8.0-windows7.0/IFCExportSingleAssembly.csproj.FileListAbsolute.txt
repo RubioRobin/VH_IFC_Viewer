@@ -1,0 +1,66 @@
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.deps.json
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.runtimeconfig.json
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.exe
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.deps.json
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\CodeLibrary.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\CodeLibrary.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.csproj.AssemblyReference.cache
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.AssemblyInfoInputs.cache
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.AssemblyInfo.cs
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.csproj.CoreCompileInputs.cache
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExpor.EDD89604.Up2Date
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\refint\IFCExportSingleAssembly.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\ref\IFCExportSingleAssembly.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Antlr4.Runtime.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Autodesk.UI.Windows.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Autodesk.Weave.Wpf.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExporterUIOverride.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Newtonsoft.Json.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Common.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Export.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\RevitAPIIFC.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\UserInterfaceUtility.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IntfIFCAPI.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Antlr4.Runtime.xml
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExporterUIOverride.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Newtonsoft.Json.xml
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Common.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Export.pdb
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\RevitAPIIFC.xml
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\de\IFCExporterUIOverride.resources.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\fr\IFCExporterUIOverride.resources.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\VHCreateSheets.dll
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\VHCreateSheets.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.deps.json
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssembly.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\RevitAPIIFC.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Antlr4.Runtime.xml
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\CodeLibrary.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExporterUIOverride.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\IFCExportSingleAssemblyUI.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Newtonsoft.Json.xml
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Common.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\Revit.IFC.Export.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\RevitAPIIFC.xml
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\VHCreateSheets.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\de\IFCExporterUIOverride.resources.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\bin\Debug\net8.0-windows7.0\fr\IFCExporterUIOverride.resources.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.csproj.AssemblyReference.cache
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.GeneratedMSBuildEditorConfig.editorconfig
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.AssemblyInfoInputs.cache
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.AssemblyInfo.cs
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.csproj.CoreCompileInputs.cache
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.sourcelink.json
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExpor.EDD89604.Up2Date
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\refint\IFCExportSingleAssembly.dll
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\IFCExportSingleAssembly.pdb
+Z:\01_Projecten\20260413_VH-Engineering_IFC-Viewer\03_Development\addin\OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\obj\Debug\net8.0-windows7.0\ref\IFCExportSingleAssembly.dll

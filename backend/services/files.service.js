@@ -1,6 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (supabase, logActivity) => {
+    const naturalCollator = new Intl.Collator('nl-NL', {
+        numeric: true,
+        sensitivity: 'base'
+    });
 
     function mapFile(f) {
         if (!f) return null;
@@ -11,17 +15,24 @@ module.exports = (supabase, logActivity) => {
         };
     }
 
+    function sortFiles(files) {
+        return (files || [])
+            .map(mapFile)
+            .filter(Boolean)
+            .sort((a, b) => naturalCollator.compare(a.filename || '', b.filename || ''));
+    }
+
     return {
         async getFilesByProjectId(projectId) {
             if (!supabase) return [];
             const { data } = await supabase.from('files').select('*').eq('project_id', projectId);
-            return (data || []).map(mapFile);
+            return sortFiles(data);
         },
 
         async getAllFiles() {
             if (!supabase) return [];
             const { data } = await supabase.from('files').select('*');
-            return (data || []).map(mapFile);
+            return sortFiles(data);
         },
 
         async getFileById(id) {
@@ -49,7 +60,7 @@ module.exports = (supabase, logActivity) => {
             try {
                 const { data, error } = await supabase.storage
                     .from('ifc-private')
-                    .createSignedUploadUrl(storagePath);
+                    .createSignedUploadUrl(storagePath, { upsert: true });
 
                 if (error) throw error;
                 return data;

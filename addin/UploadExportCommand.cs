@@ -29,6 +29,20 @@ namespace VH_IFC_QR
 
             try
             {
+                VhAssemblyIfcExportResult exportResult = VhAssemblyIfcExporter.Export(
+                    commandData,
+                    ref message,
+                    elements);
+
+                if (exportResult.Status == ResultStatus.Cancelled)
+                    return Result.Cancelled;
+
+                if (exportResult.Status == ResultStatus.Failed)
+                {
+                    NotificationWindow.ShowError($"IFC export mislukt.\n\n{exportResult.Message}");
+                    return Result.Failed;
+                }
+
                 var client = new PluginClient(BaseUrl);
 
                 try
@@ -75,41 +89,9 @@ namespace VH_IFC_QR
                     return Result.Failed;
                 }
 
-                string defaultExportFolder = ProjectExportFolder.BuildDefaultFolder(
-                    defaultProject,
-                    projectIdentity,
-                    SettingsManager.Instance.LastExportFolder);
-
-                var exportSelection = new VhExportSelectionWindow(
-                    VhAssemblyIfcExporter.GetAvailableDesignPhases(doc),
-                    defaultExportFolder);
-                if (exportSelection.ShowDialog() != true)
-                    return Result.Cancelled;
-
-                SettingsManager.Instance.LastExportFolder = exportSelection.ExportFolder;
-                SettingsManager.Save();
-
-                ProgressWindow progress = new ProgressWindow();
-                progress.Show();
                 try
                 {
-                    progress.Update("IFC bestanden exporteren...", 2);
-                    DoEvents();
-
-                    VhAssemblyIfcExportResult exportResult = VhAssemblyIfcExporter.Export(
-                        doc,
-                        exportSelection.ExportFolder,
-                        exportSelection.SelectedDesignPhases);
-
-                    progress.Close();
-
-                    if (exportResult.Status == ResultStatus.Failed)
-                    {
-                        NotificationWindow.ShowError($"IFC export mislukt.\n\n{exportResult.Message}");
-                        return Result.Failed;
-                    }
-
-                    List<LocalIfcUploadItem> exportedItems = BuildUploadItems(exportResult.ExportedFiles, sheets);
+                    List<LocalIfcUploadItem> exportedItems = BuildUploadItems(exportResult, sheets);
                     if (exportedItems.Count > 0)
                     {
                         SettingsManager.Instance.LastProjectId = defaultProject.id;
@@ -138,13 +120,8 @@ namespace VH_IFC_QR
                 }
                 catch (Exception ex)
                 {
-                    if (progress != null && progress.IsVisible) progress.Close();
                     NotificationWindow.ShowError($"Er is een fout opgetreden bij exporteren of uploaden:\n{ex.Message}");
                     return Result.Failed;
-                }
-                finally
-                {
-                    if (progress != null && progress.IsVisible) progress.Close();
                 }
             }
             catch (Exception ex)
@@ -155,6 +132,34 @@ namespace VH_IFC_QR
                 NotificationWindow.ShowError(userMsg);
                 return Result.Failed;
             }
+        }
+
+        private List<LocalIfcUploadItem> BuildUploadItems(VhAssemblyIfcExportResult exportResult, List<ViewSheet> sheets)
+        {
+            if (exportResult?.ExportedItems != null && exportResult.ExportedItems.Count > 0)
+            {
+                return exportResult.ExportedItems
+                    .Where(item => item != null && File.Exists(item.FilePath))
+                    .OrderBy(item => Path.GetFileName(item.FilePath), StringComparer.OrdinalIgnoreCase)
+                    .Select(item =>
+                    {
+                        string assemblyCode = string.IsNullOrWhiteSpace(item.AssemblyCode)
+                            ? AssemblyUploadNaming.ExtractAssemblyCode(item.FilePath)
+                            : item.AssemblyCode.Trim();
+
+                        return new LocalIfcUploadItem
+                        {
+                            IsSelected = true,
+                            FilePath = item.FilePath,
+                            AssemblyCode = assemblyCode,
+                            AllSheets = sheets,
+                            SelectedSheet = FindSheetForExportItem(sheets, item, assemblyCode)
+                        };
+                    })
+                    .ToList();
+            }
+
+            return BuildUploadItems(exportResult?.ExportedFiles, sheets);
         }
 
         private List<LocalIfcUploadItem> BuildUploadItems(IEnumerable<string> filePaths, List<ViewSheet> sheets)
@@ -177,19 +182,99 @@ namespace VH_IFC_QR
                 .ToList();
         }
 
-        private ViewSheet FindSheetForAssemblyCode(List<ViewSheet> sheets, string assemblyCode)
+        private ViewSheet FindSheetForExportItem(List<ViewSheet> sheets, VhExportedIfcFile exportedItem, string assemblyCode)
         {
-            if (string.IsNullOrWhiteSpace(assemblyCode)) return null;
+            if (sheets == null || exportedItem == null)
+                return FindSheetForAssemblyCode(sheets, assemblyCode);
 
-            return sheets.FirstOrDefault(sheet =>
-                ContainsIgnoreCase(sheet.SheetNumber, assemblyCode) ||
-                ContainsIgnoreCase(sheet.Name, assemblyCode));
+            foreach (string candidate in GetSheetMatchCandidates(exportedItem, assemblyCode))
+            {
+                ViewSheet match = FindSheetForAssemblyCode(sheets, candidate);
+                if (match != null)
+                    return match;
+            }
+
+            return null;
         }
 
-        private static bool ContainsIgnoreCase(string value, string search)
+        private static IEnumerable<string> GetSheetMatchCandidates(VhExportedIfcFile exportedItem, string assemblyCode)
         {
-            return !string.IsNullOrEmpty(value) &&
-                   value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            string fileName = string.IsNullOrWhiteSpace(exportedItem?.FilePath)
+                ? null
+                : Path.GetFileNameWithoutExtension(exportedItem.FilePath);
+
+            return new[]
+                {
+                    exportedItem?.SheetNumber,
+                    exportedItem?.SheetName,
+                    exportedItem?.AssemblyCode,
+                    assemblyCode,
+                    fileName
+                }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private ViewSheet FindSheetForAssemblyCode(List<ViewSheet> sheets, string assemblyCode)
+        {
+            if (sheets == null || string.IsNullOrWhiteSpace(assemblyCode)) return null;
+
+            return sheets.FirstOrDefault(sheet => SheetMatchesAssemblyCode(sheet, assemblyCode));
+        }
+
+        private static bool SheetMatchesAssemblyCode(ViewSheet sheet, string assemblyCode)
+        {
+            if (sheet == null || string.IsNullOrWhiteSpace(assemblyCode))
+                return false;
+
+            string search = assemblyCode.Trim();
+            string sheetNumber = sheet.SheetNumber?.Trim();
+            string sheetName = sheet.Name?.Trim();
+
+            if (EqualsIgnoreCase(sheetNumber, search) || EqualsIgnoreCase(sheetName, search))
+                return true;
+
+            string normalizedSearch = NormalizeMatchText(search);
+            string normalizedSheetNumber = NormalizeMatchText(sheetNumber);
+            string normalizedSheetName = NormalizeMatchText(sheetName);
+
+            if (EqualsIgnoreCase(normalizedSheetNumber, normalizedSearch) ||
+                EqualsIgnoreCase(normalizedSheetName, normalizedSearch))
+                return true;
+
+            return ContainsMatch(normalizedSheetNumber, normalizedSearch) ||
+                   ContainsMatch(normalizedSheetName, normalizedSearch);
+        }
+
+        private static bool ContainsMatch(string value, string search)
+        {
+            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(search))
+                return false;
+
+            if (value.Length < 3 || search.Length < 3)
+                return false;
+
+            return value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   search.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool EqualsIgnoreCase(string value, string search)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   !string.IsNullOrWhiteSpace(search) &&
+                   string.Equals(value.Trim(), search.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeMatchText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            return new string(value
+                .Where(char.IsLetterOrDigit)
+                .Select(char.ToUpperInvariant)
+                .ToArray());
         }
 
         private Result UploadItems(Document doc, PluginClient client, string projectId, List<LocalIfcUploadItem> items)
@@ -228,22 +313,36 @@ namespace VH_IFC_QR
                         continue;
                     }
 
+                    bool qrPlaced = false;
+                    string qrPlacementError = null;
+
                     if (item.SelectedSheet != null && !string.IsNullOrEmpty(uploadResult.QrTempPath))
                     {
-                        using (Transaction t = new Transaction(doc, "Plaats QR code"))
+                        try
                         {
-                            t.Start();
-                            PlaceQrOnSheet(doc, item.SelectedSheet.Id, uploadResult.QrTempPath, item.AssemblyCode);
-                            t.Commit();
+                            using (Transaction t = new Transaction(doc, "Plaats QR code"))
+                            {
+                                t.Start();
+                                qrPlaced = PlaceQrOnSheet(doc, item.SelectedSheet.Id, uploadResult.QrTempPath, item.AssemblyCode);
+                                t.Commit();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            qrPlacementError = ex.Message;
                         }
                     }
 
-                    if (!string.IsNullOrEmpty(uploadResult.QrTempPath) && File.Exists(uploadResult.QrTempPath))
-                        File.Delete(uploadResult.QrTempPath);
+                    TryDeleteTempFile(uploadResult.QrTempPath);
 
-                    results.Add(item.SelectedSheet == null
-                        ? $"OK: {item.FileName} geupload, geen sheet gekoppeld"
-                        : $"OK: {item.FileName} geupload en QR geplaatst");
+                    if (qrPlaced)
+                        results.Add($"OK: {item.FileName} geupload en QR geplaatst op sheet {item.SelectedSheet.SheetNumber}");
+                    else if (item.SelectedSheet == null)
+                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst: geen sheet gekoppeld");
+                    else if (!string.IsNullOrWhiteSpace(qrPlacementError))
+                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber}: {qrPlacementError}");
+                    else
+                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber}");
 
                     completed++;
                 }
@@ -324,6 +423,21 @@ namespace VH_IFC_QR
             return await task.ConfigureAwait(false);
         }
 
+        private static void TryDeleteTempFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                // Tijdelijke QR-bestanden mogen de upload-flow niet alsnog laten mislukken.
+            }
+        }
+
         private string GetSha256(string filePath)
         {
             using (var sha256 = SHA256.Create())
@@ -334,10 +448,10 @@ namespace VH_IFC_QR
             }
         }
 
-        private void PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath, string label)
+        private bool PlaceQrOnSheet(Document doc, ElementId sheetId, string imagePath, string label)
         {
             ViewSheet sheet = doc.GetElement(sheetId) as ViewSheet;
-            if (sheet == null) return;
+            if (sheet == null) return false;
 
             try
             {
@@ -424,8 +538,26 @@ namespace VH_IFC_QR
                     instanceWidth.Set(targetSizeInFeet);
                     if (instanceHeight != null && !instanceHeight.IsReadOnly) instanceHeight.Set(targetSizeInFeet);
                 }
+
+                double currentWidth = (instanceWidth != null) ? instanceWidth.AsDouble() : 0;
+                if (currentWidth <= 0)
+                {
+                    Parameter typeWidth = type.get_Parameter(BuiltInParameter.RASTER_SYMBOL_WIDTH) ?? type.LookupParameter("Width");
+                    if (typeWidth != null) currentWidth = typeWidth.AsDouble();
+                }
+
+                if (currentWidth > 0 && Math.Abs(currentWidth - targetSizeInFeet) > 0.0001)
+                {
+                    double scaleFactor = targetSizeInFeet / currentWidth;
+                    Parameter horizontalScale = instance.LookupParameter("Horizontal Scale");
+                    Parameter verticalScale = instance.LookupParameter("Vertical Scale");
+                    if (horizontalScale != null && !horizontalScale.IsReadOnly) horizontalScale.Set(scaleFactor);
+                    if (verticalScale != null && !verticalScale.IsReadOnly) verticalScale.Set(scaleFactor);
+                }
             }
             catch { }
+
+            return true;
         }
 
         public void DoEvents()

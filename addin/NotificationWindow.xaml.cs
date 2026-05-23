@@ -10,6 +10,7 @@ namespace VH_IFC_QR
         public NotificationWindow(string message, NotificationType type = NotificationType.Info)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
 
             MessageBlock.Text = message;
 

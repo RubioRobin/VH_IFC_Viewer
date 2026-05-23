@@ -18,6 +18,7 @@ namespace VH_IFC_QR
         public VhExportSelectionWindow(IEnumerable<string> designPhases, string defaultFolder)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
 
             txtExportFolder.Text = string.IsNullOrWhiteSpace(defaultFolder)
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
@@ -62,7 +63,7 @@ namespace VH_IFC_QR
                     ? ExportFolder
                     : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-                if (dialog.ShowDialog() == WinForms.DialogResult.OK)
+                if (RevitWindowHelper.ShowDialog(dialog, this) == WinForms.DialogResult.OK)
                     txtExportFolder.Text = dialog.SelectedPath;
             }
         }
@@ -71,7 +72,7 @@ namespace VH_IFC_QR
         {
             if (string.IsNullOrWhiteSpace(ExportFolder))
             {
-                MessageBox.Show("Kies eerst een exportmap.", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, "Kies eerst een exportmap.", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -81,13 +82,13 @@ namespace VH_IFC_QR
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"De exportmap kan niet worden gebruikt.\n\n{ex.Message}", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, $"De exportmap kan niet worden gebruikt.\n\n{ex.Message}", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_phaseChecks.Count > 0 && SelectedDesignPhases.Count == 0)
             {
-                MessageBox.Show("Selecteer minimaal één designfase.", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, "Selecteer minimaal één designfase.", "VH Engineering", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

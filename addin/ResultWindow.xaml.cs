@@ -10,6 +10,7 @@ namespace VH_IFC_QR
         public ResultWindow(List<string> results)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
             itemsResults.ItemsSource = results;
         }
 

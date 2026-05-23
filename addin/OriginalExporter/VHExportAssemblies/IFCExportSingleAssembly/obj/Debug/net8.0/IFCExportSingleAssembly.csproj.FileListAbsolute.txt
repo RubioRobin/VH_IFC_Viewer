@@ -1,0 +1,5 @@
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0\IFCExportSingleAssembly.csproj.AssemblyReference.cache
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0\IFCExportSingleAssembly.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0\IFCExportSingleAssembly.AssemblyInfoInputs.cache
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0\IFCExportSingleAssembly.AssemblyInfo.cs
+C:\Users\info\OneDrive\01_Innorev\03_Projecten\2026\26003 VHPrefab addins\01_Addin\VHPrefabAddins2025\IFCExportSingleAssembly\obj\Debug\net8.0\IFCExportSingleAssembly.csproj.CoreCompileInputs.cache

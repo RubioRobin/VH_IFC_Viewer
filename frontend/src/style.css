@@ -753,6 +753,25 @@ bim-viewport {
   z-index: 10;
 }
 
+.viewport-ui-top {
+  pointer-events: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 9rem;
+}
+
+.vh-view-cube {
+  pointer-events: auto;
+  width: 8rem;
+  height: 8rem;
+  margin: 0.25rem;
+  --bim-view-cube-front: var(--vh-brand-gold);
+  --bim-view-cube-background: rgba(16, 17, 18, 0.82);
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.28));
+}
+
 .viewport-ui-bottom {
   pointer-events: auto;
   /* Re-enable clicks for the toolbar */
@@ -1229,9 +1248,26 @@ bim-viewport canvas {
     padding: 0 0.5rem !important;
   }
 
+  .viewport-ui-bottom .custom-btn {
+    min-height: 2.75rem !important;
+    min-width: 2.75rem !important;
+    padding: 0 0.7rem !important;
+  }
+
   /* Labels verbergen op mobiel voor compacte toolbar */
-  .viewport-ui-bottom bim-button::part(label) {
+  .viewport-ui-bottom bim-button::part(label),
+  .viewport-ui-bottom .custom-btn__label {
     display: none !important;
+  }
+
+  .viewport-ui-top {
+    min-height: 6rem;
+  }
+
+  .vh-view-cube {
+    width: 5.5rem;
+    height: 5.5rem;
+    margin-top: 3.4rem;
   }
 
   bim-toolbar-section {
@@ -1501,6 +1537,10 @@ bim-text-input:focus-within {
     inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
+  max-width: min(100%, calc(100vw - 3rem)) !important;
+  overflow-x: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(193, 169, 121, 0.72) transparent;
 }
 
 .viewport-ui-bottom bim-toolbar-section {
@@ -1526,6 +1566,12 @@ bim-text-input:focus-within {
 .viewport-ui-bottom .custom-btn,
 .viewport-ui-bottom bim-button {
   box-shadow: none !important;
+}
+
+.viewport-ui-bottom .custom-btn--active,
+.viewport-ui-bottom .custom-btn:focus-visible {
+  outline: 2px solid rgba(244, 239, 228, 0.72) !important;
+  outline-offset: 2px !important;
 }
 
 .app-side-panel,
@@ -1604,5 +1650,47 @@ bim-text-input:focus-within {
     border-color: rgba(193, 169, 121, 0.32) !important;
     background: rgba(16, 17, 18, 0.88) !important;
   }
+}
+
+html.vh-light-mode body,
+html.vh-light-mode,
+html.vh-light-mode .app-content {
+  background-color: #f4f1ea !important;
+}
+
+html.vh-light-mode .app-side-panel {
+  background: #fffdf8 !important;
+  border-color: rgba(193, 169, 121, 0.5) !important;
+  color: #1d1a14 !important;
+}
+
+html.vh-light-mode .app-side-panel .custom-panel__header {
+  background: #fffaf0 !important;
+  border-bottom-color: rgba(193, 169, 121, 0.35) !important;
+  color: #1d1a14 !important;
+}
+
+html.vh-light-mode .app-side-panel .custom-panel__label,
+html.vh-light-mode .app-side-panel .custom-panel__content,
+html.vh-light-mode .app-side-panel #bim-props-dynamic-container,
+html.vh-light-mode .app-side-panel #bim-props-dynamic-container * {
+  color: #1d1a14 !important;
+}
+
+html.vh-light-mode .app-viewer-container,
+html.vh-light-mode bim-viewport,
+html.vh-light-mode bim-viewport canvas {
+  background: #f4f1ea !important;
+}
+
+html.vh-light-mode .viewport-ui-bottom bim-toolbar {
+  background: rgba(255, 253, 248, 0.92) !important;
+  border-color: rgba(193, 169, 121, 0.58) !important;
+  box-shadow: 0 18px 36px rgba(97, 82, 51, 0.18) !important;
+}
+
+html.vh-light-mode .vh-view-cube {
+  --bim-view-cube-background: rgba(255, 253, 248, 0.92);
+  filter: drop-shadow(0 12px 24px rgba(97, 82, 51, 0.18));
 }
 

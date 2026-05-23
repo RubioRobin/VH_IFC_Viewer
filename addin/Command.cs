@@ -146,8 +146,8 @@ namespace VH_IFC_QR
                                 t.Commit();
                             }
                             
-                            if (File.Exists(tempPath)) File.Delete(tempPath);
-                            if (File.Exists(qrTempPath)) File.Delete(qrTempPath);
+                            TryDeleteTempFile(tempPath);
+                            TryDeleteTempFile(qrTempPath);
                             
                             results.Add($"{modelName}");
                             currentStep++; // 7
@@ -178,6 +178,21 @@ namespace VH_IFC_QR
                     : "Er is een onverwachte fout opgetreden.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
                 NotificationWindow.ShowError(userMsg);
                 return Result.Failed;
+            }
+        }
+
+        private static void TryDeleteTempFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                // Tijdelijke bestanden mogen een geslaagde export/upload niet alsnog laten mislukken.
             }
         }
 

@@ -33,6 +33,7 @@ namespace VH_IFC_QR
         public LinkWindow(List<ProjectInfo> projects, List<ViewSheet> sheets, PluginClient client, string username)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
             _projects = projects;
             _sheets = sheets;
             _client = client;
@@ -192,7 +193,7 @@ namespace VH_IFC_QR
 
             if (SelectedProject == null)
             {
-                MessageBox.Show("Selecteer een Project.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RevitWindowHelper.ShowMessage(this, "Selecteer een Project.", "Fout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -202,7 +203,8 @@ namespace VH_IFC_QR
             var missingSheet = ValidMatches.FirstOrDefault(m => m.SelectedSheet == null);
             if (missingSheet != null)
             {
-                var result = MessageBox.Show(
+                var result = RevitWindowHelper.ShowMessage(
+                    this,
                     $"Assembly '{missingSheet.AssemblyCode}' heeft geen sheet toegewezen.\n\nWil je doorgaan zonder QR plaatsing op sheets voor items zonder sheet?",
                     "Sheets Ontbreken",
                     MessageBoxButton.YesNo,

@@ -1,6 +1,11 @@
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (supabase, logActivity) => {
+    const naturalCollator = new Intl.Collator('nl-NL', {
+        numeric: true,
+        sensitivity: 'base'
+    });
+
     function extractProjectCode(value) {
         if (!value || typeof value !== 'string') return null;
         const match = value.match(/P\d+[A-Z0-9]*/i);
@@ -56,6 +61,13 @@ module.exports = (supabase, logActivity) => {
         };
     }
 
+    function sortFiles(files) {
+        return (files || [])
+            .map(mapFile)
+            .filter(Boolean)
+            .sort((a, b) => naturalCollator.compare(a.filename || '', b.filename || ''));
+    }
+
     return {
         async getAllProjects() {
             if (!supabase) return [];
@@ -69,7 +81,7 @@ module.exports = (supabase, logActivity) => {
 
                 return data.map(p => ({
                     ...normalizeProject(p),
-                    files: (p.files || []).map(mapFile),
+                    files: sortFiles(p.files),
                     file_count: (p.files || []).length,
                     total_size: (p.files || []).reduce((acc, f) => acc + (f.size || 0), 0)
                 }));
@@ -91,7 +103,7 @@ module.exports = (supabase, logActivity) => {
                 if (error) return null;
                 return {
                     ...normalizeProject(data),
-                    files: (data.files || []).map(mapFile)
+                    files: sortFiles(data.files)
                 };
             } catch (e) { return null; }
         },

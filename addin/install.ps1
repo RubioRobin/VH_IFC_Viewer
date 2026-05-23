@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $addinDir   = $PSScriptRoot
-$targetDir  = "$env:APPDATA\Autodesk\Revit\Addins\2025\VH_IFC_QR"
+$targetDir  = "$env:APPDATA\Autodesk\Revit\Addins\2025\VH_IFC_QR_bundled"
 $addinFile  = "$env:APPDATA\Autodesk\Revit\Addins\2025\VH_IFC_QR.addin"
 
 Write-Host "=== VH IFC QR - Build en Install ===" -ForegroundColor Cyan

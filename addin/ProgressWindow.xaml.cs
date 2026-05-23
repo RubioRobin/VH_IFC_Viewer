@@ -9,6 +9,7 @@ namespace VH_IFC_QR
         public ProgressWindow()
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
         }
 
         public void Update(string message, int percent)

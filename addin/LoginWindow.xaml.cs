@@ -15,6 +15,7 @@ using System.Windows.Media;
         public LoginWindow(PluginClient client)
         {
             InitializeComponent();
+            RevitWindowHelper.KeepOnTop(this);
             _client = client;
         }
 
