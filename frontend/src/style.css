@@ -754,12 +754,16 @@ bim-viewport {
 }
 
 .viewport-ui-top {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   pointer-events: none;
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  width: 100%;
-  min-height: 9rem;
+  width: auto;
+  min-height: 0;
+  z-index: 30;
 }
 
 .vh-view-cube {
@@ -768,7 +772,7 @@ bim-viewport {
   display: block;
   width: 7.5rem;
   height: 7.5rem;
-  margin: 0.5rem;
+  margin: 0;
   --bim-view-cube--c: #141414;
   --bim-view-cube--fz: 0.68rem;
   --bim-view-cube_x--bgc: rgba(193, 169, 121, 0.94);
@@ -1266,13 +1270,14 @@ bim-viewport canvas {
   }
 
   .viewport-ui-top {
-    min-height: 6rem;
+    top: 0.75rem;
+    right: 0.75rem;
+    min-height: 0;
   }
 
   .vh-view-cube {
     width: 5.75rem;
     height: 5.75rem;
-    margin-top: 3.4rem;
     --bim-view-cube--fz: 0.56rem;
   }
 
