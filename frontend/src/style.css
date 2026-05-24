@@ -764,12 +764,17 @@ bim-viewport {
 
 .vh-view-cube {
   pointer-events: auto;
-  width: 8rem;
-  height: 8rem;
-  margin: 0.25rem;
-  --bim-view-cube-front: var(--vh-brand-gold);
-  --bim-view-cube-background: rgba(16, 17, 18, 0.82);
-  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.28));
+  position: relative !important;
+  display: block;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: 0.5rem;
+  --bim-view-cube--c: #141414;
+  --bim-view-cube--fz: 0.68rem;
+  --bim-view-cube_x--bgc: rgba(193, 169, 121, 0.94);
+  --bim-view-cube_y--bgc: rgba(244, 239, 228, 0.96);
+  --bim-view-cube_z--bgc: rgba(204, 207, 211, 0.94);
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.34));
 }
 
 .viewport-ui-bottom {
@@ -1265,9 +1270,10 @@ bim-viewport canvas {
   }
 
   .vh-view-cube {
-    width: 5.5rem;
-    height: 5.5rem;
+    width: 5.75rem;
+    height: 5.75rem;
     margin-top: 3.4rem;
+    --bim-view-cube--fz: 0.56rem;
   }
 
   bim-toolbar-section {
@@ -1690,7 +1696,10 @@ html.vh-light-mode .viewport-ui-bottom bim-toolbar {
 }
 
 html.vh-light-mode .vh-view-cube {
-  --bim-view-cube-background: rgba(255, 253, 248, 0.92);
+  --bim-view-cube--c: #1d1a14;
+  --bim-view-cube_x--bgc: rgba(193, 169, 121, 0.95);
+  --bim-view-cube_y--bgc: rgba(255, 253, 248, 0.97);
+  --bim-view-cube_z--bgc: rgba(218, 218, 216, 0.96);
   filter: drop-shadow(0 12px 24px rgba(97, 82, 51, 0.18));
 }
 

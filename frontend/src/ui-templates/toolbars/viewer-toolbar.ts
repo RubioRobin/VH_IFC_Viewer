@@ -157,18 +157,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     restoreModelMaterials();
   };
 
-  const fitToLoadedModel = async () => {
-    const bbox = components.get(OBC.BoundingBoxer);
-    bbox.list.clear();
-    bbox.addFromModels();
-    const box = bbox.get();
-    if (!box || box.isEmpty()) return false;
-    const sphere = new THREE.Sphere();
-    box.getBoundingSphere(sphere);
-    world.camera.controls?.fitToSphere(sphere, true);
-    return true;
-  };
-
   const viewFromOrientation = async (
     orientation: "front" | "back" | "left" | "right" | "top" | "bottom",
   ) => {
@@ -212,15 +200,15 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   const savedTheme = localStorage.getItem("vh-viewer-theme");
   setTheme(savedTheme === "light" ? "light" : "dark");
 
-  const clearMeasurementHover = () => {
+  const clearMeasurementClickHandler = () => {
     const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
-    if (viewport) viewport.ondblclick = null;
+    if (viewport) viewport.onclick = null;
   };
 
   const disableMeasurements = () => {
     for (const tool of Object.values(measurementTools)) tool.enabled = false;
     activeMeasurement = null;
-    clearMeasurementHover();
+    clearMeasurementClickHandler();
   };
 
   const activateMeasurement = async (kind: MeasurementKind) => {
@@ -235,8 +223,10 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
     const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
     if (viewport) {
-      viewport.ondblclick = () => {
+      viewport.onclick = (event) => {
         if (!activeMeasurement) return;
+        event.preventDefault();
+        event.stopPropagation();
         const activeTool = measurementTools[activeMeasurement] as any;
         if (typeof activeTool.create === "function") activeTool.create();
       };
@@ -351,16 +341,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
       <bim-toolbar-section>
          ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
-      </bim-toolbar-section>
-
-      <bim-toolbar-section>
-        ${customButton({ icon: appIcons.TOP, label: "Top", onClick: () => viewFromOrientation("top") })}
-        ${customButton({ icon: appIcons.BOTTOM, label: "Onder", onClick: () => viewFromOrientation("bottom") })}
-        ${customButton({ icon: appIcons.FRONT, label: "Voor", onClick: () => viewFromOrientation("front") })}
-        ${customButton({ icon: appIcons.BACK, label: "Achter", onClick: () => viewFromOrientation("back") })}
-        ${customButton({ icon: appIcons.LEFT, label: "Links", onClick: () => viewFromOrientation("left") })}
-        ${customButton({ icon: appIcons.RIGHT, label: "Rechts", onClick: () => viewFromOrientation("right") })}
-        ${customButton({ icon: appIcons.FOCUS, label: "Alles", onClick: fitToLoadedModel })}
       </bim-toolbar-section>
 
       <bim-toolbar-section>
