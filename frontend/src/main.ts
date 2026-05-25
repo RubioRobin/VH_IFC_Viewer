@@ -37,8 +37,11 @@ world.camera = new OBC.OrthoPerspectiveCamera(components);
 
 // Camera-instellingen
 world.camera.threePersp.near = 0.1;
-world.camera.threePersp.far = 10000;
+world.camera.threePersp.far = 500000;
 world.camera.threePersp.updateProjectionMatrix();
+world.camera.threeOrtho.near = 0.1;
+world.camera.threeOrtho.far = 500000;
+world.camera.threeOrtho.updateProjectionMatrix();
 
 // smoothTime wordt gebruikt voor vloeiende beweging.
 world.camera.controls.smoothTime = 0.25;
@@ -52,7 +55,7 @@ worldGrid.setup({
   color: new THREE.Color(0x5b5244),
   primarySize: 1,
   secondarySize: 5,
-  distance: 5000,
+  distance: 100000,
 });
 
 // Formaat aanpassen bij vensterwijziging
