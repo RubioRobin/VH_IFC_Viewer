@@ -770,10 +770,11 @@ bim-viewport {
   pointer-events: auto;
   position: relative !important;
   display: block;
-  width: 8.5rem;
-  height: 8.5rem;
+  width: 6.8rem;
+  height: 6.8rem;
   margin: 0;
   --vh-cube-size: 4.4rem;
+  --vh-cube-rotation: rotateX(-28deg) rotateY(38deg);
   --vh-cube-face-text: #15120c;
   --vh-cube-top: #f2ead9;
   --vh-cube-front: #d9d6cd;
@@ -784,8 +785,8 @@ bim-viewport {
 
 .vh-view-cube__scene {
   position: absolute;
-  top: 0.55rem;
-  right: 0.95rem;
+  top: 0.7rem;
+  right: 0.7rem;
   width: var(--vh-cube-size);
   height: var(--vh-cube-size);
   perspective: 360px;
@@ -797,7 +798,8 @@ bim-viewport {
   width: var(--vh-cube-size);
   height: var(--vh-cube-size);
   transform-style: preserve-3d;
-  transform: rotateX(-28deg) rotateY(38deg);
+  transform: var(--vh-cube-rotation);
+  transition: transform 120ms linear;
 }
 
 .vh-view-cube__face {
@@ -849,19 +851,6 @@ bim-viewport {
 
 .vh-view-cube__face--bottom {
   transform: rotateX(-90deg) translateZ(calc(var(--vh-cube-size) / 2));
-}
-
-.vh-view-cube__shadow {
-  position: absolute;
-  right: 0.3rem;
-  bottom: 0.3rem;
-  width: 6rem;
-  height: 1.7rem;
-  border: 1px dashed rgba(31, 28, 22, 0.34);
-  border-radius: 999px;
-  transform: rotate(-10deg);
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.18), transparent 68%);
-  opacity: 0.78;
 }
 
 .viewport-ui-bottom {
@@ -1359,18 +1348,13 @@ bim-viewport canvas {
   }
 
   .vh-view-cube {
-    width: 6.4rem;
-    height: 6.4rem;
+    width: 5.4rem;
+    height: 5.4rem;
     --vh-cube-size: 3.35rem;
   }
 
   .vh-view-cube__face {
     font-size: 0.48rem;
-  }
-
-  .vh-view-cube__shadow {
-    width: 4.5rem;
-    height: 1.2rem;
   }
 
   bim-toolbar-section {
