@@ -14,8 +14,6 @@ type CubeOrientation = "front" | "back" | "left" | "right" | "top" | "bottom";
 
 const syncedWorlds = new WeakSet<OBC.World>();
 
-const sideOrientations = new Set<CubeOrientation>(["front", "back", "left", "right"]);
-
 const syncViewCubeRotation = (world: OBC.World) => {
   const controls = (world.camera as OBC.OrthoPerspectiveCamera | undefined)?.controls as any;
   const cube = document.querySelector<HTMLElement>(".vh-view-cube__cube");
@@ -78,32 +76,15 @@ const viewFromOrientation = async (
   (world.renderer as any)?.postproduction?.updateCamera?.();
 
   const { position, target } = await bbox.getCameraOrientation(orientation);
-  const direction = position.clone().sub(target);
-  if (direction.lengthSq() < 0.000001) return;
-
-  const size = new THREE.Vector3();
-  box.getSize(size);
-  const radius = Math.max(size.x, size.y, size.z) || 10;
-  const distance = THREE.MathUtils.clamp(radius * 4, 25, 3000);
-  const viewDirection = direction.normalize();
-
-  if (sideOrientations.has(orientation)) {
-    viewDirection.y = Math.max(viewDirection.y, 0.35);
-    viewDirection.normalize();
-  }
-
-  const stablePosition = target.clone().addScaledVector(viewDirection, distance);
-
   await camera.controls.setLookAt(
-    stablePosition.x,
-    stablePosition.y,
-    stablePosition.z,
+    position.x,
+    position.y,
+    position.z,
     target.x,
     target.y,
     target.z,
-    false,
+    true,
   );
-  await camera.controls.fitToSphere(new THREE.Sphere(target, radius * 0.72), false);
   syncViewCubeRotation(world);
 };
 
