@@ -1,7 +1,5 @@
 import * as BUI from "@thatopen/ui";
 import * as OBC from "@thatopen/components";
-import * as THREE from "three";
-import "@thatopen/ui-obc";
 import { viewerToolbarTemplate, ViewerToolbarState } from "../toolbars/viewer-toolbar";
 import { TransparencyManager } from "../../viewer/transparency-manager";
 
@@ -46,49 +44,29 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
   const { components, world, transparencyManager } = state;
 
   const [bottomToolbar] = BUI.Component.create(viewerToolbarTemplate, { components, world, transparencyManager });
-  const viewCube = document.createElement("bim-view-cube") as HTMLElement & {
-    camera?: THREE.Camera;
-    size?: number;
-    rightText?: string;
-    leftText?: string;
-    topText?: string;
-    bottomText?: string;
-    frontText?: string;
-    backText?: string;
-    updateOrientation?: () => void;
-  };
-  viewCube.className = "vh-view-cube";
-  viewCube.camera = (world.camera as any).three;
-  viewCube.size = 72;
-  viewCube.topText = "TOP";
-  viewCube.bottomText = "BOTTOM";
-  viewCube.frontText = "FRONT";
-  viewCube.backText = "BACK";
-  viewCube.leftText = "LEFT";
-  viewCube.rightText = "RIGHT";
 
-  const orientationEvents: Record<string, CubeOrientation> = {
-    topclick: "top",
-    bottomclick: "bottom",
-    frontclick: "front",
-    backclick: "back",
-    leftclick: "left",
-    rightclick: "right",
+  const onCubeFaceClick = (orientation: CubeOrientation) => (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    viewFromOrientation(components, world, orientation);
   };
-
-  for (const [eventName, orientation] of Object.entries(orientationEvents)) {
-    viewCube.addEventListener(eventName, () => {
-      viewFromOrientation(components, world, orientation).then(() => {
-        viewCube.camera = (world.camera as any).three;
-        viewCube.updateOrientation?.();
-      });
-    });
-  }
 
   return BUI.html`
     <div class="viewport-ui-overlay">
       <div class="viewport-ui-top">
-        ${viewCube}
+        <div class="vh-view-cube" aria-label="View cube">
+          <div class="vh-view-cube__scene">
+            <div class="vh-view-cube__cube">
+              <button class="vh-view-cube__face vh-view-cube__face--front" @click=${onCubeFaceClick("front")}>FRONT</button>
+              <button class="vh-view-cube__face vh-view-cube__face--right" @click=${onCubeFaceClick("right")}>RIGHT</button>
+              <button class="vh-view-cube__face vh-view-cube__face--top" @click=${onCubeFaceClick("top")}>TOP</button>
+              <button class="vh-view-cube__face vh-view-cube__face--back" @click=${onCubeFaceClick("back")}>BACK</button>
+              <button class="vh-view-cube__face vh-view-cube__face--left" @click=${onCubeFaceClick("left")}>LEFT</button>
+              <button class="vh-view-cube__face vh-view-cube__face--bottom" @click=${onCubeFaceClick("bottom")}>BOTTOM</button>
+            </div>
+          </div>
+          <div class="vh-view-cube__shadow"></div>
+        </div>
       </div>
       <div class="viewport-ui-bottom">
         ${bottomToolbar}

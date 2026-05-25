@@ -770,15 +770,98 @@ bim-viewport {
   pointer-events: auto;
   position: relative !important;
   display: block;
-  width: 7.5rem;
-  height: 7.5rem;
+  width: 8.5rem;
+  height: 8.5rem;
   margin: 0;
-  --bim-view-cube--c: #141414;
-  --bim-view-cube--fz: 0.68rem;
-  --bim-view-cube_x--bgc: rgba(193, 169, 121, 0.94);
-  --bim-view-cube_y--bgc: rgba(244, 239, 228, 0.96);
-  --bim-view-cube_z--bgc: rgba(204, 207, 211, 0.94);
-  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.34));
+  --vh-cube-size: 4.4rem;
+  --vh-cube-face-text: #15120c;
+  --vh-cube-top: #f2ead9;
+  --vh-cube-front: #d9d6cd;
+  --vh-cube-right: #c1a979;
+  --vh-cube-edge: rgba(31, 28, 22, 0.32);
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.34));
+}
+
+.vh-view-cube__scene {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.95rem;
+  width: var(--vh-cube-size);
+  height: var(--vh-cube-size);
+  perspective: 360px;
+  perspective-origin: 50% 50%;
+}
+
+.vh-view-cube__cube {
+  position: relative;
+  width: var(--vh-cube-size);
+  height: var(--vh-cube-size);
+  transform-style: preserve-3d;
+  transform: rotateX(-28deg) rotateY(38deg);
+}
+
+.vh-view-cube__face {
+  position: absolute;
+  inset: 0;
+  width: var(--vh-cube-size);
+  height: var(--vh-cube-size);
+  border: 1px solid var(--vh-cube-edge);
+  border-radius: 0;
+  color: var(--vh-cube-face-text);
+  font: 800 0.62rem/1 "Outfit", sans-serif;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vh-cube-front);
+  cursor: pointer;
+  padding: 0;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.vh-view-cube__face:hover {
+  background: #c1a979;
+  color: #111;
+}
+
+.vh-view-cube__face--front {
+  transform: translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__face--right {
+  background: var(--vh-cube-right);
+  transform: rotateY(90deg) translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__face--top {
+  background: var(--vh-cube-top);
+  transform: rotateX(90deg) translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__face--back {
+  transform: rotateY(180deg) translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__face--left {
+  transform: rotateY(-90deg) translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__face--bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--vh-cube-size) / 2));
+}
+
+.vh-view-cube__shadow {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  width: 6rem;
+  height: 1.7rem;
+  border: 1px dashed rgba(31, 28, 22, 0.34);
+  border-radius: 999px;
+  transform: rotate(-10deg);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.18), transparent 68%);
+  opacity: 0.78;
 }
 
 .viewport-ui-bottom {
@@ -1276,9 +1359,18 @@ bim-viewport canvas {
   }
 
   .vh-view-cube {
-    width: 5.75rem;
-    height: 5.75rem;
-    --bim-view-cube--fz: 0.56rem;
+    width: 6.4rem;
+    height: 6.4rem;
+    --vh-cube-size: 3.35rem;
+  }
+
+  .vh-view-cube__face {
+    font-size: 0.48rem;
+  }
+
+  .vh-view-cube__shadow {
+    width: 4.5rem;
+    height: 1.2rem;
   }
 
   bim-toolbar-section {
@@ -1701,10 +1793,11 @@ html.vh-light-mode .viewport-ui-bottom bim-toolbar {
 }
 
 html.vh-light-mode .vh-view-cube {
-  --bim-view-cube--c: #1d1a14;
-  --bim-view-cube_x--bgc: rgba(193, 169, 121, 0.95);
-  --bim-view-cube_y--bgc: rgba(255, 253, 248, 0.97);
-  --bim-view-cube_z--bgc: rgba(218, 218, 216, 0.96);
+  --vh-cube-face-text: #1d1a14;
+  --vh-cube-top: #fffdf8;
+  --vh-cube-front: #e1ddd2;
+  --vh-cube-right: #c1a979;
+  --vh-cube-edge: rgba(97, 82, 51, 0.32);
   filter: drop-shadow(0 12px 24px rgba(97, 82, 51, 0.18));
 }
 
