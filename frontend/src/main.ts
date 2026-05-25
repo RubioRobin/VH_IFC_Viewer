@@ -48,11 +48,12 @@ world.camera.controls.infinityZoom = true;
 
 // Raster
 const worldGrid = components.get(OBC.Grids).create(world);
-worldGrid.material.uniforms.uColor.value = new THREE.Color(0x5b5244);
-worldGrid.material.uniforms.uSize1.value = 1;
-worldGrid.material.uniforms.uSize2.value = 5;
-
-
+worldGrid.setup({
+  color: new THREE.Color(0x5b5244),
+  primarySize: 1,
+  secondarySize: 5,
+  distance: 5000,
+});
 
 // Formaat aanpassen bij vensterwijziging
 const resizeWorld = () => {
