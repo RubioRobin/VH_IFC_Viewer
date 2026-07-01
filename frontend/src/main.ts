@@ -49,126 +49,53 @@ world.camera.controls.dollyToCursor = true;
 world.camera.controls.infinityZoom = true;
 
 
-// Raster: bewust een pure pixel-overlay, los van camera, clipping en OBC.Grids.
-const GRID_FINE_PX = 24;
-const GRID_MAJOR_PX = 120;
-const gridResolution = new THREE.Vector2(1, 1);
-const gridOffset = new THREE.Vector2();
-const gridTarget = new THREE.Vector3();
-const gridCameraRight = new THREE.Vector3();
-const gridCameraUp = new THREE.Vector3();
-const gridCameraPosition = new THREE.Vector3();
+// Raster: echte world-space grid op Y=0, los van OBC.Grids.
+const GRID_SIZE = 10000;
+const GRID_FINE_STEP = 1;
+const GRID_MAJOR_STEP = 5;
 
-const manualGridMaterial = new THREE.ShaderMaterial({
-  uniforms: {
-    uResolution: { value: gridResolution },
-    uGridOffset: { value: gridOffset },
-    uFineStep: { value: GRID_FINE_PX },
-    uMajorStep: { value: GRID_MAJOR_PX },
-    uFineColor: { value: new THREE.Color(0x332f28) },
-    uMajorColor: { value: new THREE.Color(0x5b5244) },
-  },
-  vertexShader: `
-    varying vec2 vNdc;
+const createGroundGrid = () => {
+  const halfSize = GRID_SIZE / 2;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const fineColor = new THREE.Color(0x332f28);
+  const majorColor = new THREE.Color(0x5b5244);
 
-    void main() {
-      vNdc = position.xy;
-      gl_Position = vec4(position.xy, 0.0, 1.0);
-    }
-  `,
-  fragmentShader: `
-    varying vec2 vNdc;
+  const pushVertex = (x: number, y: number, z: number, color: THREE.Color) => {
+    positions.push(x, y, z);
+    colors.push(color.r, color.g, color.b);
+  };
 
-    uniform vec2 uResolution;
-    uniform vec2 uGridOffset;
-    uniform float uFineStep;
-    uniform float uMajorStep;
-    uniform vec3 uFineColor;
-    uniform vec3 uMajorColor;
+  for (let index = -halfSize; index <= halfSize; index += GRID_FINE_STEP) {
+    const color = index % GRID_MAJOR_STEP === 0 ? majorColor : fineColor;
 
-    float lineAt(float coord, float stepSize) {
-      float distanceToLine = abs(fract(coord / stepSize - 0.5) - 0.5) * stepSize;
-      return 1.0 - smoothstep(0.45, 1.1, distanceToLine);
-    }
-
-    void main() {
-      vec2 pixel = (vNdc * 0.5 + 0.5) * uResolution;
-      vec2 centered = pixel - uResolution * 0.5 + uGridOffset;
-
-      vec2 axisA = normalize(vec2(1.0, 0.52));
-      vec2 axisB = normalize(vec2(-1.0, 0.52));
-      vec2 gridCoord = vec2(dot(centered, axisA), dot(centered, axisB));
-
-      float fineLine = max(lineAt(gridCoord.x, uFineStep), lineAt(gridCoord.y, uFineStep));
-      float majorLine = max(lineAt(gridCoord.x, uMajorStep), lineAt(gridCoord.y, uMajorStep));
-      float lineStrength = max(fineLine * 0.28, majorLine * 0.7);
-
-      if (lineStrength < 0.025) discard;
-
-      vec3 color = mix(uFineColor, uMajorColor, majorLine);
-      gl_FragColor = vec4(color, 1.0);
-    }
-  `,
-  extensions: {
-    derivatives: true,
-  },
-  depthTest: false,
-  depthWrite: false,
-});
-
-const manualGrid = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), manualGridMaterial);
-manualGrid.name = "VH Pixel Overlay Grid";
-manualGrid.frustumCulled = false;
-manualGrid.renderOrder = -1000;
-
-const getGridPixelsPerWorldUnit = (camera: THREE.Camera) => {
-  if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
-    const orthoCamera = camera as THREE.OrthographicCamera;
-    const worldHeight = Math.max(orthoCamera.top - orthoCamera.bottom, 0.0001);
-    return gridResolution.y / worldHeight * orthoCamera.zoom;
+    pushVertex(-halfSize, 0, index, color);
+    pushVertex(halfSize, 0, index, color);
+    pushVertex(index, 0, -halfSize, color);
+    pushVertex(index, 0, halfSize, color);
   }
 
-  if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-    const perspectiveCamera = camera as THREE.PerspectiveCamera;
-    const distance = Math.max(gridCameraPosition.distanceTo(gridTarget), 0.0001);
-    const verticalFov = THREE.MathUtils.degToRad(perspectiveCamera.fov);
-    return gridResolution.y / (2 * distance * Math.tan(verticalFov * 0.5));
-  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
 
-  return GRID_FINE_PX;
+  const material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+
+  const grid = new THREE.LineSegments(geometry, material);
+  grid.name = "VH Ground Grid";
+  grid.frustumCulled = false;
+  grid.renderOrder = -1000;
+  grid.position.y = 0;
+  return grid;
 };
 
-const updatePixelGridFromCamera = (camera: THREE.Camera) => {
-  const controls = world.camera.controls as any;
-  if (typeof controls.getTarget === "function") {
-    controls.getTarget(gridTarget, false);
-  } else {
-    gridTarget.set(0, 0, 0);
-  }
-
-  gridCameraPosition.setFromMatrixPosition(camera.matrixWorld);
-  gridCameraRight.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-  gridCameraUp.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
-
-  const pixelsPerWorldUnit = getGridPixelsPerWorldUnit(camera);
-  let fineStep = pixelsPerWorldUnit;
-  while (fineStep < 16) fineStep *= 2;
-  while (fineStep > 48) fineStep *= 0.5;
-
-  manualGridMaterial.uniforms.uFineStep.value = fineStep;
-  manualGridMaterial.uniforms.uMajorStep.value = fineStep * 5;
-  gridOffset.set(
-    -gridTarget.dot(gridCameraRight) * pixelsPerWorldUnit,
-    -gridTarget.dot(gridCameraUp) * pixelsPerWorldUnit,
-  );
-};
-
-manualGrid.onBeforeRender = (renderer, _scene, camera) => {
-  renderer.getDrawingBufferSize(gridResolution);
-  updatePixelGridFromCamera(camera);
-};
-
-world.scene.three.add(manualGrid);
+world.scene.three.add(createGroundGrid());
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;
