@@ -113,8 +113,6 @@ namespace VH_IFC_QR
                         exportResult.ExportFolder);
                     uploadWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
 
-                    NotificationWindow.ShowInfo("De IFC exporter is afgerond, maar ik kon geen nieuwe IFC-bestanden automatisch vinden.\n\nControleer de exportmap en upload daarna de bestanden.");
-
                     if (uploadWin.ShowDialog() != true) return Result.Cancelled;
                     return UploadItems(doc, client, uploadWin.SelectedProject.id, uploadWin.ValidItems);
                 }
