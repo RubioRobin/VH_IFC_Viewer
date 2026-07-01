@@ -49,67 +49,94 @@ world.camera.controls.dollyToCursor = true;
 world.camera.controls.infinityZoom = true;
 
 
-// Raster: eigen Three.js grid, los van OBC.Grids.
-const GRID_HALF_EXTENT = 20000;
+// Raster: eigen screen-space Three.js grid, los van OBC.Grids.
 const GRID_FINE_STEP = 1;
 const GRID_MAJOR_STEP = 5;
 const GRID_RECENTER_STEP = 100;
 
-const createGridGeometry = (
-  step: number,
-  halfExtent: number,
-  skipEvery = 0,
-) => {
-  const coordinates: number[] = [];
-  const lineCount = Math.floor(halfExtent / step);
-
-  for (let i = -lineCount; i <= lineCount; i++) {
-    const offset = i * step;
-    if (skipEvery > 0 && Math.abs(offset % skipEvery) < 0.0001) continue;
-
-    coordinates.push(-halfExtent, 0, offset, halfExtent, 0, offset);
-    coordinates.push(offset, 0, -halfExtent, offset, 0, halfExtent);
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(coordinates, 3));
-  geometry.computeBoundingSphere();
-  return geometry;
-};
-
-const manualGrid = new THREE.Group();
-manualGrid.name = "VH Manual Ground Grid";
-manualGrid.position.y = 0.002;
-
-const fineGrid = new THREE.LineSegments(
-  createGridGeometry(GRID_FINE_STEP, GRID_HALF_EXTENT, GRID_MAJOR_STEP),
-  new THREE.LineBasicMaterial({
-    color: 0x332f28,
-    transparent: true,
-    opacity: 0.32,
-    depthWrite: false,
-  }),
-);
-
-const majorGrid = new THREE.LineSegments(
-  createGridGeometry(GRID_MAJOR_STEP, GRID_HALF_EXTENT),
-  new THREE.LineBasicMaterial({
-    color: 0x5b5244,
-    transparent: true,
-    opacity: 0.62,
-    depthWrite: false,
-  }),
-);
-
-for (const gridLayer of [fineGrid, majorGrid]) {
-  gridLayer.frustumCulled = false;
-  gridLayer.renderOrder = -10;
-  manualGrid.add(gridLayer);
-}
-
-world.scene.three.add(manualGrid);
-
+const gridProjectionMatrixInverse = new THREE.Matrix4();
+const gridCameraMatrixWorld = new THREE.Matrix4();
+const gridOrigin = new THREE.Vector2();
 const gridTarget = new THREE.Vector3();
+
+const manualGridMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    uProjectionMatrixInverse: { value: gridProjectionMatrixInverse },
+    uCameraMatrixWorld: { value: gridCameraMatrixWorld },
+    uGridOrigin: { value: gridOrigin },
+    uFineStep: { value: GRID_FINE_STEP },
+    uMajorStep: { value: GRID_MAJOR_STEP },
+    uFineColor: { value: new THREE.Color(0x332f28) },
+    uMajorColor: { value: new THREE.Color(0x5b5244) },
+  },
+  vertexShader: `
+    varying vec2 vNdc;
+
+    void main() {
+      vNdc = position.xy;
+      gl_Position = vec4(position.xy, 0.0, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec2 vNdc;
+
+    uniform mat4 uProjectionMatrixInverse;
+    uniform mat4 uCameraMatrixWorld;
+    uniform vec2 uGridOrigin;
+    uniform float uFineStep;
+    uniform float uMajorStep;
+    uniform vec3 uFineColor;
+    uniform vec3 uMajorColor;
+
+    vec3 unprojectPoint(vec3 ndc) {
+      vec4 world = uCameraMatrixWorld * uProjectionMatrixInverse * vec4(ndc, 1.0);
+      return world.xyz / world.w;
+    }
+
+    float gridLine(vec2 coord, float stepSize) {
+      vec2 grid = abs(fract(coord / stepSize - 0.5) - 0.5) / fwidth(coord / stepSize);
+      return 1.0 - min(min(grid.x, grid.y), 1.0);
+    }
+
+    void main() {
+      vec3 nearPoint = unprojectPoint(vec3(vNdc, -1.0));
+      vec3 farPoint = unprojectPoint(vec3(vNdc, 1.0));
+      vec3 rayDirection = normalize(farPoint - nearPoint);
+
+      if (abs(rayDirection.y) < 0.00001) discard;
+
+      float rayDistance = -nearPoint.y / rayDirection.y;
+      if (rayDistance <= 0.0) discard;
+
+      vec3 worldPosition = nearPoint + rayDirection * rayDistance;
+      vec2 gridCoord = worldPosition.xz - uGridOrigin;
+
+      float fineLine = gridLine(gridCoord, uFineStep);
+      float majorLine = gridLine(gridCoord, uMajorStep);
+      float lineStrength = max(fineLine * 0.32, majorLine * 0.72);
+
+      float cameraDistance = length(worldPosition.xz - nearPoint.xz);
+      float distanceFade = 1.0 - smoothstep(25000.0, 45000.0, cameraDistance);
+      lineStrength *= distanceFade;
+
+      if (lineStrength < 0.025) discard;
+
+      vec3 color = mix(uFineColor, uMajorColor, majorLine);
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `,
+  extensions: {
+    derivatives: true,
+  },
+  depthTest: false,
+  depthWrite: false,
+});
+
+const manualGrid = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), manualGridMaterial);
+manualGrid.name = "VH Manual Ground Grid";
+manualGrid.frustumCulled = false;
+manualGrid.renderOrder = -1000;
+
 const syncManualGridWithTarget = () => {
   const controls = world.camera.controls as any;
   if (typeof controls.getTarget === "function") {
@@ -118,9 +145,19 @@ const syncManualGridWithTarget = () => {
     gridTarget.copy(world.camera.three.position);
   }
 
-  manualGrid.position.x = Math.round(gridTarget.x / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
-  manualGrid.position.z = Math.round(gridTarget.z / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
+  gridOrigin.set(
+    Math.round(gridTarget.x / GRID_RECENTER_STEP) * GRID_RECENTER_STEP,
+    Math.round(gridTarget.z / GRID_RECENTER_STEP) * GRID_RECENTER_STEP,
+  );
 };
+
+manualGrid.onBeforeRender = (_renderer, _scene, camera) => {
+  gridProjectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  gridCameraMatrixWorld.copy(camera.matrixWorld);
+  syncManualGridWithTarget();
+};
+
+world.scene.three.add(manualGrid);
 
 for (const eventName of ["control", "update", "rest", "sleep"]) {
   (world.camera.controls as any).addEventListener?.(eventName, syncManualGridWithTarget);
