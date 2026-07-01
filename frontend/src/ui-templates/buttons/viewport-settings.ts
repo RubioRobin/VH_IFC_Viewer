@@ -79,6 +79,7 @@ export const viewportSettingsTemplate: BUI.StatefullComponent<
 
     await world.camera.projection.set(projection);
     if (projection === "Perspective") {
+      window.dispatchEvent(new CustomEvent("vh-grid-plane-reset"));
       await tiltSideViewForPerspective();
     }
 

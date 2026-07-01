@@ -56,14 +56,22 @@ const GRID_RECENTER_STEP = 100;
 
 const gridProjectionMatrixInverse = new THREE.Matrix4();
 const gridCameraMatrixWorld = new THREE.Matrix4();
-const gridOrigin = new THREE.Vector2();
+const gridPlaneOrigin = new THREE.Vector3();
+const gridPlaneNormal = new THREE.Vector3(0, 1, 0);
+const gridPlaneAxisU = new THREE.Vector3(1, 0, 0);
+const gridPlaneAxisV = new THREE.Vector3(0, 0, 1);
 const gridTarget = new THREE.Vector3();
+type ManualGridPlaneMode = "ground" | "frontBack" | "leftRight";
+let manualGridPlaneMode: ManualGridPlaneMode = "ground";
 
 const manualGridMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uProjectionMatrixInverse: { value: gridProjectionMatrixInverse },
     uCameraMatrixWorld: { value: gridCameraMatrixWorld },
-    uGridOrigin: { value: gridOrigin },
+    uGridPlaneOrigin: { value: gridPlaneOrigin },
+    uGridPlaneNormal: { value: gridPlaneNormal },
+    uGridAxisU: { value: gridPlaneAxisU },
+    uGridAxisV: { value: gridPlaneAxisV },
     uFineStep: { value: GRID_FINE_STEP },
     uMajorStep: { value: GRID_MAJOR_STEP },
     uFineColor: { value: new THREE.Color(0x332f28) },
@@ -82,7 +90,10 @@ const manualGridMaterial = new THREE.ShaderMaterial({
 
     uniform mat4 uProjectionMatrixInverse;
     uniform mat4 uCameraMatrixWorld;
-    uniform vec2 uGridOrigin;
+    uniform vec3 uGridPlaneOrigin;
+    uniform vec3 uGridPlaneNormal;
+    uniform vec3 uGridAxisU;
+    uniform vec3 uGridAxisV;
     uniform float uFineStep;
     uniform float uMajorStep;
     uniform vec3 uFineColor;
@@ -103,19 +114,21 @@ const manualGridMaterial = new THREE.ShaderMaterial({
       vec3 farPoint = unprojectPoint(vec3(vNdc, 1.0));
       vec3 rayDirection = normalize(farPoint - nearPoint);
 
-      if (abs(rayDirection.y) < 0.00001) discard;
+      float rayPlaneDot = dot(rayDirection, uGridPlaneNormal);
+      if (abs(rayPlaneDot) < 0.00001) discard;
 
-      float rayDistance = -nearPoint.y / rayDirection.y;
+      float rayDistance = dot(uGridPlaneOrigin - nearPoint, uGridPlaneNormal) / rayPlaneDot;
       if (rayDistance <= 0.0) discard;
 
       vec3 worldPosition = nearPoint + rayDirection * rayDistance;
-      vec2 gridCoord = worldPosition.xz - uGridOrigin;
+      vec3 planeOffset = worldPosition - uGridPlaneOrigin;
+      vec2 gridCoord = vec2(dot(planeOffset, uGridAxisU), dot(planeOffset, uGridAxisV));
 
       float fineLine = gridLine(gridCoord, uFineStep);
       float majorLine = gridLine(gridCoord, uMajorStep);
       float lineStrength = max(fineLine * 0.32, majorLine * 0.72);
 
-      float cameraDistance = length(worldPosition.xz - nearPoint.xz);
+      float cameraDistance = length(worldPosition - nearPoint);
       float distanceFade = 1.0 - smoothstep(25000.0, 45000.0, cameraDistance);
       lineStrength *= distanceFade;
 
@@ -137,6 +150,9 @@ manualGrid.name = "VH Manual Ground Grid";
 manualGrid.frustumCulled = false;
 manualGrid.renderOrder = -1000;
 
+const roundToGridOrigin = (value: number) =>
+  Math.round(value / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
+
 const syncManualGridWithTarget = () => {
   const controls = world.camera.controls as any;
   if (typeof controls.getTarget === "function") {
@@ -145,25 +161,118 @@ const syncManualGridWithTarget = () => {
     gridTarget.copy(world.camera.three.position);
   }
 
-  gridOrigin.set(
-    Math.round(gridTarget.x / GRID_RECENTER_STEP) * GRID_RECENTER_STEP,
-    Math.round(gridTarget.z / GRID_RECENTER_STEP) * GRID_RECENTER_STEP,
+  if (manualGridPlaneMode === "frontBack") {
+    gridPlaneNormal.set(0, 0, 1);
+    gridPlaneAxisU.set(1, 0, 0);
+    gridPlaneAxisV.set(0, 1, 0);
+    gridPlaneOrigin.set(
+      roundToGridOrigin(gridTarget.x),
+      roundToGridOrigin(gridTarget.y),
+      gridTarget.z,
+    );
+    return;
+  }
+
+  if (manualGridPlaneMode === "leftRight") {
+    gridPlaneNormal.set(1, 0, 0);
+    gridPlaneAxisU.set(0, 0, 1);
+    gridPlaneAxisV.set(0, 1, 0);
+    gridPlaneOrigin.set(
+      gridTarget.x,
+      roundToGridOrigin(gridTarget.y),
+      roundToGridOrigin(gridTarget.z),
+    );
+    return;
+  }
+
+  gridPlaneNormal.set(0, 1, 0);
+  gridPlaneAxisU.set(1, 0, 0);
+  gridPlaneAxisV.set(0, 0, 1);
+  gridPlaneOrigin.set(
+    roundToGridOrigin(gridTarget.x),
+    0,
+    roundToGridOrigin(gridTarget.z),
   );
+};
+
+const setManualGridPlaneMode = (mode: ManualGridPlaneMode) => {
+  manualGridPlaneMode = mode;
+  syncManualGridWithTarget();
+};
+
+const setGridPlaneFromOrientation = (orientation: string) => {
+  if (orientation === "front" || orientation === "back") {
+    setManualGridPlaneMode("frontBack");
+    return;
+  }
+
+  if (orientation === "left" || orientation === "right") {
+    setManualGridPlaneMode("leftRight");
+    return;
+  }
+
+  setManualGridPlaneMode("ground");
+};
+
+const resetManualGridPlaneWhenLeavingCubeView = () => {
+  if (manualGridPlaneMode === "ground") return;
+
+  const controls = world.camera.controls as any;
+  const position = new THREE.Vector3();
+  const target = new THREE.Vector3();
+
+  if (typeof controls.getPosition === "function") {
+    controls.getPosition(position, false);
+  } else {
+    position.copy(world.camera.three.position);
+  }
+
+  if (typeof controls.getTarget === "function") {
+    controls.getTarget(target, false);
+  }
+
+  const viewDirection = target.sub(position);
+  if (viewDirection.lengthSq() < 0.000001) return;
+  viewDirection.normalize();
+
+  const sideAlignment =
+    manualGridPlaneMode === "frontBack"
+      ? Math.abs(viewDirection.z)
+      : Math.abs(viewDirection.x);
+
+  if (sideAlignment < 0.92) {
+    manualGridPlaneMode = "ground";
+  }
+};
+
+const syncManualGridForCamera = () => {
+  resetManualGridPlaneWhenLeavingCubeView();
+  syncManualGridWithTarget();
 };
 
 manualGrid.onBeforeRender = (_renderer, _scene, camera) => {
   gridProjectionMatrixInverse.copy(camera.projectionMatrix).invert();
   gridCameraMatrixWorld.copy(camera.matrixWorld);
-  syncManualGridWithTarget();
+  syncManualGridForCamera();
 };
 
 world.scene.three.add(manualGrid);
 
 for (const eventName of ["control", "update", "rest", "sleep"]) {
-  (world.camera.controls as any).addEventListener?.(eventName, syncManualGridWithTarget);
+  (world.camera.controls as any).addEventListener?.(eventName, syncManualGridForCamera);
 }
 
 syncManualGridWithTarget();
+
+window.addEventListener("vh-grid-plane-change", ((event: CustomEvent<{ orientation?: string }>) => {
+  const orientation = event.detail?.orientation;
+  if (!orientation) return;
+  setGridPlaneFromOrientation(orientation);
+}) as EventListener);
+
+window.addEventListener("vh-grid-plane-reset", () => {
+  setManualGridPlaneMode("ground");
+});
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;
