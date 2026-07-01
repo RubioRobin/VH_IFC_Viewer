@@ -56,3 +56,5 @@ backend/qr-codes/
 backend/uploads/
 backend/temp/
 frontend/.env.local
+
+.vercel

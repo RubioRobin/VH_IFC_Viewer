@@ -36,34 +36,78 @@ world.renderer.enabled = false; // Definitively prevent WebGL clear/render befor
 world.camera = new OBC.OrthoPerspectiveCamera(components);
 
 // Camera-instellingen
-world.camera.threePersp.near = 0.1;
-world.camera.threePersp.far = 50000;
-world.camera.threePersp.updateProjectionMatrix();
-world.camera.threeOrtho.near = 0.1;
-world.camera.threeOrtho.far = 50000;
-world.camera.threeOrtho.updateProjectionMatrix();
+const MIN_CAMERA_NEAR = 0.01;
+const DEFAULT_CAMERA_FAR = 1_000_000;
+
+const updateCameraClippingRange = (radius = 50000) => {
+  const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 50000;
+  const near = Math.max(safeRadius / 100000, MIN_CAMERA_NEAR);
+  const far = Math.max(safeRadius * 20, 10000);
+
+  world.camera.threePersp.near = near;
+  world.camera.threePersp.far = Math.max(far, DEFAULT_CAMERA_FAR);
+  world.camera.threePersp.updateProjectionMatrix();
+
+  world.camera.threeOrtho.near = near;
+  world.camera.threeOrtho.far = Math.max(far, DEFAULT_CAMERA_FAR);
+  world.camera.threeOrtho.updateProjectionMatrix();
+};
+
+updateCameraClippingRange();
 
 // smoothTime wordt gebruikt voor vloeiende beweging.
 world.camera.controls.smoothTime = 0.25;
 world.camera.controls.dollyToCursor = true;
-world.camera.controls.infinityZoom = true;
+world.camera.controls.infinityDolly = true;
 
 
-// Raster
-const worldGrid = components.get(OBC.Grids).create(world);
-worldGrid.setup({
-  color: new THREE.Color(0x5b5244),
-  primarySize: 1,
-  secondarySize: 5,
-  distance: 600,
-});
-worldGrid.material.depthWrite = false;
-worldGrid.three.renderOrder = -10;
+// Raster: echte world-space grid op Y=0, los van OBC.Grids.
+const GRID_SIZE = 10000;
+const GRID_FINE_STEP = 1;
+const GRID_MAJOR_STEP = 5;
 
-const syncGridFadeWithProjection = () => {
-  worldGrid.fade = world.camera.projection.current !== "Orthographic";
+const createGroundGrid = () => {
+  const halfSize = GRID_SIZE / 2;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const fineColor = new THREE.Color(0x332f28);
+  const majorColor = new THREE.Color(0x5b5244);
+
+  const pushVertex = (x: number, y: number, z: number, color: THREE.Color) => {
+    positions.push(x, y, z);
+    colors.push(color.r, color.g, color.b);
+  };
+
+  for (let index = -halfSize; index <= halfSize; index += GRID_FINE_STEP) {
+    const color = index % GRID_MAJOR_STEP === 0 ? majorColor : fineColor;
+
+    pushVertex(-halfSize, 0, index, color);
+    pushVertex(halfSize, 0, index, color);
+    pushVertex(index, 0, -halfSize, color);
+    pushVertex(index, 0, halfSize, color);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+
+  const material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+
+  const grid = new THREE.LineSegments(geometry, material);
+  grid.name = "VH Ground Grid";
+  grid.frustumCulled = false;
+  grid.renderOrder = -1000;
+  grid.position.y = 0;
+  return grid;
 };
-syncGridFadeWithProjection();
+
+world.scene.three.add(createGroundGrid());
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;
@@ -88,10 +132,11 @@ const resizeWorld = () => {
     // Only enable renderer and postproduction when we have a valid size
     if (!world.renderer.enabled) world.renderer.enabled = true;
 
-    if (world.renderer.postproduction && !world.renderer.postproduction.enabled) {
-      world.renderer.postproduction.enabled = true;
-      if (world.renderer.postproduction.customEffects) {
-        world.renderer.postproduction.customEffects.outlineEnabled = true;
+    const postproduction = world.renderer.postproduction as any;
+    if (postproduction && !postproduction.enabled) {
+      postproduction.enabled = true;
+      if (postproduction.customEffects) {
+        postproduction.customEffects.outlineEnabled = true;
       }
     }
   }
@@ -125,10 +170,13 @@ components.get(OBC.Raycasters).get(world);
 const fragments = components.get(OBC.FragmentsManager);
 fragments.init("/obc-worker.mjs");
 
+const syncManualGridWithTarget = () => {
+  // Ground grid is fixed on Y=0; this hook keeps projection changes safe.
+};
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
-  syncGridFadeWithProjection();
+  syncManualGridWithTarget();
   for (const [_, model] of fragments.list) {
     model.useCamera(world.camera.three);
   }
@@ -144,6 +192,10 @@ const webIfcWasmPath = new URL("/web-ifc/", window.location.origin).toString();
 await ifcLoader.setup({
   autoSetWasm: false,
   wasm: { absolute: true, path: webIfcWasmPath },
+  webIfc: {
+    ...ifcLoader.settings.webIfc,
+    COORDINATE_TO_ORIGIN: true,
+  },
 });
 
 // Highlighter instellen
@@ -177,6 +229,69 @@ if (postproduction) {
 const clipper = components.get(OBC.Clipper);
 clipper.enabled = false;
 
+const clearViewerClipping = () => {
+  clipper.enabled = false;
+  clipper.visible = false;
+  clipper.deleteAll();
+
+  if (world.renderer) {
+    world.renderer.clippingPlanes.length = 0;
+    world.renderer.three.clippingPlanes = [];
+    world.renderer.updateClippingPlanes();
+  }
+};
+
+const isValidBox = (box: THREE.Box3) => {
+  return (
+    !box.isEmpty() &&
+    Number.isFinite(box.min.x) &&
+    Number.isFinite(box.min.y) &&
+    Number.isFinite(box.min.z) &&
+    Number.isFinite(box.max.x) &&
+    Number.isFinite(box.max.y) &&
+    Number.isFinite(box.max.z)
+  );
+};
+
+const getModelBox = async (model: any) => {
+  const methods = [
+    BoundsCalculationMethod.FAST_SCAN,
+    BoundsCalculationMethod.BOUNDING_BOXER,
+    BoundsCalculationMethod.THREE_BOX3,
+  ];
+
+  for (const method of methods) {
+    try {
+      const bounds = await aligner.calculateBounds(model, method, false);
+      if (isValidBox(bounds.box)) return bounds.box.clone();
+    } catch (error) {
+      console.warn(`[Main] Bounds calculation failed with ${method}:`, error);
+    }
+  }
+
+  model.object.updateMatrixWorld(true);
+  const fallbackBox = new THREE.Box3().setFromObject(model.object);
+  return isValidBox(fallbackBox) ? fallbackBox : null;
+};
+
+const fitLoadedModelToView = async (model: any) => {
+  const box = await getModelBox(model);
+  if (!box) return;
+
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return;
+
+  sphere.radius *= 1.2;
+  updateCameraClippingRange(sphere.radius);
+
+  const controls = world.camera.controls;
+  controls.minDistance = Math.max(sphere.radius / 10000, MIN_CAMERA_NEAR);
+  controls.maxDistance = Math.max(sphere.radius * 12, 10000);
+
+  await controls.fitToSphere(sphere, true);
+  await fragments.core.update(true);
+};
+
 
 
 
@@ -191,8 +306,9 @@ window.addEventListener("keydown", (event) => {
 
 // Model Loaded Handler
 fragments.list.onItemSet.add(async ({ value: model }) => {
+  clearViewerClipping();
   model.useCamera(world.camera.three);
-  model.getClippingPlanesEvent = () => Array.from(world.renderer!.three.clippingPlanes) || [];
+  model.getClippingPlanesEvent = () => Array.from(world.renderer?.clippingPlanes ?? []);
 
   model.object.visible = false;
   world.scene.three.add(model.object);
@@ -212,6 +328,7 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
 
   await fragments.core.update(true);
   model.object.visible = true;
+  await fitLoadedModelToView(model);
 
   // HIDE LOADING OVERLAY
   const loader = document.getElementById('initial-loading-overlay');
@@ -228,8 +345,11 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
   if (thumbFileId) {
     await new Promise(resolve => setTimeout(resolve, 800));
     try {
-      const canvas = world.renderer.three.domElement;
-      world.renderer.three.render(world.scene.three, world.camera.three);
+      const renderer = world.renderer;
+      if (!renderer) return;
+
+      const canvas = renderer.three.domElement;
+      renderer.three.render(world.scene.three, world.camera.three);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       if (dataUrl && dataUrl.length > 100) {
         localStorage.setItem(`thumb_${thumbFileId}`, dataUrl);
@@ -297,59 +417,70 @@ setTimeout(queueWorldResize, 50);
 setTimeout(queueWorldResize, 250);
 
 // ---- Mobiele paneel-drawers ----
-// Op mobiel verschijnen FAB-knoppen waarmee gebruikers de zijpanelen kunnen openen.
-// Dit gebruikt CSS-klassen (.mobile-panel-open) zodat de animaties via CSS lopen.
 const isMobile = () => window.innerWidth <= 768;
 
 const setupMobilePanelToggles = () => {
-  if (!isMobile()) return;
-
   const leftPanel = document.querySelector('.app-side-panel--left') as HTMLElement | null;
   const rightPanel = document.querySelector('.app-side-panel--right') as HTMLElement | null;
   if (!leftPanel || !rightPanel) return;
+  if (document.querySelector('.mobile-panel-actions')) return;
 
-  // Scrim (overlay achter open paneel)
   const scrim = document.createElement('div');
   scrim.className = 'mobile-panel-scrim';
   document.body.appendChild(scrim);
+
+  const panelActions = document.createElement('div');
+  panelActions.className = 'mobile-panel-actions';
+  panelActions.setAttribute('aria-label', 'Mobiele panelen');
+  document.body.appendChild(panelActions);
+
+  let fabProperties: HTMLButtonElement | null = null;
+
+  const updateButtonState = () => {
+    const leftOpen = leftPanel.classList.contains('mobile-panel-open');
+    const rightOpen = rightPanel.classList.contains('mobile-panel-open');
+
+    fabProperties?.classList.toggle('mobile-fab--active', rightOpen);
+    fabProperties?.setAttribute('aria-expanded', String(rightOpen));
+
+    document.body.classList.toggle('mobile-drawer-open', leftOpen || rightOpen);
+  };
 
   const closeAll = () => {
     leftPanel.classList.remove('mobile-panel-open');
     rightPanel.classList.remove('mobile-panel-open');
     scrim.classList.remove('visible');
+    updateButtonState();
+  };
+
+  const openPanel = (panel: HTMLElement) => {
+    closeAll();
+    panel.classList.add('mobile-panel-open');
+    scrim.classList.add('visible');
+    updateButtonState();
   };
 
   scrim.addEventListener('click', closeAll);
-
-  // FAB knop: Modellen (links)
-  const fabModels = document.createElement('button');
-  fabModels.className = 'mobile-fab mobile-fab--models';
-  fabModels.setAttribute('aria-label', 'Modellen tonen');
-  fabModels.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
-  fabModels.addEventListener('click', () => {
-    const isOpen = leftPanel.classList.contains('mobile-panel-open');
-    closeAll();
-    if (!isOpen) {
-      leftPanel.classList.add('mobile-panel-open');
-      scrim.classList.add('visible');
-    }
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeAll();
   });
-  document.body.appendChild(fabModels);
+  window.addEventListener('resize', () => {
+    if (!isMobile()) closeAll();
+  });
 
-  // FAB knop: Eigenschappen (rechts)
-  const fabProperties = document.createElement('button');
+  fabProperties = document.createElement('button');
   fabProperties.className = 'mobile-fab mobile-fab--properties';
   fabProperties.setAttribute('aria-label', 'Eigenschappen tonen');
-  fabProperties.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  fabProperties.setAttribute('aria-controls', 'mobile-properties-panel');
+  fabProperties.setAttribute('aria-expanded', 'false');
+  rightPanel.id = rightPanel.id || 'mobile-properties-panel';
+  fabProperties.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span class="mobile-fab__label">Info</span>`;
   fabProperties.addEventListener('click', () => {
     const isOpen = rightPanel.classList.contains('mobile-panel-open');
     closeAll();
-    if (!isOpen) {
-      rightPanel.classList.add('mobile-panel-open');
-      scrim.classList.add('visible');
-    }
+    if (!isOpen) openPanel(rightPanel);
   });
-  document.body.appendChild(fabProperties);
+  panelActions.appendChild(fabProperties);
 };
 
 // Wacht op DOM zodat panelen beschikbaar zijn
@@ -391,6 +522,7 @@ const init = async () => {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
 
+      clearViewerClipping();
       await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
     } catch (e) {
       console.error("Publieke viewer fout:", e);
@@ -458,6 +590,7 @@ const init = async () => {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
 
+      clearViewerClipping();
       await ifcLoader.load(bytes, true, displayTitle.replace(".ifc", ""));
     } catch (e) {
       console.error("Laden mislukt:", e);

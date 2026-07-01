@@ -17,6 +17,7 @@ export const modelsPanelTemplate: BUI.StatefullComponent<ModelsPanelState> = (
 ) => {
   const { components } = state;
   const ifcLoader = components.get(OBC.IfcLoader);
+  const clipper = components.get(OBC.Clipper);
 
   const onAddIfcModel = (e: any) => {
     const target = e.target as HTMLElement;
@@ -42,6 +43,9 @@ export const modelsPanelTemplate: BUI.StatefullComponent<ModelsPanelState> = (
     try {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
+      clipper.enabled = false;
+      clipper.visible = false;
+      clipper.deleteAll();
       await ifcLoader.load(bytes, true, file.name.replace(".ifc", ""));
     } catch (error) {
       console.error("Error loading IFC:", error);
