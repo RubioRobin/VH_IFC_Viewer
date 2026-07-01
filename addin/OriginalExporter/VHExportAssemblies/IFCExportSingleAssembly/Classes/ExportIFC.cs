@@ -5,11 +5,13 @@ using Revit.IFC.Common.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace IFCExportSingleAssembly.Classes
 {
+    [SupportedOSPlatform("windows")]
     public class ExportIFC
     {
         private static string filePathPropertySet =
@@ -110,7 +112,7 @@ namespace IFCExportSingleAssembly.Classes
         private static string GetProjectName(Document doc)
         {
             // Probeer eerst Project Information > Name, val terug op documenttitel
-            string? projName = null;
+            string projName = null;
 
             // Sommige Revit-versies hebben ProjectInformation.Name als property,
             // in andere pak je de parameter PROJECT_NAME.

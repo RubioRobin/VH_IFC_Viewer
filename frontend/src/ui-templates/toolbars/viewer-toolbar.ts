@@ -19,13 +19,10 @@ const originalColors = new Map<
   { color: number; transparent: boolean; opacity: number }
 >();
 
-type MeasurementKind = "length" | "angle" | "area" | "volume";
+type MeasurementKind = "length";
 
 const measurementLabels: Record<MeasurementKind, string> = {
   length: "Afstand meten",
-  angle: "Hoek meten",
-  area: "Oppervlak meten",
-  volume: "Volume meten",
 };
 
 const setModelTransparent = (components: OBC.Components) => {
@@ -83,15 +80,9 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   const highlighter = components.get(OBF.Highlighter);
   const hider = components.get(OBC.Hider);
   const lengthMeasurement = components.get(OBF.LengthMeasurement);
-  const angleMeasurement = components.get(OBF.AngleMeasurement);
-  const areaMeasurement = components.get(OBF.AreaMeasurement);
-  const volumeMeasurement = components.get(OBF.VolumeMeasurement);
 
   const measurementTools = {
     length: lengthMeasurement,
-    angle: angleMeasurement,
-    area: areaMeasurement,
-    volume: volumeMeasurement,
   };
 
   for (const tool of Object.values(measurementTools)) {
@@ -104,9 +95,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     tool.enabled = false;
   }
   lengthMeasurement.units = "m";
-  areaMeasurement.units = "m2";
-  volumeMeasurement.units = "m3";
-  angleMeasurement.units = "deg";
 
   let activeMeasurement: MeasurementKind | null = null;
 
@@ -181,24 +169,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       true,
     );
   };
-
-  const setTheme = (mode: "light" | "dark") => {
-    const html = document.documentElement;
-    html.classList.toggle("vh-light-mode", mode === "light");
-    html.classList.toggle("vh-dark-mode", mode === "dark");
-    html.classList.toggle("bim-ui-light", mode === "light");
-    html.classList.toggle("bim-ui-dark", mode === "dark");
-    localStorage.setItem("vh-viewer-theme", mode);
-    world.scene.three.background = new THREE.Color(mode === "light" ? 0xf4f1ea : 0x101112);
-  };
-
-  const onToggleTheme = () => {
-    const isLight = document.documentElement.classList.contains("vh-light-mode");
-    setTheme(isLight ? "dark" : "light");
-  };
-
-  const savedTheme = localStorage.getItem("vh-viewer-theme");
-  setTheme(savedTheme === "light" ? "light" : "dark");
 
   const clearMeasurementClickHandler = () => {
     const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
@@ -330,7 +300,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       <bim-toolbar-section> 
         ${customButton({ icon: appIcons.SHOW, label: "Toon alles", onClick: onShowAll })}
         ${customButton({ icon: appIcons.TRANSPARENT, label: "Transparant", onClick: onToggleGhost })}
-        ${customButton({ icon: appIcons.THEME, label: "Thema", onClick: onToggleTheme })}
       </bim-toolbar-section> 
       
       <bim-toolbar-section>
@@ -345,9 +314,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
       <bim-toolbar-section>
         ${customButton({ icon: appIcons.RULER, label: measurementLabels.length, onClick: () => activateMeasurement("length") })}
-        ${customButton({ icon: appIcons.ANGLE, label: measurementLabels.angle, onClick: () => activateMeasurement("angle") })}
-        ${customButton({ icon: appIcons.AREA, label: measurementLabels.area, onClick: () => activateMeasurement("area") })}
-        ${customButton({ icon: appIcons.VOLUME, label: measurementLabels.volume, onClick: () => activateMeasurement("volume") })}
         ${customButton({ icon: appIcons.DELETE, label: "Metingen wissen", onClick: clearMeasurements })}
       </bim-toolbar-section>
 

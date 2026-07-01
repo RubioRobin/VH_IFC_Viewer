@@ -4,8 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Loader;
+using System.Runtime.Versioning;
 using System.Xml.Linq;
 
 namespace VH_IFC_QR
@@ -34,37 +33,50 @@ namespace VH_IFC_QR
         Failed
     }
 
+    [SupportedOSPlatform("windows")]
     public static class VhAssemblyIfcExporter
     {
-        private const string OriginalExporterAssemblyName = "IFCExportSingleAssembly.dll";
-        private const string OriginalExporterCommandType = "IFCExportSingleAssembly.ExecuteAddin";
-        private static readonly object ResolverLock = new object();
-        private static string _originalExporterFolder;
-        private static bool _resolverRegistered;
-
         public static VhAssemblyIfcExportResult Export(
             ExternalCommandData commandData,
             ref string message,
             ElementSet elements)
         {
-            DateTime startedAt = DateTime.Now.AddSeconds(-3);
+            DateTime startedAtUtc = DateTime.UtcNow.AddSeconds(-5);
 
             try
             {
+                string exportFolderBefore = TryReadOriginalExporterFolder();
+                Dictionary<string, IfcFileSnapshot> filesBefore = TrySnapshotIfcFiles(exportFolderBefore);
+
                 Result originalResult = ExecuteOriginalExporter(commandData, ref message, elements);
                 if (originalResult == Result.Cancelled)
+                {
+                    message = string.Empty;
                     return Cancelled("IFC export geannuleerd.");
+                }
 
                 if (originalResult == Result.Failed)
-                    return Failed(string.IsNullOrWhiteSpace(message) ? "De originele IFC exporter is mislukt." : message);
+                {
+                    string exportMessage = string.IsNullOrWhiteSpace(message)
+                        ? "De originele IFC exporter is mislukt."
+                        : message;
+                    message = string.Empty;
+                    return Failed(exportMessage);
+                }
 
-                string exportFolder = ReadOriginalExporterFolder();
+                string exportFolder = TryReadOriginalExporterFolder();
                 if (string.IsNullOrWhiteSpace(exportFolder) || !Directory.Exists(exportFolder))
                 {
                     return Succeeded(null, new List<VhExportedIfcFile>());
                 }
 
-                List<VhExportedIfcFile> exportedItems = FindExportedIfcFiles(exportFolder, startedAt)
+                IReadOnlyDictionary<string, IfcFileSnapshot> comparisonSnapshot =
+                    SameFolder(exportFolderBefore, exportFolder) ? filesBefore : null;
+
+                List<VhExportedIfcFile> exportedItems = FindExportedIfcFiles(
+                        exportFolder,
+                        comparisonSnapshot,
+                        startedAtUtc)
                     .Select(path =>
                     {
                         string assemblyCode = AssemblyUploadNaming.ExtractAssemblyCode(path);
@@ -85,95 +97,72 @@ namespace VH_IFC_QR
             }
         }
 
+        [SupportedOSPlatform("windows")]
         private static Result ExecuteOriginalExporter(
             ExternalCommandData commandData,
             ref string message,
             ElementSet elements)
         {
-            string exporterFolder = ResolveOriginalExporterFolder();
-            EnsureAssemblyResolver(exporterFolder);
-
-            string assemblyPath = Path.Combine(exporterFolder, OriginalExporterAssemblyName);
-            Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
-            Type commandType = assembly.GetType(OriginalExporterCommandType, throwOnError: true);
-            object command = Activator.CreateInstance(commandType);
-
-            if (command is not IExternalCommand externalCommand)
-                throw new InvalidOperationException("De originele IFC exporter command kon niet worden gestart.");
-
+            IExternalCommand externalCommand = new IFCExportSingleAssembly.ExecuteAddin();
             return externalCommand.Execute(commandData, ref message, elements);
         }
 
-        private static string ResolveOriginalExporterFolder()
+        private static string NormalizeFolderPath(string folderPath)
         {
-            string addinFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            List<string> candidates = new List<string>
-            {
-                Path.Combine(addinFolder ?? "", "OriginalExporter")
-            };
+            if (string.IsNullOrWhiteSpace(folderPath))
+                return null;
 
-            candidates.AddRange(FindVendoredExporterRuntimeFolders(addinFolder));
-
-            foreach (string candidate in candidates)
+            try
             {
-                string fullPath = Path.GetFullPath(candidate);
-                if (File.Exists(Path.Combine(fullPath, OriginalExporterAssemblyName)))
-                    return fullPath;
+                return TrimTrailingDirectorySeparators(Path.GetFullPath(folderPath.Trim()));
             }
-
-            throw new FileNotFoundException(
-                "De originele IFC exporter bestanden zijn niet gevonden.",
-                OriginalExporterAssemblyName);
-        }
-
-        private static IEnumerable<string> FindVendoredExporterRuntimeFolders(string startFolder)
-        {
-            string current = startFolder;
-            while (!string.IsNullOrWhiteSpace(current))
+            catch
             {
-                yield return Path.Combine(
-                    current,
-                    "OriginalExporter",
-                    "VHExportAssemblies",
-                    "IFCExportSingleAssembly",
-                    "bin",
-                    "Debug",
-                    "net8.0-windows7.0");
-
-                yield return Path.Combine(
-                    current,
-                    "OriginalExporter",
-                    "VHExportAssemblies",
-                    "IFCExportSingleAssembly",
-                    "bin",
-                    "Release",
-                    "net8.0-windows7.0");
-
-                DirectoryInfo parent = Directory.GetParent(current);
-                current = parent?.FullName;
+                return TrimTrailingDirectorySeparators(folderPath.Trim());
             }
         }
 
-        private static void EnsureAssemblyResolver(string exporterFolder)
+        private static string TrimTrailingDirectorySeparators(string folderPath)
         {
-            lock (ResolverLock)
+            string root = null;
+            try
             {
-                _originalExporterFolder = exporterFolder;
-                if (_resolverRegistered)
-                    return;
-
-                AssemblyLoadContext.Default.Resolving += ResolveOriginalExporterDependency;
-                _resolverRegistered = true;
+                root = Path.GetPathRoot(folderPath);
             }
+            catch
+            {
+            }
+
+            if (!string.IsNullOrEmpty(root) &&
+                string.Equals(folderPath, root, StringComparison.OrdinalIgnoreCase))
+            {
+                return folderPath;
+            }
+
+            return folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
 
-        private static Assembly ResolveOriginalExporterDependency(AssemblyLoadContext context, AssemblyName assemblyName)
+        private static bool SameFolder(string left, string right)
         {
-            string candidate = Path.Combine(_originalExporterFolder ?? "", assemblyName.Name + ".dll");
-            if (File.Exists(candidate))
-                return context.LoadFromAssemblyPath(candidate);
+            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+                return false;
 
-            return null;
+            return string.Equals(
+                NormalizeFolderPath(left),
+                NormalizeFolderPath(right),
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string TryReadOriginalExporterFolder()
+        {
+            try
+            {
+                return NormalizeFolderPath(ReadOriginalExporterFolder());
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string ReadOriginalExporterFolder()
@@ -208,11 +197,68 @@ namespace VH_IFC_QR
                 .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value) && Directory.Exists(value));
         }
 
-        private static IEnumerable<string> FindExportedIfcFiles(string exportFolder, DateTime startedAt)
+        private sealed class IfcFileSnapshot
         {
+            public long Length { get; set; }
+            public DateTime LastWriteTimeUtc { get; set; }
+        }
+
+        private static Dictionary<string, IfcFileSnapshot> SnapshotIfcFiles(string exportFolder)
+        {
+            if (string.IsNullOrWhiteSpace(exportFolder) || !Directory.Exists(exportFolder))
+                return new Dictionary<string, IfcFileSnapshot>(StringComparer.OrdinalIgnoreCase);
+
             return Directory
                 .GetFiles(exportFolder, "*.ifc", SearchOption.TopDirectoryOnly)
-                .Where(path => File.GetLastWriteTime(path) >= startedAt)
+                .Select(path => new FileInfo(path))
+                .Where(file => file.Exists)
+                .ToDictionary(
+                    file => file.FullName,
+                    file => new IfcFileSnapshot
+                    {
+                        Length = file.Length,
+                        LastWriteTimeUtc = file.LastWriteTimeUtc
+                    },
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static Dictionary<string, IfcFileSnapshot> TrySnapshotIfcFiles(string exportFolder)
+        {
+            try
+            {
+                return SnapshotIfcFiles(exportFolder);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static IEnumerable<string> FindExportedIfcFiles(
+            string exportFolder,
+            IReadOnlyDictionary<string, IfcFileSnapshot> filesBefore,
+            DateTime startedAtUtc)
+        {
+            Dictionary<string, IfcFileSnapshot> filesAfter = SnapshotIfcFiles(exportFolder);
+
+            if (filesBefore != null)
+            {
+                List<string> changedFiles = filesAfter
+                    .Where(pair =>
+                        !filesBefore.TryGetValue(pair.Key, out IfcFileSnapshot before) ||
+                        before.Length != pair.Value.Length ||
+                        before.LastWriteTimeUtc != pair.Value.LastWriteTimeUtc)
+                    .Select(pair => pair.Key)
+                    .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (changedFiles.Count > 0)
+                    return changedFiles;
+            }
+
+            return filesAfter
+                .Where(pair => pair.Value.LastWriteTimeUtc >= startedAtUtc)
+                .Select(pair => pair.Key)
                 .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }

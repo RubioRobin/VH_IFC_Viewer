@@ -14,11 +14,14 @@ namespace VH_IFC_QR
 
         public void Update(string message, int percent)
         {
+            int value = Math.Max(0, Math.Min(100, percent));
+
             // Ensure UI update on UI thread
-             Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.BeginInvoke(new Action(() =>
             {
                 lblMessage.Text = message;
-                progressBar.Value = percent;
+                progressBar.Value = value;
+                lblPercent.Text = $"{value}%";
             }), DispatcherPriority.Render);
         }
 

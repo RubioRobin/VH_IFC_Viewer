@@ -70,7 +70,7 @@ namespace VH_IFC_QR
 
                 // 6. Loop over MAPPINGS (1 mapping = 1 view + 1 sheet)
                 var mappings = selWin.ValidMappings;
-                List<string> results = new List<string>();
+                List<string> qrSheetLabels = new List<string>();
                 int totalSteps = mappings.Count * 7; 
                 int currentStep = 0;
 
@@ -149,14 +149,14 @@ namespace VH_IFC_QR
                             TryDeleteTempFile(tempPath);
                             TryDeleteTempFile(qrTempPath);
                             
-                            results.Add($"{modelName}");
+                            qrSheetLabels.Add(ResultSummaryFormatter.FormatSheetLabel(sheet?.SheetNumber, sheet?.Name));
                             currentStep++; // 7
                         }
 
                     progress.Update("Klaar!", 100);
                     progress.Close();
 
-                    ResultWindow resWin = new ResultWindow(results);
+                    ResultWindow resWin = new ResultWindow(qrSheetLabels, SettingsManager.Instance.AdminUrl);
                     resWin.ShowDialog();
                 }
                 catch (Exception ex)

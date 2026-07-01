@@ -4,8 +4,11 @@ using Autodesk.Revit.UI;
 using IFCExportSingleAssembly.Classes;
 using IFCExportSingleAssemblyUI.Model;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Versioning;
 using System.Windows;
-using db = Autodesk.Revit.DB;
+using RevitDb = Autodesk.Revit.DB;
 
 namespace IFCExportSingleAssembly
 {
@@ -20,6 +23,7 @@ namespace IFCExportSingleAssembly
     // in de 3D view niet de VH maar de CB Assembly Code filter toepassen
 
     [TransactionAttribute(TransactionMode.Manual)]
+    [SupportedOSPlatform("windows")]
     public class ExecuteAddin : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
@@ -28,7 +32,7 @@ namespace IFCExportSingleAssembly
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
 
             // Get Document
-            db.Document doc = uidoc.Document;
+            RevitDb.Document doc = uidoc.Document;
 
             // Revit version controle
             string revitVersionNumber = doc.Application.VersionNumber;
@@ -42,10 +46,10 @@ namespace IFCExportSingleAssembly
             }
 
             // Get all assembly intances in the open view
-            IEnumerable<db.AssemblyInstance> AllAssembliesInOpenView = GetAssemblies.GetAllAssemliesInCurrentView(doc);
+            IEnumerable<RevitDb.AssemblyInstance> AllAssembliesInOpenView = GetAssemblies.GetAllAssemliesInCurrentView(doc);
 
             // Get all sheets
-            IEnumerable<db.ViewSheet> AllSheets = GetSheets.GetAllSheets(doc);
+            IEnumerable<RevitDb.ViewSheet> AllSheets = GetSheets.GetAllSheets(doc);
 
             // Filter at least 1 assembly in active view
             if (AllAssembliesInOpenView.Count() < 1 || AllSheets.Count() < 1)
@@ -221,14 +225,6 @@ namespace IFCExportSingleAssembly
 
             //    t1.Commit();
             //}
-
-            var count = _3DViews.Count;
-            System.Windows.MessageBox.Show(
-                $"Export completed.\n{count} view(s) exported to:\n{mainVm.FileExportPath}",
-                "IFC Export",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information
-            );
 
             return Result.Succeeded; 
         }

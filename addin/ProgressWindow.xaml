@@ -2,32 +2,50 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Verwerken..."
-        Height="160" Width="420"
+        Height="190" Width="480"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent">
+        Background="Transparent"
+        FontFamily="Segoe UI">
     
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
-    <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="12" Padding="20">
+    <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="12" Padding="24">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18" Direction="270" RenderingBias="Quality" ShadowDepth="3" Opacity="0.16"/>
+        </Border.Effect>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Header / Drag Area -->
             <Border Grid.Row="0" Background="Transparent" MouseLeftButtonDown="Header_MouseDown" Margin="0,0,0,15">
-                <TextBlock Text="Even geduld..." FontWeight="Bold" FontSize="16" Foreground="#111827" HorizontalAlignment="Center"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="IFC upload verwerken" FontWeight="Bold" FontSize="17" Foreground="#111827"/>
+                        <TextBlock Text="VH Engineering" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Background="#F3EFE5" CornerRadius="6" Padding="10,5" VerticalAlignment="Top">
+                        <TextBlock x:Name="lblPercent" Text="0%" FontSize="12" FontWeight="SemiBold" Foreground="#6F6042"/>
+                    </Border>
+                </Grid>
             </Border>
 
             <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                <TextBlock x:Name="lblMessage" Text="Initialiseren..." FontSize="14" Foreground="#6B7280" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,15"/>
-                <ProgressBar x:Name="progressBar" Height="8" Foreground="#4F46E5" Background="#F3F4F6" BorderThickness="0">
+                <TextBlock x:Name="lblMessage" Text="Initialiseren..." FontSize="13" Foreground="#374151" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                <ProgressBar x:Name="progressBar" Height="9" Maximum="100" Foreground="#C1A979" Background="#F1F5F9" BorderThickness="0">
                      <ProgressBar.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="4"/>

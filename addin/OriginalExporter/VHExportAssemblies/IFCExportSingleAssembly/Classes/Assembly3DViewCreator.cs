@@ -239,9 +239,9 @@ namespace IFCExportSingleAssembly.Classes
             {
                 if (ReferenceEquals(x, y)) return true;
                 if (x is null || y is null) return false;
-                return x.Id.IntegerValue == y.Id.IntegerValue;
+                return x.Id.Value == y.Id.Value;
             }
-            public int GetHashCode(T obj) => obj?.Id.IntegerValue ?? 0;
+            public int GetHashCode(T obj) => obj?.Id.Value.GetHashCode() ?? 0;
         }
     }
 }

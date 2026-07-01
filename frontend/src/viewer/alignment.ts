@@ -201,6 +201,8 @@ export class ModelAligner {
     ): THREE.Box3 {
         if (logDetails) console.log("[ModelAligner] Using FAST_SCAN method");
 
+        model.object.updateMatrixWorld(true);
+
         const tempBox = new THREE.Box3();
         const tempMatrix = new THREE.Matrix4();
         const globalBox = new THREE.Box3();
@@ -222,12 +224,12 @@ export class ModelAligner {
                     for (let i = 0; i < mesh.count; i++) {
                         instanceCount++;
                         mesh.getMatrixAt(i, tempMatrix);
+                        tempMatrix.premultiply(mesh.matrixWorld);
                         tempBox.copy(geom.boundingBox!).applyMatrix4(tempMatrix);
                         globalBox.union(tempBox);
                     }
                 } else {
-                    // Standard mesh
-                    tempBox.copy(geom.boundingBox!).applyMatrix4(mesh.matrix);
+                    tempBox.copy(geom.boundingBox!).applyMatrix4(mesh.matrixWorld);
                     globalBox.union(tempBox);
                 }
             }
@@ -269,17 +271,23 @@ export class ModelAligner {
         bounds: BoundsResult,
         logDetails: boolean
     ): void {
-        const offset = -bounds.minY;
+        const center = bounds.box.getCenter(new THREE.Vector3());
+        const offset = new THREE.Vector3(-center.x, -bounds.minY, -center.z);
 
         if (logDetails) {
-            console.log(`[ModelAligner] Aligning bottom to grid. Current minY: ${bounds.minY}, offset: ${offset}`);
+            console.log("[ModelAligner] Aligning bottom to grid and centering X/Z.", {
+                minY: bounds.minY,
+                centerX: center.x,
+                centerZ: center.z,
+                offset: offset.toArray(),
+            });
         }
 
-        model.object.position.y += offset;
+        model.object.position.add(offset);
         model.object.updateMatrixWorld(true);
 
         if (logDetails) {
-            console.log(`[ModelAligner] Model position after alignment: ${model.object.position.y}`);
+            console.log(`[ModelAligner] Model position after alignment: ${model.object.position.toArray()}`);
         }
     }
 
