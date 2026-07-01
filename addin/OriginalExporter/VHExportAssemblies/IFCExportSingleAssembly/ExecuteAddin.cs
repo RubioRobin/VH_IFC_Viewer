@@ -85,7 +85,7 @@ namespace IFCExportSingleAssembly
 
             // if user cancels the UI
             bool? result = dialog.ShowDialog();
-            if (result != true) return Result.Succeeded;
+            if (result != true) return Result.Cancelled;
 
             // ✔ Aangevinkt ophalen uit dezelfde VM-instantie
             var checkedItems = exportVm.GetChecked().ToList();
@@ -93,7 +93,7 @@ namespace IFCExportSingleAssembly
 
             if (selectedNames == null || selectedNames.Count == 0)
             {
-                return Result.Succeeded;
+                return Result.Cancelled;
             }
 
             // haalt alle sheets op die bij de designphase(s) horen
