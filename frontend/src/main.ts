@@ -53,10 +53,16 @@ world.camera.controls.infinityZoom = true;
 const GRID_FINE_PX = 24;
 const GRID_MAJOR_PX = 120;
 const gridResolution = new THREE.Vector2(1, 1);
+const gridOffset = new THREE.Vector2();
+const gridTarget = new THREE.Vector3();
+const gridCameraRight = new THREE.Vector3();
+const gridCameraUp = new THREE.Vector3();
+const gridCameraPosition = new THREE.Vector3();
 
 const manualGridMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uResolution: { value: gridResolution },
+    uGridOffset: { value: gridOffset },
     uFineStep: { value: GRID_FINE_PX },
     uMajorStep: { value: GRID_MAJOR_PX },
     uFineColor: { value: new THREE.Color(0x332f28) },
@@ -74,6 +80,7 @@ const manualGridMaterial = new THREE.ShaderMaterial({
     varying vec2 vNdc;
 
     uniform vec2 uResolution;
+    uniform vec2 uGridOffset;
     uniform float uFineStep;
     uniform float uMajorStep;
     uniform vec3 uFineColor;
@@ -86,7 +93,7 @@ const manualGridMaterial = new THREE.ShaderMaterial({
 
     void main() {
       vec2 pixel = (vNdc * 0.5 + 0.5) * uResolution;
-      vec2 centered = pixel - uResolution * 0.5;
+      vec2 centered = pixel - uResolution * 0.5 + uGridOffset;
 
       vec2 axisA = normalize(vec2(1.0, 0.52));
       vec2 axisB = normalize(vec2(-1.0, 0.52));
@@ -114,8 +121,51 @@ manualGrid.name = "VH Pixel Overlay Grid";
 manualGrid.frustumCulled = false;
 manualGrid.renderOrder = -1000;
 
-manualGrid.onBeforeRender = (renderer) => {
+const getGridPixelsPerWorldUnit = (camera: THREE.Camera) => {
+  if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
+    const orthoCamera = camera as THREE.OrthographicCamera;
+    const worldHeight = Math.max(orthoCamera.top - orthoCamera.bottom, 0.0001);
+    return gridResolution.y / worldHeight * orthoCamera.zoom;
+  }
+
+  if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+    const perspectiveCamera = camera as THREE.PerspectiveCamera;
+    const distance = Math.max(gridCameraPosition.distanceTo(gridTarget), 0.0001);
+    const verticalFov = THREE.MathUtils.degToRad(perspectiveCamera.fov);
+    return gridResolution.y / (2 * distance * Math.tan(verticalFov * 0.5));
+  }
+
+  return GRID_FINE_PX;
+};
+
+const updatePixelGridFromCamera = (camera: THREE.Camera) => {
+  const controls = world.camera.controls as any;
+  if (typeof controls.getTarget === "function") {
+    controls.getTarget(gridTarget, false);
+  } else {
+    gridTarget.set(0, 0, 0);
+  }
+
+  gridCameraPosition.setFromMatrixPosition(camera.matrixWorld);
+  gridCameraRight.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+  gridCameraUp.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+
+  const pixelsPerWorldUnit = getGridPixelsPerWorldUnit(camera);
+  let fineStep = pixelsPerWorldUnit;
+  while (fineStep < 16) fineStep *= 2;
+  while (fineStep > 48) fineStep *= 0.5;
+
+  manualGridMaterial.uniforms.uFineStep.value = fineStep;
+  manualGridMaterial.uniforms.uMajorStep.value = fineStep * 5;
+  gridOffset.set(
+    -gridTarget.dot(gridCameraRight) * pixelsPerWorldUnit,
+    -gridTarget.dot(gridCameraUp) * pixelsPerWorldUnit,
+  );
+};
+
+manualGrid.onBeforeRender = (renderer, _scene, camera) => {
   renderer.getDrawingBufferSize(gridResolution);
+  updatePixelGridFromCamera(camera);
 };
 
 world.scene.three.add(manualGrid);
