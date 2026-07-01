@@ -50,17 +50,20 @@ world.camera.controls.infinityZoom = true;
 
 
 // Raster
+const GRID_FADE_DISTANCE = 20000;
 const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.setup({
   color: new THREE.Color(0x5b5244),
   primarySize: 1,
   secondarySize: 5,
-  distance: 600,
+  distance: GRID_FADE_DISTANCE,
 });
 worldGrid.material.depthWrite = false;
 worldGrid.three.renderOrder = -10;
 
 const syncGridFadeWithProjection = () => {
+  worldGrid.config.distance = GRID_FADE_DISTANCE;
+  worldGrid.material.uniforms.uDistance.value = GRID_FADE_DISTANCE;
   worldGrid.fade = world.camera.projection.current !== "Orthographic";
 };
 syncGridFadeWithProjection();
