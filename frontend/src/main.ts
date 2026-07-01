@@ -50,7 +50,7 @@ world.camera.controls.infinityZoom = true;
 
 
 // Raster
-const GRID_FADE_DISTANCE = 20000;
+const GRID_FADE_DISTANCE = 200000;
 const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.setup({
   color: new THREE.Color(0x5b5244),
