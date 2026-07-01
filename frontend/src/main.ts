@@ -105,8 +105,7 @@ const manualGridMaterial = new THREE.ShaderMaterial({
 
       if (abs(rayDirection.y) < 0.00001) discard;
 
-      float rayDistance = -nearPoint.y / rayDirection.y;
-      if (rayDistance <= 0.0) discard;
+      float rayDistance = abs(-nearPoint.y / rayDirection.y);
 
       vec3 worldPosition = nearPoint + rayDirection * rayDistance;
       vec2 gridCoord = worldPosition.xz - uGridOrigin;
