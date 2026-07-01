@@ -49,48 +49,84 @@ world.camera.controls.dollyToCursor = true;
 world.camera.controls.infinityZoom = true;
 
 
-// Raster
-const GRID_FADE_DISTANCE = 40000;
-const worldGrid = components.get(OBC.Grids).create(world);
-worldGrid.setup({
-  color: new THREE.Color(0x5b5244),
-  primarySize: 1,
-  secondarySize: 5,
-  distance: GRID_FADE_DISTANCE,
-});
-worldGrid.material.depthWrite = false;
-worldGrid.three.renderOrder = -10;
+// Raster: eigen Three.js grid, los van OBC.Grids.
+const GRID_HALF_EXTENT = 20000;
+const GRID_FINE_STEP = 1;
+const GRID_MAJOR_STEP = 5;
+const GRID_RECENTER_STEP = 100;
 
-const gridCenter = new THREE.Vector2();
+const createGridGeometry = (
+  step: number,
+  halfExtent: number,
+  skipEvery = 0,
+) => {
+  const coordinates: number[] = [];
+  const lineCount = Math.floor(halfExtent / step);
+
+  for (let i = -lineCount; i <= lineCount; i++) {
+    const offset = i * step;
+    if (skipEvery > 0 && Math.abs(offset % skipEvery) < 0.0001) continue;
+
+    coordinates.push(-halfExtent, 0, offset, halfExtent, 0, offset);
+    coordinates.push(offset, 0, -halfExtent, offset, 0, halfExtent);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(coordinates, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+};
+
+const manualGrid = new THREE.Group();
+manualGrid.name = "VH Manual Ground Grid";
+manualGrid.position.y = 0.002;
+
+const fineGrid = new THREE.LineSegments(
+  createGridGeometry(GRID_FINE_STEP, GRID_HALF_EXTENT, GRID_MAJOR_STEP),
+  new THREE.LineBasicMaterial({
+    color: 0x332f28,
+    transparent: true,
+    opacity: 0.32,
+    depthWrite: false,
+  }),
+);
+
+const majorGrid = new THREE.LineSegments(
+  createGridGeometry(GRID_MAJOR_STEP, GRID_HALF_EXTENT),
+  new THREE.LineBasicMaterial({
+    color: 0x5b5244,
+    transparent: true,
+    opacity: 0.62,
+    depthWrite: false,
+  }),
+);
+
+for (const gridLayer of [fineGrid, majorGrid]) {
+  gridLayer.frustumCulled = false;
+  gridLayer.renderOrder = -10;
+  manualGrid.add(gridLayer);
+}
+
+world.scene.three.add(manualGrid);
+
 const gridTarget = new THREE.Vector3();
-worldGrid.material.uniforms.uGridCenter = { value: gridCenter };
-worldGrid.material.vertexShader = worldGrid.material.vertexShader
-  .replace("uniform float uDistance;", "uniform float uDistance;\nuniform vec2 uGridCenter;")
-  .replace("pos.xz += cameraPosition.xz;", "pos.xz += uGridCenter;");
-worldGrid.material.needsUpdate = true;
-
-const syncGridCenterWithTarget = () => {
+const syncManualGridWithTarget = () => {
   const controls = world.camera.controls as any;
   if (typeof controls.getTarget === "function") {
     controls.getTarget(gridTarget, false);
-    gridCenter.set(gridTarget.x, gridTarget.z);
-    return;
+  } else {
+    gridTarget.copy(world.camera.three.position);
   }
 
-  gridCenter.set(world.camera.three.position.x, world.camera.three.position.z);
+  manualGrid.position.x = Math.round(gridTarget.x / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
+  manualGrid.position.z = Math.round(gridTarget.z / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
 };
 
 for (const eventName of ["control", "update", "rest", "sleep"]) {
-  (world.camera.controls as any).addEventListener?.(eventName, syncGridCenterWithTarget);
+  (world.camera.controls as any).addEventListener?.(eventName, syncManualGridWithTarget);
 }
 
-const syncGridFadeWithProjection = () => {
-  syncGridCenterWithTarget();
-  worldGrid.config.distance = GRID_FADE_DISTANCE;
-  worldGrid.material.uniforms.uDistance.value = GRID_FADE_DISTANCE;
-  worldGrid.fade = world.camera.projection.current !== "Orthographic";
-};
-syncGridFadeWithProjection();
+syncManualGridWithTarget();
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;
@@ -155,7 +191,7 @@ fragments.init("/obc-worker.mjs");
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
-  syncGridFadeWithProjection();
+  syncManualGridWithTarget();
   for (const [_, model] of fragments.list) {
     model.useCamera(world.camera.three);
   }
