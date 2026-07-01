@@ -55,8 +55,15 @@ worldGrid.setup({
   color: new THREE.Color(0x5b5244),
   primarySize: 1,
   secondarySize: 5,
-  distance: 20000,
+  distance: 600,
 });
+worldGrid.material.depthWrite = false;
+worldGrid.three.renderOrder = -10;
+
+const syncGridFadeWithProjection = () => {
+  worldGrid.fade = world.camera.projection.current !== "Orthographic";
+};
+syncGridFadeWithProjection();
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;
@@ -121,6 +128,7 @@ fragments.init("/obc-worker.mjs");
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
+  syncGridFadeWithProjection();
   for (const [_, model] of fragments.list) {
     model.useCamera(world.camera.three);
   }
