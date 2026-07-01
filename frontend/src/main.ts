@@ -36,17 +36,29 @@ world.renderer.enabled = false; // Definitively prevent WebGL clear/render befor
 world.camera = new OBC.OrthoPerspectiveCamera(components);
 
 // Camera-instellingen
-world.camera.threePersp.near = 0.1;
-world.camera.threePersp.far = 50000;
-world.camera.threePersp.updateProjectionMatrix();
-world.camera.threeOrtho.near = 0.1;
-world.camera.threeOrtho.far = 50000;
-world.camera.threeOrtho.updateProjectionMatrix();
+const MIN_CAMERA_NEAR = 0.01;
+const DEFAULT_CAMERA_FAR = 1_000_000;
+
+const updateCameraClippingRange = (radius = 50000) => {
+  const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 50000;
+  const near = Math.max(safeRadius / 100000, MIN_CAMERA_NEAR);
+  const far = Math.max(safeRadius * 20, 10000);
+
+  world.camera.threePersp.near = near;
+  world.camera.threePersp.far = Math.max(far, DEFAULT_CAMERA_FAR);
+  world.camera.threePersp.updateProjectionMatrix();
+
+  world.camera.threeOrtho.near = near;
+  world.camera.threeOrtho.far = Math.max(far, DEFAULT_CAMERA_FAR);
+  world.camera.threeOrtho.updateProjectionMatrix();
+};
+
+updateCameraClippingRange();
 
 // smoothTime wordt gebruikt voor vloeiende beweging.
 world.camera.controls.smoothTime = 0.25;
 world.camera.controls.dollyToCursor = true;
-world.camera.controls.infinityZoom = true;
+world.camera.controls.infinityDolly = true;
 
 
 // Raster: echte world-space grid op Y=0, los van OBC.Grids.
@@ -120,10 +132,11 @@ const resizeWorld = () => {
     // Only enable renderer and postproduction when we have a valid size
     if (!world.renderer.enabled) world.renderer.enabled = true;
 
-    if (world.renderer.postproduction && !world.renderer.postproduction.enabled) {
-      world.renderer.postproduction.enabled = true;
-      if (world.renderer.postproduction.customEffects) {
-        world.renderer.postproduction.customEffects.outlineEnabled = true;
+    const postproduction = world.renderer.postproduction as any;
+    if (postproduction && !postproduction.enabled) {
+      postproduction.enabled = true;
+      if (postproduction.customEffects) {
+        postproduction.customEffects.outlineEnabled = true;
       }
     }
   }
@@ -157,6 +170,9 @@ components.get(OBC.Raycasters).get(world);
 const fragments = components.get(OBC.FragmentsManager);
 fragments.init("/obc-worker.mjs");
 
+const syncManualGridWithTarget = () => {
+  // Ground grid is fixed on Y=0; this hook keeps projection changes safe.
+};
 
 // Sync camera
 world.camera.projection.onChanged.add(() => {
@@ -176,6 +192,10 @@ const webIfcWasmPath = new URL("/web-ifc/", window.location.origin).toString();
 await ifcLoader.setup({
   autoSetWasm: false,
   wasm: { absolute: true, path: webIfcWasmPath },
+  webIfc: {
+    ...ifcLoader.settings.webIfc,
+    COORDINATE_TO_ORIGIN: true,
+  },
 });
 
 // Highlighter instellen
@@ -209,6 +229,69 @@ if (postproduction) {
 const clipper = components.get(OBC.Clipper);
 clipper.enabled = false;
 
+const clearViewerClipping = () => {
+  clipper.enabled = false;
+  clipper.visible = false;
+  clipper.deleteAll();
+
+  if (world.renderer) {
+    world.renderer.clippingPlanes.length = 0;
+    world.renderer.three.clippingPlanes = [];
+    world.renderer.updateClippingPlanes();
+  }
+};
+
+const isValidBox = (box: THREE.Box3) => {
+  return (
+    !box.isEmpty() &&
+    Number.isFinite(box.min.x) &&
+    Number.isFinite(box.min.y) &&
+    Number.isFinite(box.min.z) &&
+    Number.isFinite(box.max.x) &&
+    Number.isFinite(box.max.y) &&
+    Number.isFinite(box.max.z)
+  );
+};
+
+const getModelBox = async (model: any) => {
+  const methods = [
+    BoundsCalculationMethod.FAST_SCAN,
+    BoundsCalculationMethod.BOUNDING_BOXER,
+    BoundsCalculationMethod.THREE_BOX3,
+  ];
+
+  for (const method of methods) {
+    try {
+      const bounds = await aligner.calculateBounds(model, method, false);
+      if (isValidBox(bounds.box)) return bounds.box.clone();
+    } catch (error) {
+      console.warn(`[Main] Bounds calculation failed with ${method}:`, error);
+    }
+  }
+
+  model.object.updateMatrixWorld(true);
+  const fallbackBox = new THREE.Box3().setFromObject(model.object);
+  return isValidBox(fallbackBox) ? fallbackBox : null;
+};
+
+const fitLoadedModelToView = async (model: any) => {
+  const box = await getModelBox(model);
+  if (!box) return;
+
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return;
+
+  sphere.radius *= 1.2;
+  updateCameraClippingRange(sphere.radius);
+
+  const controls = world.camera.controls;
+  controls.minDistance = Math.max(sphere.radius / 10000, MIN_CAMERA_NEAR);
+  controls.maxDistance = Math.max(sphere.radius * 12, 10000);
+
+  await controls.fitToSphere(sphere, true);
+  await fragments.core.update(true);
+};
+
 
 
 
@@ -223,8 +306,9 @@ window.addEventListener("keydown", (event) => {
 
 // Model Loaded Handler
 fragments.list.onItemSet.add(async ({ value: model }) => {
+  clearViewerClipping();
   model.useCamera(world.camera.three);
-  model.getClippingPlanesEvent = () => Array.from(world.renderer!.three.clippingPlanes) || [];
+  model.getClippingPlanesEvent = () => Array.from(world.renderer?.clippingPlanes ?? []);
 
   model.object.visible = false;
   world.scene.three.add(model.object);
@@ -244,6 +328,7 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
 
   await fragments.core.update(true);
   model.object.visible = true;
+  await fitLoadedModelToView(model);
 
   // HIDE LOADING OVERLAY
   const loader = document.getElementById('initial-loading-overlay');
@@ -260,8 +345,11 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
   if (thumbFileId) {
     await new Promise(resolve => setTimeout(resolve, 800));
     try {
-      const canvas = world.renderer.three.domElement;
-      world.renderer.three.render(world.scene.three, world.camera.three);
+      const renderer = world.renderer;
+      if (!renderer) return;
+
+      const canvas = renderer.three.domElement;
+      renderer.three.render(world.scene.three, world.camera.three);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       if (dataUrl && dataUrl.length > 100) {
         localStorage.setItem(`thumb_${thumbFileId}`, dataUrl);
@@ -423,6 +511,7 @@ const init = async () => {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
 
+      clearViewerClipping();
       await ifcLoader.load(bytes, true, filename.replace(".ifc", ""));
     } catch (e) {
       console.error("Publieke viewer fout:", e);
@@ -490,6 +579,7 @@ const init = async () => {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
 
+      clearViewerClipping();
       await ifcLoader.load(bytes, true, displayTitle.replace(".ifc", ""));
     } catch (e) {
       console.error("Laden mislukt:", e);
