@@ -18,22 +18,20 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
 
     - name: Restore NuGet Packages
-      run: nuget restore addin/*.sln
+      run: dotnet restore addin/VH_IFC_QR.csproj
 
-    - name: Build Solution (Release)
-      run: msbuild addin/*.sln /p:Configuration=Release /t:Rebuild
+    - name: Build Add-in (Release)
+      run: dotnet build addin/VH_IFC_QR.csproj --configuration Release --no-restore -p:CopyToRevitAddins=false
 
     - name: Upload Artifact (DLL and Addin)
       uses: actions/upload-artifact@v4
       with:
         name: vh-ifc-viewer-addin-Release
         path: |
-          addin/**/bin/Release/**/*.dll
-          addin/**/bin/Release/**/*.addin
+          addin/bin/Release/net8.0-windows/**
