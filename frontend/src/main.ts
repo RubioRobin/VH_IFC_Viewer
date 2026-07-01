@@ -50,7 +50,7 @@ world.camera.controls.infinityZoom = true;
 
 
 // Raster
-const GRID_FADE_DISTANCE = 200000;
+const GRID_FADE_DISTANCE = 40000;
 const worldGrid = components.get(OBC.Grids).create(world);
 worldGrid.setup({
   color: new THREE.Color(0x5b5244),
@@ -61,7 +61,31 @@ worldGrid.setup({
 worldGrid.material.depthWrite = false;
 worldGrid.three.renderOrder = -10;
 
+const gridCenter = new THREE.Vector2();
+const gridTarget = new THREE.Vector3();
+worldGrid.material.uniforms.uGridCenter = { value: gridCenter };
+worldGrid.material.vertexShader = worldGrid.material.vertexShader
+  .replace("uniform float uDistance;", "uniform float uDistance;\nuniform vec2 uGridCenter;")
+  .replace("pos.xz += cameraPosition.xz;", "pos.xz += uGridCenter;");
+worldGrid.material.needsUpdate = true;
+
+const syncGridCenterWithTarget = () => {
+  const controls = world.camera.controls as any;
+  if (typeof controls.getTarget === "function") {
+    controls.getTarget(gridTarget, false);
+    gridCenter.set(gridTarget.x, gridTarget.z);
+    return;
+  }
+
+  gridCenter.set(world.camera.three.position.x, world.camera.three.position.z);
+};
+
+for (const eventName of ["control", "update", "rest", "sleep"]) {
+  (world.camera.controls as any).addEventListener?.(eventName, syncGridCenterWithTarget);
+}
+
 const syncGridFadeWithProjection = () => {
+  syncGridCenterWithTarget();
   worldGrid.config.distance = GRID_FADE_DISTANCE;
   worldGrid.material.uniforms.uDistance.value = GRID_FADE_DISTANCE;
   worldGrid.fade = world.camera.projection.current !== "Orthographic";
