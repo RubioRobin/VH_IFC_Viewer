@@ -297,7 +297,7 @@ router.get('/projects/:projectId/files', authenticatePlugin, async (req, res) =>
             filename: f.filename || f.original_name,
             path: f.path,
             size: f.size,
-            created_at: f.created_at || f.upload_date
+            created_at: f.created_at || f.uploaded_at || f.upload_date
         }));
         res.json(simplified);
     } catch (e) {

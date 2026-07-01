@@ -11,7 +11,7 @@ module.exports = (supabase, logActivity) => {
         return {
             ...f,
             filename: f.filename || f.original_name,
-            upload_date: f.upload_date || f.created_at || f.updated_at
+            upload_date: f.upload_date || f.uploaded_at || f.created_at || f.updated_at
         };
     }
 
@@ -100,7 +100,7 @@ module.exports = (supabase, logActivity) => {
                 original_name: finalName,
                 path: path,
                 size: size,
-                upload_date: uploadDate
+                uploaded_at: uploadDate
             };
 
             let data;
@@ -134,6 +134,10 @@ module.exports = (supabase, logActivity) => {
         async updateFile(id, updates) {
             if (!supabase) return null;
             const cleanUpdates = { ...updates };
+
+            if (cleanUpdates.upload_date && !cleanUpdates.uploaded_at) {
+                cleanUpdates.uploaded_at = cleanUpdates.upload_date;
+            }
             delete cleanUpdates.upload_date;
 
             if (cleanUpdates.filename) {

@@ -33,7 +33,7 @@ test('createFile updates an existing project filename instead of creating a dupl
     const calls = [];
     const existing = { id: 'existing-file-id', project_id: 'project-id', filename: 'A.ifc' };
     const uploadedAt = '2026-07-01T10:15:00.000Z';
-    const updated = { ...existing, path: 'new/path/A.ifc', size: 42, original_name: 'A.ifc', upload_date: uploadedAt };
+    const updated = { ...existing, path: 'new/path/A.ifc', size: 42, original_name: 'A.ifc', uploaded_at: uploadedAt };
 
     const supabase = {
         from(table) {
@@ -73,12 +73,13 @@ test('createFile updates an existing project filename instead of creating a dupl
     assert.equal(result.path, 'new/path/A.ifc');
     assert.equal(result.upload_date, uploadedAt);
     assert.ok(calls.some(call => Array.isArray(call) && call[0] === 'update'));
-    assert.ok(calls.some(call => Array.isArray(call) && call[0] === 'update' && call[1].upload_date === uploadedAt));
+    assert.ok(calls.some(call => Array.isArray(call) && call[0] === 'update' && call[1].uploaded_at === uploadedAt));
+    assert.ok(!calls.some(call => Array.isArray(call) && call[0] === 'update' && Object.prototype.hasOwnProperty.call(call[1], 'upload_date')));
     assert.ok(!calls.some(call => Array.isArray(call) && call[0] === 'insert'));
 });
 
-test('getFileById maps updated_at to upload_date when older rows miss upload_date and created_at', async () => {
-    const updatedAt = '2026-07-01T11:30:00.000Z';
+test('getFileById maps uploaded_at to upload_date for the dashboard API', async () => {
+    const uploadedAt = '2026-07-01T11:30:00.000Z';
     const supabase = {
         from(table) {
             assert.equal(table, 'files');
@@ -94,7 +95,7 @@ test('getFileById maps updated_at to upload_date when older rows miss upload_dat
                         data: {
                             id: 'file-id',
                             filename: 'GP5-10.ifc',
-                            updated_at: updatedAt
+                            uploaded_at: uploadedAt
                         },
                         error: null
                     });
@@ -107,5 +108,48 @@ test('getFileById maps updated_at to upload_date when older rows miss upload_dat
     const service = createFilesService(supabase);
     const result = await service.getFileById('file-id');
 
-    assert.equal(result.upload_date, updatedAt);
+    assert.equal(result.upload_date, uploadedAt);
+});
+
+test('updateFile translates legacy upload_date input to uploaded_at column', async () => {
+    let updatePayload;
+    const uploadedAt = '2026-07-01T12:00:00.000Z';
+    const supabase = {
+        from(table) {
+            assert.equal(table, 'files');
+            const builder = {
+                update(payload) {
+                    updatePayload = payload;
+                    return builder;
+                },
+                eq() {
+                    return builder;
+                },
+                select() {
+                    return builder;
+                },
+                single() {
+                    return Promise.resolve({
+                        data: {
+                            id: 'file-id',
+                            filename: 'A.ifc',
+                            uploaded_at: uploadedAt
+                        },
+                        error: null
+                    });
+                }
+            };
+            return builder;
+        }
+    };
+
+    const service = createFilesService(supabase);
+    const result = await service.updateFile('file-id', {
+        size: 123,
+        upload_date: uploadedAt
+    });
+
+    assert.equal(updatePayload.uploaded_at, uploadedAt);
+    assert.ok(!Object.prototype.hasOwnProperty.call(updatePayload, 'upload_date'));
+    assert.equal(result.upload_date, uploadedAt);
 });
