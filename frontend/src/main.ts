@@ -49,31 +49,16 @@ world.camera.controls.dollyToCursor = true;
 world.camera.controls.infinityZoom = true;
 
 
-// Raster: eigen screen-space Three.js grid, los van OBC.Grids.
-const GRID_FINE_STEP = 1;
-const GRID_MAJOR_STEP = 5;
-const GRID_RECENTER_STEP = 100;
-
-const gridProjectionMatrixInverse = new THREE.Matrix4();
-const gridCameraMatrixWorld = new THREE.Matrix4();
-const gridPlaneOrigin = new THREE.Vector3();
-const gridPlaneNormal = new THREE.Vector3(0, 1, 0);
-const gridPlaneAxisU = new THREE.Vector3(1, 0, 0);
-const gridPlaneAxisV = new THREE.Vector3(0, 0, 1);
-const gridTarget = new THREE.Vector3();
-type ManualGridPlaneMode = "ground" | "frontBack" | "leftRight";
-let manualGridPlaneMode: ManualGridPlaneMode = "ground";
+// Raster: bewust een pure pixel-overlay, los van camera, clipping en OBC.Grids.
+const GRID_FINE_PX = 24;
+const GRID_MAJOR_PX = 120;
+const gridResolution = new THREE.Vector2(1, 1);
 
 const manualGridMaterial = new THREE.ShaderMaterial({
   uniforms: {
-    uProjectionMatrixInverse: { value: gridProjectionMatrixInverse },
-    uCameraMatrixWorld: { value: gridCameraMatrixWorld },
-    uGridPlaneOrigin: { value: gridPlaneOrigin },
-    uGridPlaneNormal: { value: gridPlaneNormal },
-    uGridAxisU: { value: gridPlaneAxisU },
-    uGridAxisV: { value: gridPlaneAxisV },
-    uFineStep: { value: GRID_FINE_STEP },
-    uMajorStep: { value: GRID_MAJOR_STEP },
+    uResolution: { value: gridResolution },
+    uFineStep: { value: GRID_FINE_PX },
+    uMajorStep: { value: GRID_MAJOR_PX },
     uFineColor: { value: new THREE.Color(0x332f28) },
     uMajorColor: { value: new THREE.Color(0x5b5244) },
   },
@@ -88,49 +73,28 @@ const manualGridMaterial = new THREE.ShaderMaterial({
   fragmentShader: `
     varying vec2 vNdc;
 
-    uniform mat4 uProjectionMatrixInverse;
-    uniform mat4 uCameraMatrixWorld;
-    uniform vec3 uGridPlaneOrigin;
-    uniform vec3 uGridPlaneNormal;
-    uniform vec3 uGridAxisU;
-    uniform vec3 uGridAxisV;
+    uniform vec2 uResolution;
     uniform float uFineStep;
     uniform float uMajorStep;
     uniform vec3 uFineColor;
     uniform vec3 uMajorColor;
 
-    vec3 unprojectPoint(vec3 ndc) {
-      vec4 world = uCameraMatrixWorld * uProjectionMatrixInverse * vec4(ndc, 1.0);
-      return world.xyz / world.w;
-    }
-
-    float gridLine(vec2 coord, float stepSize) {
-      vec2 grid = abs(fract(coord / stepSize - 0.5) - 0.5) / fwidth(coord / stepSize);
-      return 1.0 - min(min(grid.x, grid.y), 1.0);
+    float lineAt(float coord, float stepSize) {
+      float distanceToLine = abs(fract(coord / stepSize - 0.5) - 0.5) * stepSize;
+      return 1.0 - smoothstep(0.45, 1.1, distanceToLine);
     }
 
     void main() {
-      vec3 nearPoint = unprojectPoint(vec3(vNdc, -1.0));
-      vec3 farPoint = unprojectPoint(vec3(vNdc, 1.0));
-      vec3 rayDirection = normalize(farPoint - nearPoint);
+      vec2 pixel = (vNdc * 0.5 + 0.5) * uResolution;
+      vec2 centered = pixel - uResolution * 0.5;
 
-      float rayPlaneDot = dot(rayDirection, uGridPlaneNormal);
-      if (abs(rayPlaneDot) < 0.00001) discard;
+      vec2 axisA = normalize(vec2(1.0, 0.52));
+      vec2 axisB = normalize(vec2(-1.0, 0.52));
+      vec2 gridCoord = vec2(dot(centered, axisA), dot(centered, axisB));
 
-      float rayDistance = dot(uGridPlaneOrigin - nearPoint, uGridPlaneNormal) / rayPlaneDot;
-      if (rayDistance <= 0.0) discard;
-
-      vec3 worldPosition = nearPoint + rayDirection * rayDistance;
-      vec3 planeOffset = worldPosition - uGridPlaneOrigin;
-      vec2 gridCoord = vec2(dot(planeOffset, uGridAxisU), dot(planeOffset, uGridAxisV));
-
-      float fineLine = gridLine(gridCoord, uFineStep);
-      float majorLine = gridLine(gridCoord, uMajorStep);
-      float lineStrength = max(fineLine * 0.32, majorLine * 0.72);
-
-      float cameraDistance = length(worldPosition - nearPoint);
-      float distanceFade = 1.0 - smoothstep(25000.0, 45000.0, cameraDistance);
-      lineStrength *= distanceFade;
+      float fineLine = max(lineAt(gridCoord.x, uFineStep), lineAt(gridCoord.y, uFineStep));
+      float majorLine = max(lineAt(gridCoord.x, uMajorStep), lineAt(gridCoord.y, uMajorStep));
+      float lineStrength = max(fineLine * 0.28, majorLine * 0.7);
 
       if (lineStrength < 0.025) discard;
 
@@ -146,133 +110,15 @@ const manualGridMaterial = new THREE.ShaderMaterial({
 });
 
 const manualGrid = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), manualGridMaterial);
-manualGrid.name = "VH Manual Ground Grid";
+manualGrid.name = "VH Pixel Overlay Grid";
 manualGrid.frustumCulled = false;
 manualGrid.renderOrder = -1000;
 
-const roundToGridOrigin = (value: number) =>
-  Math.round(value / GRID_RECENTER_STEP) * GRID_RECENTER_STEP;
-
-const syncManualGridWithTarget = () => {
-  const controls = world.camera.controls as any;
-  if (typeof controls.getTarget === "function") {
-    controls.getTarget(gridTarget, false);
-  } else {
-    gridTarget.copy(world.camera.three.position);
-  }
-
-  if (manualGridPlaneMode === "frontBack") {
-    gridPlaneNormal.set(0, 0, 1);
-    gridPlaneAxisU.set(1, 0, 0);
-    gridPlaneAxisV.set(0, 1, 0);
-    gridPlaneOrigin.set(
-      roundToGridOrigin(gridTarget.x),
-      roundToGridOrigin(gridTarget.y),
-      gridTarget.z,
-    );
-    return;
-  }
-
-  if (manualGridPlaneMode === "leftRight") {
-    gridPlaneNormal.set(1, 0, 0);
-    gridPlaneAxisU.set(0, 0, 1);
-    gridPlaneAxisV.set(0, 1, 0);
-    gridPlaneOrigin.set(
-      gridTarget.x,
-      roundToGridOrigin(gridTarget.y),
-      roundToGridOrigin(gridTarget.z),
-    );
-    return;
-  }
-
-  gridPlaneNormal.set(0, 1, 0);
-  gridPlaneAxisU.set(1, 0, 0);
-  gridPlaneAxisV.set(0, 0, 1);
-  gridPlaneOrigin.set(
-    roundToGridOrigin(gridTarget.x),
-    0,
-    roundToGridOrigin(gridTarget.z),
-  );
-};
-
-const setManualGridPlaneMode = (mode: ManualGridPlaneMode) => {
-  manualGridPlaneMode = mode;
-  syncManualGridWithTarget();
-};
-
-const setGridPlaneFromOrientation = (orientation: string) => {
-  if (orientation === "front" || orientation === "back") {
-    setManualGridPlaneMode("frontBack");
-    return;
-  }
-
-  if (orientation === "left" || orientation === "right") {
-    setManualGridPlaneMode("leftRight");
-    return;
-  }
-
-  setManualGridPlaneMode("ground");
-};
-
-const resetManualGridPlaneWhenLeavingCubeView = () => {
-  if (manualGridPlaneMode === "ground") return;
-
-  const controls = world.camera.controls as any;
-  const position = new THREE.Vector3();
-  const target = new THREE.Vector3();
-
-  if (typeof controls.getPosition === "function") {
-    controls.getPosition(position, false);
-  } else {
-    position.copy(world.camera.three.position);
-  }
-
-  if (typeof controls.getTarget === "function") {
-    controls.getTarget(target, false);
-  }
-
-  const viewDirection = target.sub(position);
-  if (viewDirection.lengthSq() < 0.000001) return;
-  viewDirection.normalize();
-
-  const sideAlignment =
-    manualGridPlaneMode === "frontBack"
-      ? Math.abs(viewDirection.z)
-      : Math.abs(viewDirection.x);
-
-  if (sideAlignment < 0.92) {
-    manualGridPlaneMode = "ground";
-  }
-};
-
-const syncManualGridForCamera = () => {
-  resetManualGridPlaneWhenLeavingCubeView();
-  syncManualGridWithTarget();
-};
-
-manualGrid.onBeforeRender = (_renderer, _scene, camera) => {
-  gridProjectionMatrixInverse.copy(camera.projectionMatrix).invert();
-  gridCameraMatrixWorld.copy(camera.matrixWorld);
-  syncManualGridForCamera();
+manualGrid.onBeforeRender = (renderer) => {
+  renderer.getDrawingBufferSize(gridResolution);
 };
 
 world.scene.three.add(manualGrid);
-
-for (const eventName of ["control", "update", "rest", "sleep"]) {
-  (world.camera.controls as any).addEventListener?.(eventName, syncManualGridForCamera);
-}
-
-syncManualGridWithTarget();
-
-window.addEventListener("vh-grid-plane-change", ((event: CustomEvent<{ orientation?: string }>) => {
-  const orientation = event.detail?.orientation;
-  if (!orientation) return;
-  setGridPlaneFromOrientation(orientation);
-}) as EventListener);
-
-window.addEventListener("vh-grid-plane-reset", () => {
-  setManualGridPlaneMode("ground");
-});
 
 // Formaat aanpassen bij vensterwijziging
 let resizeFrame = 0;

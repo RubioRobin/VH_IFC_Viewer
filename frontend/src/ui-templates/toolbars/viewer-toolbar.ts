@@ -168,7 +168,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       target.z,
       true,
     );
-    window.dispatchEvent(new CustomEvent("vh-grid-plane-change", { detail: { orientation } }));
   };
 
   const clearMeasurementClickHandler = () => {

@@ -85,7 +85,6 @@ const viewFromOrientation = async (
     target.z,
     true,
   );
-  window.dispatchEvent(new CustomEvent("vh-grid-plane-change", { detail: { orientation } }));
   syncViewCubeRotation(world);
 };
 

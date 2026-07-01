@@ -1,7 +1,6 @@
 import * as BUI from "@thatopen/ui";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
-import * as THREE from "three";
 import { appIcons } from "../../globals";
 
 interface ViewportSettingsState {
@@ -33,55 +32,11 @@ export const viewportSettingsTemplate: BUI.StatefullComponent<
     `;
   }
 
-  const tiltSideViewForPerspective = async () => {
-    const controls = world.camera.controls as any;
-    if (!controls?.setLookAt) return;
-
-    const position = new THREE.Vector3();
-    const target = new THREE.Vector3();
-
-    if (typeof controls.getPosition === "function") {
-      controls.getPosition(position, false);
-    } else {
-      position.copy(world.camera.three.position);
-    }
-
-    if (typeof controls.getTarget === "function") {
-      controls.getTarget(target, false);
-    }
-
-    const offset = position.clone().sub(target);
-    const horizontalDistance = Math.hypot(offset.x, offset.z);
-    if (horizontalDistance < 0.0001) return;
-
-    const verticalRatio = Math.abs(offset.y) / horizontalDistance;
-    if (verticalRatio >= 0.25) return;
-
-    const direction = new THREE.Vector3(offset.x, 0, offset.z).normalize();
-    const distance = Math.max(offset.length(), horizontalDistance, 10);
-    const newPosition = target.clone().add(direction.multiplyScalar(horizontalDistance));
-    newPosition.y = target.y + Math.max(distance * 0.35, 5);
-
-    await controls.setLookAt(
-      newPosition.x,
-      newPosition.y,
-      newPosition.z,
-      target.x,
-      target.y,
-      target.z,
-      true,
-    );
-  };
-
   const onProjectionChange = async ({ target }: { target: BUI.Dropdown }) => {
     const [projection] = target.value;
     if (!projection) return;
 
     await world.camera.projection.set(projection);
-    if (projection === "Perspective") {
-      window.dispatchEvent(new CustomEvent("vh-grid-plane-reset"));
-      await tiltSideViewForPerspective();
-    }
 
     if (world.renderer) {
       world.renderer.postproduction.updateCamera();
