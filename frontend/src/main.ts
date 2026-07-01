@@ -59,9 +59,23 @@ worldGrid.setup({
 });
 
 // Formaat aanpassen bij vensterwijziging
+let resizeFrame = 0;
+let lastViewportWidth = 0;
+let lastViewportHeight = 0;
+
 const resizeWorld = () => {
   const { width, height } = viewport.getBoundingClientRect();
   if (width < 10 || height < 10) return;
+
+  if (
+    Math.abs(width - lastViewportWidth) < 1 &&
+    Math.abs(height - lastViewportHeight) < 1
+  ) {
+    return;
+  }
+
+  lastViewportWidth = width;
+  lastViewportHeight = height;
 
   if (world.renderer) {
     // Only enable renderer and postproduction when we have a valid size
@@ -79,11 +93,19 @@ const resizeWorld = () => {
   world.camera.updateAspect();
 };
 
-const resizeObserver = new ResizeObserver(() => resizeWorld());
-resizeObserver.observe(viewport);
-// Note: Immediate resizeWorld() call removed. We wait for ResizeObserver to provide first valid layout.
+const queueWorldResize = () => {
+  if (resizeFrame) cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = 0;
+    resizeWorld();
+  });
+};
 
-world.dynamicAnchor = false;
+const resizeObserver = new ResizeObserver(queueWorldResize);
+resizeObserver.observe(viewport);
+window.addEventListener("resize", queueWorldResize);
+
+world.dynamicAnchor = true;
 
 components.init();
 
@@ -262,7 +284,9 @@ const [contentGrid] = BUI.Component.create(
 
 const app = document.getElementById("app");
 if (app) app.appendChild(contentGrid);
-// resizeWorld(); // REMOVED: Triggers WebGL zero-size warnings if called before layout is ready
+queueWorldResize();
+setTimeout(queueWorldResize, 50);
+setTimeout(queueWorldResize, 250);
 
 // ---- Mobiele paneel-drawers ----
 // Op mobiel verschijnen FAB-knoppen waarmee gebruikers de zijpanelen kunnen openen.

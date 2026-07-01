@@ -67,7 +67,7 @@ namespace VH_IFC_QR
                 progress.Show();
 
                 var validMatches = linkWin.ValidMatches;
-                List<string> results = new List<string>();
+                List<string> qrSheetLabels = new List<string>();
                 int totalSteps = validMatches.Count;
                 int completedDownloads = 0;
 
@@ -122,7 +122,6 @@ namespace VH_IFC_QR
 
                     // Splits geslaagde en mislukte downloads
                     var succeeded = downloadedItems.Where(x => x.TempPath != null).ToList();
-                    var failed    = downloadedItems.Where(x => x.Error != null).ToList();
 
                     // FASE 2: Plaatsen — alleen geslaagde items, in 1 transactie
                     int placedCount = 0;
@@ -142,10 +141,14 @@ namespace VH_IFC_QR
                                 DoEvents();
 
                                 if (item.Match.SelectedSheet != null)
+                                {
                                     PlaceQrOnSheet(doc, item.Match.SelectedSheet.Id, item.TempPath, item.Match.AssemblyCode);
+                                    qrSheetLabels.Add(ResultSummaryFormatter.FormatSheetLabel(
+                                        item.Match.SelectedSheet.SheetNumber,
+                                        item.Match.SelectedSheet.Name));
+                                }
 
                                 TryDeleteTempFile(item.TempPath);
-                                results.Add($"✓ {item.Match.AssemblyCode} → {item.Match.MatchedFileName}");
                             }
 
                             t.Commit();
@@ -160,14 +163,10 @@ namespace VH_IFC_QR
                         }
                     }
 
-                    // Voeg mislukte items toe aan resultatenlijst
-                    foreach (var item in failed)
-                        results.Add($"✗ {item.Match.AssemblyCode}: {item.Error}");
-
                     progress.Update("Klaar!", 100);
                     progress.Close();
 
-                    ResultWindow resWin = new ResultWindow(results);
+                    ResultWindow resWin = new ResultWindow(qrSheetLabels, SettingsManager.Instance.AdminUrl);
                     resWin.ShowDialog();
                 }
                 catch (Exception ex)

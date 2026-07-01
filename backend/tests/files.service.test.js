@@ -32,7 +32,8 @@ test('createSignedUploadUrl requests Supabase overwrite support', async () => {
 test('createFile updates an existing project filename instead of creating a duplicate', async () => {
     const calls = [];
     const existing = { id: 'existing-file-id', project_id: 'project-id', filename: 'A.ifc' };
-    const updated = { ...existing, path: 'new/path/A.ifc', size: 42, original_name: 'A.ifc' };
+    const uploadedAt = '2026-07-01T10:15:00.000Z';
+    const updated = { ...existing, path: 'new/path/A.ifc', size: 42, original_name: 'A.ifc', upload_date: uploadedAt };
 
     const supabase = {
         from(table) {
@@ -64,10 +65,47 @@ test('createFile updates an existing project filename instead of creating a dupl
     };
 
     const service = createFilesService(supabase);
-    const result = await service.createFile(null, 'project-id', 'A.ifc', 'new/path/A.ifc', 42, 'Tester');
+    const result = await service.createFile(null, 'project-id', 'A.ifc', 'new/path/A.ifc', 42, 'Tester', {
+        uploadedAt
+    });
 
     assert.equal(result.id, 'existing-file-id');
     assert.equal(result.path, 'new/path/A.ifc');
+    assert.equal(result.upload_date, uploadedAt);
     assert.ok(calls.some(call => Array.isArray(call) && call[0] === 'update'));
+    assert.ok(calls.some(call => Array.isArray(call) && call[0] === 'update' && call[1].upload_date === uploadedAt));
     assert.ok(!calls.some(call => Array.isArray(call) && call[0] === 'insert'));
+});
+
+test('getFileById maps updated_at to upload_date when older rows miss upload_date and created_at', async () => {
+    const updatedAt = '2026-07-01T11:30:00.000Z';
+    const supabase = {
+        from(table) {
+            assert.equal(table, 'files');
+            const builder = {
+                select() {
+                    return builder;
+                },
+                eq() {
+                    return builder;
+                },
+                single() {
+                    return Promise.resolve({
+                        data: {
+                            id: 'file-id',
+                            filename: 'GP5-10.ifc',
+                            updated_at: updatedAt
+                        },
+                        error: null
+                    });
+                }
+            };
+            return builder;
+        }
+    };
+
+    const service = createFilesService(supabase);
+    const result = await service.getFileById('file-id');
+
+    assert.equal(result.upload_date, updatedAt);
 });

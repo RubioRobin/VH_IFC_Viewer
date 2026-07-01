@@ -11,7 +11,7 @@ module.exports = (supabase, logActivity) => {
         return {
             ...f,
             filename: f.filename || f.original_name,
-            upload_date: f.upload_date || f.created_at
+            upload_date: f.upload_date || f.created_at || f.updated_at
         };
     }
 
@@ -82,9 +82,10 @@ module.exports = (supabase, logActivity) => {
             await supabase.from('files').delete().eq('id', id);
         },
 
-        async createFile(id, projectId, filename, path, size, user = 'Admin') {
+        async createFile(id, projectId, filename, path, size, user = 'Admin', options = {}) {
             if (!supabase) return null;
             const finalName = filename || 'unnamed_file_' + Date.now();
+            const uploadDate = options.uploadedAt || new Date().toISOString();
 
             const { data: existing } = await supabase
                 .from('files')
@@ -98,7 +99,8 @@ module.exports = (supabase, logActivity) => {
                 filename: finalName,
                 original_name: finalName,
                 path: path,
-                size: size
+                size: size,
+                upload_date: uploadDate
             };
 
             let data;

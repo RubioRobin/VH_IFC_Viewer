@@ -19,10 +19,6 @@ namespace IFCExportSingleAssembly.Classes
 
         public static void ChangeParameters(Autodesk.Revit.DB.Document doc, List<AssemblyInstance> assemblies)
         {
-            // toggle to show messagebox
-            bool toggleParameterFault = false;
-
-
             string revitVersionNumber = doc.Application.VersionNumber;
 
             //
@@ -141,11 +137,6 @@ namespace IFCExportSingleAssembly.Classes
                 biggestElementInAssembly.IFCAssemblyBreedte = assemblyDimensions[0];
                 biggestElementInAssembly.IFCAssemblyDiepte = assemblyDimensions[1];
                 biggestElementInAssembly.IFCAssemblyHoogte = assemblyDimensions[2];
-
-                if (assemblyDimensions.Count == 4)
-                {
-                    toggleParameterFault = true;
-                }
 
                 //
                 // overriding the parameter values of the main (precast) element in the assembly

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -30,6 +31,7 @@ namespace VH_IFC_QR
             // Moderne TLS protocollen expliciet inschakelen
             System.Net.ServicePointManager.SecurityProtocol = 
                 System.Net.SecurityProtocolType.Tls12 | (System.Net.SecurityProtocolType)3072 /*Tls13*/;
+            System.Net.ServicePointManager.Expect100Continue = false;
 
             _client = new HttpClient();
             _client.Timeout = TimeSpan.FromMinutes(10);
@@ -272,18 +274,60 @@ namespace VH_IFC_QR
             return JsonConvert.DeserializeObject<UploadSessionInfo>(result);
         }
 
-        public async Task UploadFileAsync(string uploadUrl, string filePath)
+        public async Task UploadFileAsync(string uploadUrl, string filePath, Action<long, long> progress = null)
         {
-            using (var stream = System.IO.File.OpenRead(filePath))
+            using (var stream = File.OpenRead(filePath))
+            using (var content = new ProgressStreamContent(stream, 1024 * 256, progress))
+            using (var request = new HttpRequestMessage(HttpMethod.Put, uploadUrl))
             {
-                var content = new StreamContent(stream);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                var response = await _client.PutAsync(uploadUrl, content).ConfigureAwait(false);
+                content.Headers.ContentLength = stream.Length;
+                request.Content = content;
+
+                var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     throw new Exception($"Bestand uploaden mislukt: {SanitizeErrorMessage(error, response.StatusCode)}");
                 }
+            }
+        }
+
+        private sealed class ProgressStreamContent : HttpContent
+        {
+            private readonly Stream _source;
+            private readonly int _bufferSize;
+            private readonly Action<long, long> _progress;
+            private readonly long _length;
+
+            public ProgressStreamContent(Stream source, int bufferSize, Action<long, long> progress)
+            {
+                _source = source ?? throw new ArgumentNullException(nameof(source));
+                _bufferSize = bufferSize > 0 ? bufferSize : 81920;
+                _progress = progress;
+                _length = source.CanSeek ? source.Length : -1;
+            }
+
+            protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                byte[] buffer = new byte[_bufferSize];
+                long uploaded = 0;
+                int bytesRead;
+
+                _progress?.Invoke(0, _length);
+
+                while ((bytesRead = await _source.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                {
+                    await stream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
+                    uploaded += bytesRead;
+                    _progress?.Invoke(uploaded, _length);
+                }
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = _length;
+                return _length >= 0;
             }
         }
 

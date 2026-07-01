@@ -1785,3 +1785,129 @@ html.vh-light-mode .vh-view-cube {
   filter: drop-shadow(0 12px 24px rgba(97, 82, 51, 0.18));
 }
 
+/* Final viewer layout guard: keeps canvas, grid and overlay in the same box. */
+html,
+body,
+#app {
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.app-content {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(280px, 320px) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 1rem !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  padding: 1rem !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.app-side-panel,
+.app-viewer-container {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.app-side-panel--left {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+.app-side-panel--right {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+}
+
+.app-viewer-container {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.app-viewer-container > div,
+.app-viewer-container bim-viewport {
+  flex: 1 1 auto !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+bim-viewport,
+bim-viewport canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+.viewport-ui-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+
+.viewport-ui-bottom {
+  position: absolute !important;
+  left: 1rem !important;
+  right: 1rem !important;
+  bottom: 1rem !important;
+  width: auto !important;
+  max-width: calc(100% - 2rem) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.viewport-ui-bottom bim-toolbar {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  white-space: nowrap !important;
+}
+
+.viewport-ui-bottom bim-toolbar-section {
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  .app-viewer-container {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+  }
+
+  .viewport-ui-bottom {
+    position: fixed !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  .viewport-ui-bottom bim-toolbar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
