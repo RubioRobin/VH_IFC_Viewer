@@ -19,15 +19,6 @@ const originalColors = new Map<
   { color: number; transparent: boolean; opacity: number }
 >();
 
-type MeasurementKind = "length" | "angle" | "area" | "volume";
-
-const measurementLabels: Record<MeasurementKind, string> = {
-  length: "Afstand meten",
-  angle: "Hoek meten",
-  area: "Oppervlak meten",
-  volume: "Volume meten",
-};
-
 const setModelTransparent = (components: OBC.Components) => {
   const fragments = components.get(OBC.FragmentsManager);
 
@@ -83,32 +74,21 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
   const highlighter = components.get(OBF.Highlighter);
   const hider = components.get(OBC.Hider);
   const lengthMeasurement = components.get(OBF.LengthMeasurement);
-  const angleMeasurement = components.get(OBF.AngleMeasurement);
-  const areaMeasurement = components.get(OBF.AreaMeasurement);
-  const volumeMeasurement = components.get(OBF.VolumeMeasurement);
 
-  const measurementTools = {
-    length: lengthMeasurement,
-    angle: angleMeasurement,
-    area: areaMeasurement,
-    volume: volumeMeasurement,
-  };
-
-  for (const tool of Object.values(measurementTools)) {
-    if ((tool as any).world !== world) (tool as any).world = world;
-    (tool as any).color = new THREE.Color("#c1a979");
-    if ("snappings" in tool) {
-      (tool as any).snappings = [FRAGS.SnappingClass.POINT, FRAGS.SnappingClass.LINE, FRAGS.SnappingClass.FACE];
-    }
-    if ("rounding" in tool) (tool as any).rounding = 2;
-    tool.enabled = false;
+  if ((lengthMeasurement as any).world !== world) {
+    (lengthMeasurement as any).world = world;
   }
+  lengthMeasurement.color = new THREE.Color("#c1a979");
+  lengthMeasurement.snappings = [
+    FRAGS.SnappingClass.POINT,
+    FRAGS.SnappingClass.LINE,
+    FRAGS.SnappingClass.FACE,
+  ];
+  lengthMeasurement.rounding = 2;
   lengthMeasurement.units = "m";
-  areaMeasurement.units = "m2";
-  volumeMeasurement.units = "m3";
-  angleMeasurement.units = "deg";
+  lengthMeasurement.enabled = false;
 
-  let activeMeasurement: MeasurementKind | null = null;
+  let distanceMeasurementActive = false;
 
   const onToggleGhost = () => {
     const current = transparencyManager.getCurrentTransparency();
@@ -157,104 +137,64 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     restoreModelMaterials();
   };
 
-  const viewFromOrientation = async (
-    orientation: "front" | "back" | "left" | "right" | "top" | "bottom",
-  ) => {
-    const camera = world.camera as OBC.OrthoPerspectiveCamera;
-    const bbox = components.get(OBC.BoundingBoxer);
-    bbox.list.clear();
-    bbox.addFromModels();
-    const box = bbox.get();
-    if (!box || box.isEmpty()) return;
+  const clipper = components.get(OBC.Clipper);
 
-    await camera.projection.set("Orthographic");
-    (world.renderer as any)?.postproduction?.updateCamera?.();
-
-    const { position, target } = await bbox.getCameraOrientation(orientation);
-    await camera.controls.setLookAt(
-      position.x,
-      position.y,
-      position.z,
-      target.x,
-      target.y,
-      target.z,
-      true,
-    );
-  };
-
-  const setTheme = (mode: "light" | "dark") => {
-    const html = document.documentElement;
-    html.classList.toggle("vh-light-mode", mode === "light");
-    html.classList.toggle("vh-dark-mode", mode === "dark");
-    html.classList.toggle("bim-ui-light", mode === "light");
-    html.classList.toggle("bim-ui-dark", mode === "dark");
-    localStorage.setItem("vh-viewer-theme", mode);
-    world.scene.three.background = new THREE.Color(mode === "light" ? 0xf4f1ea : 0x101112);
-  };
-
-  const onToggleTheme = () => {
-    const isLight = document.documentElement.classList.contains("vh-light-mode");
-    setTheme(isLight ? "dark" : "light");
-  };
-
-  const savedTheme = localStorage.getItem("vh-viewer-theme");
-  setTheme(savedTheme === "light" ? "light" : "dark");
-
-  const clearMeasurementClickHandler = () => {
+  const clearDistanceClickHandler = () => {
     const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
     if (viewport) viewport.onclick = null;
   };
 
-  const disableMeasurements = () => {
-    for (const tool of Object.values(measurementTools)) tool.enabled = false;
-    activeMeasurement = null;
-    clearMeasurementClickHandler();
-  };
+  const setDistanceMeasurementActive = (active: boolean) => {
+    distanceMeasurementActive = active;
+    lengthMeasurement.enabled = active;
+    highlighter.enabled = !active;
 
-  const activateMeasurement = async (kind: MeasurementKind) => {
-    disableMeasurements();
-    await viewFromOrientation("top");
-
-    const tool = measurementTools[kind] as any;
-    tool.enabled = true;
-    activeMeasurement = kind;
-    highlighter.enabled = false;
-    clipper.enabled = false;
-
-    const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
-    if (viewport) {
-      viewport.onclick = (event) => {
-        if (!activeMeasurement) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const activeTool = measurementTools[activeMeasurement] as any;
-        if (typeof activeTool.create === "function") activeTool.create();
-      };
+    if (!active) {
+      lengthMeasurement.cancelCreation();
+      clearDistanceClickHandler();
     }
   };
 
-  const clearMeasurements = () => {
-    for (const tool of Object.values(measurementTools) as any[]) {
-      if (tool.cancelCreation) tool.cancelCreation();
-      if (tool.list?.clear) tool.list.clear();
-      if (tool.lines?.clear) tool.lines.clear();
-      if (tool.fills?.clear) tool.fills.clear();
-      if (tool.labels?.clear) tool.labels.clear();
-      if (tool.volumes?.clear) tool.volumes.clear();
-      if (tool.deleteAll) tool.deleteAll();
-    }
-    disableMeasurements();
-    highlighter.enabled = true;
-  };
+  const clearDistanceMeasurements = () => {
+    const tool = lengthMeasurement as any;
 
-  /* Measurement & Clipper Logic */
-  const clipper = components.get(OBC.Clipper);
+    if (tool.cancelCreation) tool.cancelCreation();
+    if (tool.list?.clear) tool.list.clear();
+    if (tool.lines?.clear) tool.lines.clear();
+    if (tool.fills?.clear) tool.fills.clear();
+    if (tool.labels?.clear) tool.labels.clear();
+    if (tool.volumes?.clear) tool.volumes.clear();
+
+    setDistanceMeasurementActive(false);
+  };
 
   const disableAll = () => {
     BUI.ContextMenu.removeMenus();
     clipper.enabled = false;
-    disableMeasurements();
+    setDistanceMeasurementActive(false);
     highlighter.enabled = true;
+  };
+
+  const onMeasureDistance = () => {
+    BUI.ContextMenu.removeMenus();
+
+    if (distanceMeasurementActive) {
+      setDistanceMeasurementActive(false);
+      return;
+    }
+
+    clipper.enabled = false;
+    setDistanceMeasurementActive(true);
+
+    const viewport = document.querySelector("bim-viewport") as HTMLElement | null;
+    if (!viewport) return;
+
+    viewport.onclick = (event) => {
+      if (!distanceMeasurementActive) return;
+      event.preventDefault();
+      event.stopPropagation();
+      lengthMeasurement.create();
+    };
   };
 
 
@@ -330,7 +270,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       <bim-toolbar-section> 
         ${customButton({ icon: appIcons.SHOW, label: "Toon alles", onClick: onShowAll })}
         ${customButton({ icon: appIcons.TRANSPARENT, label: "Transparant", onClick: onToggleGhost })}
-        ${customButton({ icon: appIcons.THEME, label: "Thema", onClick: onToggleTheme })}
       </bim-toolbar-section> 
       
       <bim-toolbar-section>
@@ -340,17 +279,13 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       </bim-toolbar-section> 
 
       <bim-toolbar-section>
-         ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
+        ${customButton({ icon: appIcons.RULER, label: "Afstand meten", onClick: onMeasureDistance })}
+        ${customButton({ icon: appIcons.DELETE, label: "Afstand wissen", onClick: clearDistanceMeasurements })}
       </bim-toolbar-section>
 
       <bim-toolbar-section>
-        ${customButton({ icon: appIcons.RULER, label: measurementLabels.length, onClick: () => activateMeasurement("length") })}
-        ${customButton({ icon: appIcons.ANGLE, label: measurementLabels.angle, onClick: () => activateMeasurement("angle") })}
-        ${customButton({ icon: appIcons.AREA, label: measurementLabels.area, onClick: () => activateMeasurement("area") })}
-        ${customButton({ icon: appIcons.VOLUME, label: measurementLabels.volume, onClick: () => activateMeasurement("volume") })}
-        ${customButton({ icon: appIcons.DELETE, label: "Metingen wissen", onClick: clearMeasurements })}
+         ${customButton({ icon: appIcons.CLIPPING, label: "Sectie Box", onClick: onSectionBox })}
       </bim-toolbar-section>
-
     </bim-toolbar>
   `;
 };
