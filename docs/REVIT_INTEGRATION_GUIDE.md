@@ -14,8 +14,9 @@ Belangrijke contractpunten:
 
 - De add-in gebruikt een Supabase **publishable key**, nooit een secret/service-role key.
 - Revit-gebruikers melden aan met een Supabase Auth e-mailadres en wachtwoord.
-- Elke `revit-api` actie vereist zowel de Supabase Auth JWT als de per-installatie
-  `VH_REVIT_PLUGIN_KEY` header.
+- Elke muterende `revit-api` actie vereist een server-side gevalideerde Supabase
+  Auth JWT. De publishable key identificeert alleen het publieke project en is
+  geen autorisatiesecret.
 - IFC-bestanden worden met TUS chunks naar de private `ifc-models` bucket gestuurd.
 - Alleen een actieve, niet-verlopen share kan via `viewer-link` een tijdelijke
   download-URL voor de browser verkrijgen.

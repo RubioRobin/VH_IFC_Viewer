@@ -17,8 +17,9 @@ Viewer:    https://<project-ref>.supabase.co/functions/v1/viewer-link
 1. Meld de gebruiker aan met `POST /auth/v1/token?grant_type=password`.
 2. Stuur de ontvangen `access_token` als `Authorization: Bearer <token>` naar
    elke `revit-api`-aanroep behalve `GET /health`.
-3. Stuur ook `apikey: <publishable-key>` en
-   `x-vh-plugin-key: <VH_REVIT_PLUGIN_KEY>` mee.
+3. Stuur ook `apikey: <publishable-key>` mee. Een desktopclient bevat bewust
+   geen apart installatiesecret; autorisatie gebeurt met de server-side
+   gevalideerde gebruikerssessie.
 
 De service-role key hoort uitsluitend in de Edge Function-omgeving en nooit in
 Revit of de browser.

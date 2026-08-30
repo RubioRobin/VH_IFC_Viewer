@@ -17,9 +17,10 @@
 
 Het script installeert alleen in het huidige Windows-profiel onder
 `%APPDATA%\Autodesk\Revit\Addins\2025`. Een vorige installatie blijft als
-gedateerde backup staan. Supabase-URL, publishable key en Revit-toegangssleutel
-worden niet door het installatiepakket opgeslagen; stel die bij de eerste start
-in via **VH > IFC Instellingen**.
+gedateerde backup staan. De productie-URL en publishable key zijn onderdeel van
+de geteste releaseconfiguratie. Er wordt geen service-role key of apart
+desktopsecret geïnstalleerd; meld bij de eerste start aan met een bevestigde
+Supabase Auth-gebruiker.
 
 Controleer na installatie in Revit:
 

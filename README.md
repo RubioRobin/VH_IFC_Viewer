@@ -194,7 +194,7 @@ QR-codes of de publieke IFC-viewer. Zie voor de actieve route
 
 ### Revit plugin werkt niet
 - Controleer of het `.addin` bestand in de juiste Revit-map staat
-- Controleer in `VH > IFC Instellingen` de Supabase URL, publishable key en Revit toegangssleutel
+- Controleer of aanmelden met een bevestigde Supabase Auth-gebruiker lukt
 - Controleer of de gebruiker bestaat in Supabase Auth
 
 ### QR-code scan werkt niet op mobiel

@@ -97,7 +97,7 @@ if ($signature.Status -eq "Valid") {
 $settingsDir  = "$env:APPDATA\VH_IFC_Viewer"
 $settingsFile = "$settingsDir\settings.json"
 New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
-Write-Host "Stel bij de eerste start de Supabase URL, publishable key en Revit toegangssleutel in via IFC Instellingen." -ForegroundColor Yellow
+Write-Host "Meld bij de eerste start aan met een bevestigde Supabase Auth-gebruiker." -ForegroundColor Yellow
 Write-Host "Het installatieprogramma schrijft geen sleutels of server-URL's naar AppData." -ForegroundColor DarkGray
 
 Write-Host "`n=== Klaar! Start Revit 2025 om de add-in te testen. ===" -ForegroundColor Green

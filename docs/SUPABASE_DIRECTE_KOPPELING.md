@@ -14,13 +14,15 @@ Supabase secret/service-role key.
 - Revit meldt de gebruiker aan via **Supabase Auth** (e-mail + wachtwoord).
 - Het adminportaal gebruikt dezelfde Auth-sessie en accepteert uitsluitend een
   gebruiker met `app_metadata.role = "admin"`.
-- `revit-api` valideert zowel de gebruikerssessie als `VH_REVIT_PLUGIN_KEY`.
+- `revit-api` valideert de gebruikerssessie server-side via Supabase Auth.
 - IFC-bestanden staan in private bucket `ifc-models`.
 - Grote IFC-bestanden gebruiken de directe Supabase Storage-hostnaam met TUS-resume.
 - Alleen `viewer-link` maakt een download-URL van 15 minuten voor een actieve QR-share.
 - Een publieke viewerlink is altijd `/v/<share-token>`; `?model=` en `?fileId=`
   zijn geen geldige toegangsroute meer.
-- De Revit toegangssleutel en sessie worden per Windows-gebruiker DPAPI-versleuteld opgeslagen; de sessie wordt vóór function-calls automatisch ververst.
+- De Revit-sessie wordt per Windows-gebruiker DPAPI-versleuteld opgeslagen en
+  vóór function-calls automatisch ververst. De publishable key is openbare
+  projectconfiguratie; een service-role key komt nooit in de add-in.
 
 ## Eenmalige inrichting
 
@@ -38,11 +40,9 @@ Supabase secret/service-role key.
 2. Stel in Supabase Edge Function Secrets in:
 
    ```powershell
-   supabase secrets set VH_REVIT_PLUGIN_KEY=<lange-willekeurige-sleutel>
    supabase secrets set VH_VIEWER_URL=https://<jouw-vercel-domein>
    ```
 
-   Gebruik een unieke, roteerbare sleutel per organisatie of Revit-installatie.
    `SUPABASE_SECRET_KEYS` wordt door Supabase zelf aan Edge Functions geleverd;
    de Functions gebruiken de moderne standaard-secret-key vóór een eventuele
    legacy service-role key. Een moderne `sb_secret_` key gaat binnen de Function
@@ -86,11 +86,9 @@ Supabase secret/service-role key.
    dat bewust vanaf de repository-root wordt gebouwd; wijzig de Root Directory
    niet tegelijk met deze inrichting.
 
-6. Open in Revit het tabblad **VH > IFC Instellingen** en vul in:
-
-   - Supabase project-URL
-   - Supabase publishable key
-   - Revit toegangssleutel (`VH_REVIT_PLUGIN_KEY`)
+6. Start Revit en meld aan met een bevestigde Supabase Auth-gebruiker. De
+   productie-URL en publishable key zijn onderdeel van de releaseconfiguratie;
+   exportvoorkeuren blijven beschikbaar via **VH > IFC Instellingen**.
 
 7. Ken de adminrol alleen server-side toe. Bewaar autorisatie nooit in
    `user_metadata`:
@@ -113,7 +111,6 @@ geven. Hij controleert de tabellen én de benodigde Storage-buckets.
 ```powershell
 Invoke-RestMethod "$SUPABASE_URL/functions/v1/revit-api/health" -Headers @{
   apikey = $SUPABASE_PUBLISHABLE_KEY
-  'x-vh-plugin-key' = $VH_REVIT_PLUGIN_KEY
 }
 ```
 

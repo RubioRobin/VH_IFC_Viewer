@@ -11,7 +11,7 @@ De uitvoerbare inrichting staat in [SUPABASE_DIRECTE_KOPPELING.md](SUPABASE_DIRE
 ```text
 Revit add-in
   ├─ Supabase Auth (e-mail/wachtwoord → gebruikers-JWT)
-  ├─ revit-api Edge Function (JWT + x-vh-plugin-key)
+  ├─ revit-api Edge Function (server-side gevalideerde Auth-JWT)
   └─ private Supabase Storage (signed TUS-upload)
                                       │
                                       ▼
@@ -28,8 +28,7 @@ De browser en de add-in ontvangen nooit een Supabase secret/service-role key.
 ## Revit-exportflow
 
 1. De gebruiker meldt zich in de add-in aan via Supabase Auth.
-2. `revit-api` valideert de Auth-JWT én de installatieheader
-   `x-vh-plugin-key`.
+2. `revit-api` valideert de Auth-JWT server-side via Supabase Auth.
 3. De add-in maakt een model en een uploadsessie aan.
 4. De IFC gaat direct naar private bucket `ifc-models`; grote bestanden gaan
    via TUS in chunks van 6 MB en worden na netwerkverlies hervat.
@@ -68,10 +67,10 @@ actuele modelversiecontract zonder tabellen te verwijderen.
 
 - RLS sluit de BIM-tabellen voor `anon` en `authenticated`; alleen Edge
   Functions met de server-side sleutel behandelen metadata.
-- `VH_REVIT_PLUGIN_KEY` is een aparte, roteerbare installatiesleutel — geen
-  Supabase service-role key.
-- De add-in bewaart de installatiesleutel en het gebruikers-token met Windows
-  DPAPI in `%APPDATA%\VH_IFC_Viewer`.
+- De add-in bevat alleen de openbare project-URL en publishable key. Een
+  service-role key of schijnveilig desktopsecret wordt niet meegeleverd.
+- De add-in bewaart de gebruikerssessie met Windows DPAPI in
+  `%APPDATA%\VH_IFC_Viewer`.
 - `viewer-link` is publiek omdat een QR-link publiek is, maar geeft uitsluitend
   een tijdelijke download-URL voor een actieve share terug.
 
@@ -79,7 +78,7 @@ actuele modelversiecontract zonder tabellen te verwijderen.
 
 1. `supabase link --project-ref <project-ref>`
 2. `supabase db push`
-3. Stel `VH_REVIT_PLUGIN_KEY` en `VH_VIEWER_URL` in als Edge Function secrets.
+3. Stel `VH_VIEWER_URL` in als Edge Function secret.
 4. Activeer Email/Password en maak de Revit-gebruikers aan in Supabase Auth.
 5. `supabase functions deploy revit-api`
 6. `supabase functions deploy admin-api`
