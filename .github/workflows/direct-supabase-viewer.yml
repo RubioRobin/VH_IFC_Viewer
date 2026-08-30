@@ -101,5 +101,6 @@ jobs:
           grep -Fq 'rpc("publish_model_version"' supabase/functions/admin-api/index.ts
           grep -Fq 'from("public_links")' supabase/functions/viewer-link/index.ts
           grep -Fq 'action: "viewer_scan"' supabase/functions/viewer-link/index.ts
+          grep -Fq 'return json(await currentOrLegacyFiles(supabase, data ?? []));' supabase/functions/revit-api/index.ts
           ! grep -Fq 'url.searchParams.get("fileId")' supabase/functions/viewer-link/index.ts
           ! grep -Fq '/api/files/' frontend/src/main.ts

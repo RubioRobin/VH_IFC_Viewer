@@ -214,6 +214,25 @@ async function ensureModel(
   return { id: String(existing.id), created: false };
 }
 
+async function currentOrLegacyFiles(supabase: any, files: any[]) {
+  const versionIds = files.map((file: any) => file.model_version_id).filter(
+    Boolean,
+  );
+  if (!versionIds.length) return files;
+
+  const { data: versions, error } = await supabase.from("model_versions")
+    .select("id, is_current").in("id", versionIds);
+  if (error) throw error;
+  const currentIds = new Set(
+    (versions || []).filter((version: any) => version.is_current).map((
+      version: any,
+    ) => String(version.id)),
+  );
+  return files.filter((file: any) =>
+    !file.model_version_id || currentIds.has(String(file.model_version_id))
+  );
+}
+
 async function ensureActiveShare(
   supabase: any,
   versionId: string,
@@ -402,7 +421,7 @@ Deno.serve(async (request) => {
         .eq("project_id", parts[1])
         .order("filename");
       if (error) throw error;
-      return json(data ?? []);
+      return json(await currentOrLegacyFiles(supabase, data ?? []));
     }
 
     if (
