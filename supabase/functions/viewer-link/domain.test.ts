@@ -1,5 +1,6 @@
 import {
   isExpired,
+  isLegacyPublicLinkToken,
   isMissingLegacyRelationError,
   isShareToken,
 } from "./domain.ts";
@@ -16,6 +17,24 @@ Deno.test("viewer tokens accept current and legacy capability formats", () => {
   for (const token of [null, "short", "bad token", "../viewer-token"]) {
     if (isShareToken(token)) {
       throw new Error(`Accepted invalid token: ${token}`);
+    }
+  }
+});
+
+Deno.test("legacy public-link lookup only receives UUID tokens", () => {
+  for (
+    const token of [
+      "44f9711a-a06f-48e8-aa45-4b0e60212cbe",
+      "44F9711A-A06F-48E8-AA45-4B0E60212CBE",
+    ]
+  ) {
+    if (!isLegacyPublicLinkToken(token)) {
+      throw new Error(`Rejected legacy UUID token: ${token}`);
+    }
+  }
+  for (const token of ["legacy_share-token_123", "abcdefghijkl"]) {
+    if (isLegacyPublicLinkToken(token)) {
+      throw new Error(`Accepted non-UUID legacy token: ${token}`);
     }
   }
 });

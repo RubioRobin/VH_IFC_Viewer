@@ -8,6 +8,13 @@ export function isShareToken(value: string | null): value is string {
   return Boolean(value && /^[a-zA-Z0-9_-]{12,128}$/.test(value));
 }
 
+export function isLegacyPublicLinkToken(value: string): boolean {
+  // public_links.public_id is a PostgreSQL UUID. Avoid querying that column
+  // with newer URL-safe tokens because PostgREST rejects those with 22P02.
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    .test(value);
+}
+
 export function isMissingLegacyRelationError(error: unknown): boolean {
   const code = String((error as { code?: unknown } | null)?.code || "");
   return code === "42P01" || code === "PGRST205";
