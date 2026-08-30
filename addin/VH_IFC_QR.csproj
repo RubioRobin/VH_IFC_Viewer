@@ -11,20 +11,27 @@
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RevitInstallDir Condition="'$(RevitInstallDir)' == ''">C:\Program Files\Autodesk\Revit 2025\</RevitInstallDir>
+    <UseInstalledRevitReferences Condition="'$(UseInstalledRevitReferences)' == '' And Exists('$(RevitInstallDir)RevitAPI.dll')">true</UseInstalledRevitReferences>
+    <UseInstalledRevitReferences Condition="'$(UseInstalledRevitReferences)' == ''">false</UseInstalledRevitReferences>
     <OriginalExporterSourceDir>OriginalExporter\VHExportAssemblies\IFCExportSingleAssembly\</OriginalExporterSourceDir>
     <OriginalExporterRuntimeDir>$(OriginalExporterSourceDir)bin\Debug\net8.0-windows7.0\</OriginalExporterRuntimeDir>
     <RevitAddinOutputDir>$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR_bundled\</RevitAddinOutputDir>
     <RevitAddinManifestPath>$(APPDATA)\Autodesk\Revit\Addins\2025\VH_IFC_QR.addin</RevitAddinManifestPath>
     <CodeSigningCertificatePath Condition="'$(CodeSigningCertificatePath)' == ''">$(VH_CODE_SIGN_CERT)</CodeSigningCertificatePath>
     <CodeSigningCertificatePassword Condition="'$(CodeSigningCertificatePassword)' == ''">$(VH_CODE_SIGN_PASSWORD)</CodeSigningCertificatePassword>
+    <CodeSigningCertificateThumbprint Condition="'$(CodeSigningCertificateThumbprint)' == ''">$(VH_CODE_SIGN_THUMBPRINT)</CodeSigningCertificateThumbprint>
     <CodeSigningTimestampUrl Condition="'$(CodeSigningTimestampUrl)' == ''">http://timestamp.digicert.com</CodeSigningTimestampUrl>
     <SignToolPath Condition="'$(SignToolPath)' == ''">signtool</SignToolPath>
+    <PowerShellPath Condition="'$(PowerShellPath)' == ''">pwsh</PowerShellPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+                      ExcludeAssets="runtime"
+                      Condition="'$(UseInstalledRevitReferences)' != 'true'" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- Compile against the exact installed Revit patch. -->
+  <ItemGroup Condition="'$(UseInstalledRevitReferences)' == 'true'">
+    <!-- Local builds compile against the exact installed Revit patch. -->
     <Reference Include="RevitAPI">
       <HintPath>$(RevitInstallDir)RevitAPI.dll</HintPath>
       <Private>false</Private>
@@ -33,10 +40,6 @@
       <HintPath>$(RevitInstallDir)RevitAPIUI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Antlr4.Runtime">
-      <HintPath>$(OriginalExporterRuntimeDir)Antlr4.Runtime.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
     <Reference Include="Autodesk.UI.Windows">
       <HintPath>$(RevitInstallDir)Autodesk.UI.Windows.dll</HintPath>
       <Private>false</Private>
@@ -44,18 +47,6 @@
     <Reference Include="Autodesk.Weave.Wpf">
       <HintPath>$(RevitInstallDir)Autodesk.Weave.Wpf.dll</HintPath>
       <Private>false</Private>
-    </Reference>
-    <Reference Include="CodeLibrary">
-      <HintPath>$(OriginalExporterRuntimeDir)CodeLibrary.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
-    <Reference Include="IFCExporterUIOverride">
-      <HintPath>$(OriginalExporterRuntimeDir)IFCExporterUIOverride.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
-    <Reference Include="IFCExportSingleAssemblyUI">
-      <HintPath>$(OriginalExporterRuntimeDir)IFCExportSingleAssemblyUI.dll</HintPath>
-      <Private>true</Private>
     </Reference>
     <Reference Include="IntfIFCAPI">
       <HintPath>$(RevitInstallDir)IntfIFCAPI.dll</HintPath>
@@ -78,6 +69,56 @@
     <Reference Include="UserInterfaceUtility">
       <HintPath>$(RevitInstallDir)UserInterfaceUtility.dll</HintPath>
       <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseInstalledRevitReferences)' != 'true'">
+    <!-- CI has no Revit installation. These supporting assemblies are supplied
+         by the checked-in, version-matched exporter runtime. -->
+    <Reference Include="Autodesk.UI.Windows">
+      <HintPath>$(OriginalExporterRuntimeDir)Autodesk.UI.Windows.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Autodesk.Weave.Wpf">
+      <HintPath>$(OriginalExporterRuntimeDir)Autodesk.Weave.Wpf.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="IntfIFCAPI">
+      <HintPath>$(OriginalExporterRuntimeDir)IntfIFCAPI.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Revit.IFC.Common">
+      <HintPath>$(OriginalExporterRuntimeDir)Revit.IFC.Common.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Revit.IFC.Export">
+      <HintPath>$(OriginalExporterRuntimeDir)Revit.IFC.Export.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="RevitAPIIFC">
+      <HintPath>$(OriginalExporterRuntimeDir)RevitAPIIFC.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UserInterfaceUtility">
+      <HintPath>$(OriginalExporterRuntimeDir)UserInterfaceUtility.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Antlr4.Runtime">
+      <HintPath>$(OriginalExporterRuntimeDir)Antlr4.Runtime.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="CodeLibrary">
+      <HintPath>$(OriginalExporterRuntimeDir)CodeLibrary.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="IFCExporterUIOverride">
+      <HintPath>$(OriginalExporterRuntimeDir)IFCExporterUIOverride.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="IFCExportSingleAssemblyUI">
+      <HintPath>$(OriginalExporterRuntimeDir)IFCExportSingleAssemblyUI.dll</HintPath>
+      <Private>true</Private>
     </Reference>
     <Reference Include="VHCreateSheets">
       <HintPath>$(OriginalExporterRuntimeDir)VHCreateSheets.dll</HintPath>
@@ -108,12 +149,17 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
 
-  <Target Name="CodeSignAddin" AfterTargets="Build" BeforeTargets="CopyToRevitAddins"
+  <Target Name="CodeSignAddinWithFile" AfterTargets="Build" BeforeTargets="CopyToRevitAddins"
           Condition="'$(CodeSigningCertificatePath)' != '' And Exists('$(CodeSigningCertificatePath)')">
     <Exec Condition="'$(CodeSigningCertificatePassword)' != ''"
           Command="&quot;$(SignToolPath)&quot; sign /f &quot;$(CodeSigningCertificatePath)&quot; /p &quot;$(CodeSigningCertificatePassword)&quot; /fd SHA256 /tr &quot;$(CodeSigningTimestampUrl)&quot; /td SHA256 &quot;$(TargetPath)&quot;" />
     <Exec Condition="'$(CodeSigningCertificatePassword)' == ''"
           Command="&quot;$(SignToolPath)&quot; sign /f &quot;$(CodeSigningCertificatePath)&quot; /fd SHA256 /tr &quot;$(CodeSigningTimestampUrl)&quot; /td SHA256 &quot;$(TargetPath)&quot;" />
+  </Target>
+
+  <Target Name="CodeSignAddinWithStore" AfterTargets="Build" BeforeTargets="CopyToRevitAddins"
+          Condition="'$(CodeSigningCertificateThumbprint)' != '' And ('$(CodeSigningCertificatePath)' == '' Or !Exists('$(CodeSigningCertificatePath)'))">
+    <Exec Command="&quot;$(PowerShellPath)&quot; -NoProfile -NonInteractive -Command &quot;$cert = Get-Item 'Cert:\CurrentUser\My\$(CodeSigningCertificateThumbprint)'; $result = Set-AuthenticodeSignature -FilePath '$(TargetPath)' -Certificate $cert -TimestampServer '$(CodeSigningTimestampUrl)' -HashAlgorithm SHA256; if (-not $result.SignerCertificate) { throw 'Authenticode signing failed.' }&quot;" />
   </Target>
 
   <Target Name="RemoveLegacyOriginalExporterRuntime" BeforeTargets="CopyToRevitAddins"
@@ -139,8 +185,8 @@
       <AddinSourceAsset Include="$(MSBuildProjectDirectory)\icon_export.png" />
       <!-- Copy only the two runtime IFC assemblies. Marking these references
            Copy Local would also pull internal Revit DBAPI modules into AppData. -->
-      <AddinIfcRuntime Include="$(RevitInstallDir)Revit.IFC.Common.dll" />
-      <AddinIfcRuntime Include="$(RevitInstallDir)Revit.IFC.Export.dll" />
+      <AddinIfcRuntime Include="$(RevitInstallDir)Revit.IFC.Common.dll" Condition="'$(UseInstalledRevitReferences)' == 'true'" />
+      <AddinIfcRuntime Include="$(RevitInstallDir)Revit.IFC.Export.dll" Condition="'$(UseInstalledRevitReferences)' == 'true'" />
     </ItemGroup>
     <Copy SourceFiles="@(AddinRuntimeOutput)"
           DestinationFiles="@(AddinRuntimeOutput->'$(RevitAddinOutputDir)%(RecursiveDir)%(Filename)%(Extension)')"

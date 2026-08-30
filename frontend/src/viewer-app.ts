@@ -23,6 +23,15 @@ import {
 
 const viewerBootstrap = getViewerBootstrap();
 const isPublicViewer = viewerBootstrap.mode === "public";
+const fragmentsBenchmarkMode = new URLSearchParams(window.location.search).get("benchmark") === "fragments";
+const benchmarkWindow = window as Window & {
+  __VH_FRAGMENTS_BENCHMARK_RESULT__?: Record<string, unknown> | null;
+  __VH_FRAGMENTS_BENCHMARK_ERROR__?: string | null;
+};
+if (fragmentsBenchmarkMode) {
+  benchmarkWindow.__VH_FRAGMENTS_BENCHMARK_RESULT__ = null;
+  benchmarkWindow.__VH_FRAGMENTS_BENCHMARK_ERROR__ = null;
+}
 
 BUI.Manager.init();
 
@@ -44,9 +53,13 @@ const viewport = BUI.Component.create<BUI.Viewport>(
 );
 
 world.renderer = new OBF.PostproductionRenderer(components, viewport);
+// Keep the production viewer behaviour: do not let WebGL clear or render
+// before the viewport has a real layout size.
+world.renderer.enabled = false;
 world.camera = new OBC.OrthoPerspectiveCamera(components);
 
 const MIN_CAMERA_NEAR = 0.005;
+const DEFAULT_CAMERA_FAR = 1_000_000;
 
 const updateCameraClippingRange = (radius = 500) => {
   const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 500;
@@ -54,16 +67,19 @@ const updateCameraClippingRange = (radius = 500) => {
   const far = Math.max(safeRadius * 50, 10_000);
 
   world.camera.threePersp.near = near;
-  world.camera.threePersp.far = far;
+  world.camera.threePersp.far = Math.max(far, DEFAULT_CAMERA_FAR);
   world.camera.threePersp.updateProjectionMatrix();
 
   world.camera.threeOrtho.near = near;
-  world.camera.threeOrtho.far = far;
+  world.camera.threeOrtho.far = Math.max(far, DEFAULT_CAMERA_FAR);
   world.camera.threeOrtho.updateProjectionMatrix();
 };
 
 updateCameraClippingRange();
 await world.camera.controls.setLookAt(12, 8, 12, 0, 0, 0);
+world.camera.controls.smoothTime = 0.25;
+world.camera.controls.dollyToCursor = true;
+world.camera.controls.infinityDolly = true;
 
 const cameraControls = world.camera.controls;
 const rendererCanvas = world.renderer.three.domElement;
@@ -303,12 +319,52 @@ window.addEventListener("blur", () => {
   setMiddleMouseAction(false);
 });
 
-const grid = components.get(OBC.Grids).create(world);
-grid.config.color = new THREE.Color("#5c5548");
-grid.config.primarySize = 5;
-grid.config.secondarySize = 1;
-grid.config.distance = 200;
-grid.fade = true;
+// Use the proven production grid. It lives in world space and does not move,
+// vibrate or disappear when the camera crosses an OBC grid fade boundary.
+const GRID_SIZE = 10_000;
+const GRID_FINE_STEP = 1;
+const GRID_MAJOR_STEP = 5;
+
+const createGroundGrid = () => {
+  const halfSize = GRID_SIZE / 2;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const fineColor = new THREE.Color(0x332f28);
+  const majorColor = new THREE.Color(0x5b5244);
+
+  const pushVertex = (x: number, y: number, z: number, color: THREE.Color) => {
+    positions.push(x, y, z);
+    colors.push(color.r, color.g, color.b);
+  };
+
+  for (let index = -halfSize; index <= halfSize; index += GRID_FINE_STEP) {
+    const color = index % GRID_MAJOR_STEP === 0 ? majorColor : fineColor;
+    pushVertex(-halfSize, 0, index, color);
+    pushVertex(halfSize, 0, index, color);
+    pushVertex(index, 0, -halfSize, color);
+    pushVertex(index, 0, halfSize, color);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+
+  const material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const groundGrid = new THREE.LineSegments(geometry, material);
+  groundGrid.name = "VH Ground Grid";
+  groundGrid.frustumCulled = false;
+  groundGrid.renderOrder = -1000;
+  return groundGrid;
+};
+
+const grid = createGroundGrid();
+world.scene.three.add(grid);
 
 const ifcLoader = components.get(OBC.IfcLoader);
 await ifcLoader.setup({
@@ -382,11 +438,63 @@ async function loadLocalIfc(file: File) {
   try {
     document.title = `VH Engineering IFC Viewer – ${getViewerModelName(file.name)}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
+    const ifcLoadStartedAt = performance.now();
     const model = await ifcLoader.load(bytes, true, file.name.replace(/\.ifc$/i, ""));
     await keepAllElementsLoaded(model);
+    const ifcLoadFinishedAt = performance.now();
+
+    if (fragmentsBenchmarkMode) {
+      const ifcItemIds = await model.getItemsIdsWithGeometry();
+      const ifcItemCount = ifcItemIds.length;
+      const ifcCategories = (await model.getCategories()).sort();
+      const sampleItemIds = ifcItemIds.slice(0, 10);
+      const ifcSampleData = await model.getItemsData(sampleItemIds);
+      const encodeStartedAt = performance.now();
+      const fragmentBuffer = await model.getBuffer(false);
+      const encodeFinishedAt = performance.now();
+
+      await fragments.core.disposeModel(model.modelId);
+      const fragmentLoadStartedAt = performance.now();
+      const fragmentModel = await fragments.core.load(fragmentBuffer, {
+        modelId: `benchmark-${crypto.randomUUID()}`,
+        camera: world.camera.three,
+        raw: false,
+      });
+      await keepAllElementsLoaded(fragmentModel);
+      const fragmentLoadFinishedAt = performance.now();
+      const fragmentItemCount = (await fragmentModel.getItemsIdsWithGeometry()).length;
+      const fragmentCategories = (await fragmentModel.getCategories()).sort();
+      const fragmentSampleData = await fragmentModel.getItemsData(sampleItemIds);
+      const memory = performance as Performance & {
+        memory?: { usedJSHeapSize?: number };
+      };
+
+      benchmarkWindow.__VH_FRAGMENTS_BENCHMARK_RESULT__ = {
+        fileName: file.name,
+        ifcBytes: bytes.byteLength,
+        fragmentBytes: fragmentBuffer.byteLength,
+        fragmentToIfcRatio: Number((fragmentBuffer.byteLength / bytes.byteLength).toFixed(4)),
+        ifcLoadMs: Math.round(ifcLoadFinishedAt - ifcLoadStartedAt),
+        fragmentEncodeMs: Math.round(encodeFinishedAt - encodeStartedAt),
+        fragmentLoadMs: Math.round(fragmentLoadFinishedAt - fragmentLoadStartedAt),
+        ifcItemCount,
+        fragmentItemCount,
+        geometryCountMatches: ifcItemCount === fragmentItemCount,
+        categoriesMatch: JSON.stringify(ifcCategories) === JSON.stringify(fragmentCategories),
+        samplePropertiesMatch: JSON.stringify(ifcSampleData) === JSON.stringify(fragmentSampleData),
+        checkedPropertyItemCount: sampleItemIds.length,
+        usedJsHeapBytes: memory.memory?.usedJSHeapSize || null,
+        userAgent: navigator.userAgent,
+      };
+    }
     if (!panelMedia.matches) closePanel("model");
   } catch (error) {
     console.error("IFC file loading error:", error);
+    if (fragmentsBenchmarkMode) {
+      benchmarkWindow.__VH_FRAGMENTS_BENCHMARK_ERROR__ = error instanceof Error
+        ? error.stack || error.message
+        : String(error);
+    }
   }
 }
 
@@ -778,20 +886,36 @@ window.addEventListener("keydown", (event) => {
 panelMedia.addEventListener("change", syncPanelsForViewport);
 
 const resizeViewer = () => {
+  const { width, height } = viewport.getBoundingClientRect();
+  if (width < 10 || height < 10) return false;
   world.renderer?.resize();
   world.camera.updateAspect();
+  return true;
 };
 
 const app = document.getElementById("app");
 if (!app) throw new Error("Viewer root element #app ontbreekt.");
 app.append(viewerRoot);
 viewerRoot.querySelector(".basic-viewer__viewport")?.append(viewerTools.element);
+
+if (fragmentsBenchmarkMode) {
+  const benchmarkInput = document.createElement("input");
+  benchmarkInput.id = "vh-fragments-benchmark-input";
+  benchmarkInput.type = "file";
+  benchmarkInput.accept = ".ifc";
+  benchmarkInput.hidden = true;
+  benchmarkInput.addEventListener("change", () => {
+    const [file] = Array.from(benchmarkInput.files ?? []);
+    if (file) void loadLocalIfc(file);
+  });
+  document.body.append(benchmarkInput);
+}
 if (!isPublicViewer && panelMedia.matches) openPanel("model");
 
 window.addEventListener("resize", resizeViewer);
 await new Promise<void>((resolve) => {
   window.requestAnimationFrame(() => {
-    resizeViewer();
+    if (resizeViewer()) world.renderer.enabled = true;
     postproduction.enabled = true;
     resolve();
   });
@@ -828,7 +952,7 @@ const placeModelOnGrid = (model: { object: THREE.Object3D; box: THREE.Box3 }) =>
   const boundingBox = model.box;
   if (boundingBox.isEmpty()) return;
 
-  const gridHeight = grid.three.getWorldPosition(new THREE.Vector3()).y;
+  const gridHeight = grid.getWorldPosition(new THREE.Vector3()).y;
   model.object.position.y += gridHeight - boundingBox.min.y;
   model.object.updateMatrixWorld(true);
 };

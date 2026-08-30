@@ -7,4 +7,4 @@ using System.Reflection;
 [assembly: AssemblyCopyright("Copyright (c) VH Engineering")]
 [assembly: AssemblyVersion("1.1.0.0")]
 [assembly: AssemblyFileVersion("1.1.0.0")]
-[assembly: AssemblyInformationalVersion("1.1.0-development")]
+[assembly: AssemblyInformationalVersion("1.1.0")]

@@ -1,3 +1,4 @@
+// @deno-types="npm:@types/qrcode@1.5.6"
 import QRCode from "npm:qrcode@1.5.4";
 import { createSupabaseAdminClient } from "../_shared/supabase-admin.ts";
 
@@ -355,7 +356,6 @@ async function replacePreviousUpload(
     );
     if (error) throw error;
   }
-
 }
 
 async function assertReadyVersion(
@@ -368,6 +368,23 @@ async function assertReadyVersion(
     throw new ApiError(409, "De IFC-upload is nog niet volledig afgerond.");
   }
   return version;
+}
+
+async function findReservedVersion(
+  supabase: any,
+  modelId: string,
+  fileName: string,
+) {
+  const { data, error } = await supabase.from("model_versions")
+    .select("id, storage_path_ifc, storage_bucket")
+    .eq("model_id", modelId)
+    .eq("file_name", fileName)
+    .eq("upload_status", "pending")
+    .is("file_size", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
 }
 
 Deno.serve(async (request) => {
@@ -493,11 +510,16 @@ Deno.serve(async (request) => {
       if (projectError) throw projectError;
       if (!project) throw new ApiError(404, "Project niet gevonden.");
 
+      const compatibleModelNames = modelName.toLowerCase().endsWith(".ifc")
+        ? [modelName]
+        : [modelName, `${modelName}.ifc`];
       const { data: existingModels, error: lookupError } = await supabase
         .from("models")
         .select("id")
         .eq("project_id", String(project.id))
-        .eq("name", modelName)
+        // The second value keeps reservations made by the pre-1.1.0 admin
+        // implementation usable; new reservations omit the extension.
+        .in("name", compatibleModelNames)
         .order("created_at", { ascending: false })
         .limit(1);
       if (lookupError) throw lookupError;
@@ -538,6 +560,40 @@ Deno.serve(async (request) => {
         .maybeSingle();
       if (modelError) throw modelError;
       if (!model) throw new ApiError(404, "Model niet gevonden.");
+
+      // The admin dashboard can reserve a stable viewer/QR capability before
+      // Revit uploads the IFC. Reuse that empty version so its share token and
+      // printed QR code remain valid after the real upload completes.
+      const reserved = await findReservedVersion(supabase, modelId, fileName);
+      if (reserved) {
+        const bucket = reserved.storage_bucket || IFC_BUCKET;
+        const { data: signed, error: signedError } = await supabase.storage
+          .from(bucket)
+          .createSignedUploadUrl(reserved.storage_path_ifc);
+        if (signedError || !signed) {
+          throw signedError ||
+            new Error("Kon geen ondertekende upload-URL maken.");
+        }
+        const { error: updateError } = await supabase.from("model_versions")
+          .update({
+            file_size: fileSize,
+            checksum_sha256: body.checksumSha256
+              ? String(body.checksumSha256).slice(0, 128)
+              : null,
+          })
+          .eq("id", reserved.id);
+        if (updateError) throw updateError;
+
+        return json({
+          versionId: reserved.id,
+          uploadUrl: signed.signedUrl,
+          uploadToken: signed.token,
+          tusEndpoint: tusEndpoint(),
+          storagePath: reserved.storage_path_ifc,
+          storageBucket: bucket,
+          reserved: true,
+        }, 200);
+      }
 
       const storagePath =
         `projects/${model.project_id}/models/${modelId}/revisions/${crypto.randomUUID()}/${fileName}`;

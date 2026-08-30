@@ -1,8 +1,8 @@
 # Technische overdracht — directe IFC-keten
 
-**Status:** juli 2026
-**Actieve route:** Revit → Supabase → Vercel IFC-viewer
-**Niet in deze route:** de Express-backend
+**Status:** release 1.1.0 — augustus 2026
+**Actieve route:** Revit + adminportaal → Supabase → Vercel IFC-viewer
+**Legacy, niet gedeployed:** de Express-backend
 
 De uitvoerbare inrichting staat in [SUPABASE_DIRECTE_KOPPELING.md](SUPABASE_DIRECTE_KOPPELING.md).
 
@@ -19,6 +19,8 @@ Revit add-in
                                       │
                                       ▼
 Vercel viewer ── viewer-link Edge Function ── signed download-URL ── IFC
+
+Vercel admin ── Supabase Auth ── admin-api Edge Function ── database/storage
 ```
 
 De browser en de add-in ontvangen nooit een Supabase secret/service-role key.
@@ -80,8 +82,9 @@ actuele modelversiecontract zonder tabellen te verwijderen.
 3. Stel `VH_REVIT_PLUGIN_KEY` en `VH_VIEWER_URL` in als Edge Function secrets.
 4. Activeer Email/Password en maak de Revit-gebruikers aan in Supabase Auth.
 5. `supabase functions deploy revit-api`
-6. `supabase functions deploy viewer-link`
-7. Deploy de Vercel-viewer met `VITE_SUPABASE_URL` en
+6. `supabase functions deploy admin-api`
+7. `supabase functions deploy viewer-link`
+8. Deploy de Vercel-viewer met `VITE_SUPABASE_URL` en
    `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
 Gebruik bij voorkeur `frontend` als Vercel Root Directory. De root
@@ -98,9 +101,11 @@ wordt gedeployed; hij start de Express-backend niet.
 - Controleer in de browsernetwerktab dat de viewer alleen Vercel en
   `*.supabase.co` aanroept en geen legacy backend-URL.
 
-## Legacy adminportaal
+## Adminportaal
 
-`backend/` en de resterende `VITE_API_URL`-aanroepen horen uitsluitend bij het
-niet-gemigreerde adminportaal. Zij zijn geen afhankelijkheid van een Revit
-export, QR-link of publieke IFC-viewer. Wijzigingen aan dat portaal mogen de
-directe route niet opnieuw via Express laten lopen.
+Alle adminpagina's roepen `admin-api` aan. Dat omvat authenticatie/profiel,
+projecten en bestanden, uploadtickets, QR-assets, gebruikersbeheer, activiteit
+en statistieken. De Function controleert de Supabase-JWT en gebruikt uitsluitend
+`app_metadata.role` voor adminautorisatie. `backend/` is alleen bewaarde
+legacycode voor regressieonderzoek; `VITE_API_URL` is uit de actieve route
+verwijderd.

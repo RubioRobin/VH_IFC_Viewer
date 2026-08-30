@@ -10,8 +10,15 @@ $outputDir  = "$addinDir\bin\Release\net8.0-windows"
 $revitDir   = "C:\Program Files\Autodesk\Revit 2025"
 
 Write-Host "=== VH IFC QR - Build en Install ===" -ForegroundColor Cyan
-if ($env:VH_CODE_SIGN_CERT) {
-    Write-Host "Code signing certificaat gevonden: $env:VH_CODE_SIGN_CERT" -ForegroundColor DarkGray
+$signingIdentity = if ($env:VH_CODE_SIGN_THUMBPRINT) {
+    $env:VH_CODE_SIGN_THUMBPRINT
+} elseif ($env:VH_CODE_SIGN_CERT) {
+    $env:VH_CODE_SIGN_CERT
+} else {
+    $null
+}
+if ($signingIdentity) {
+    Write-Host "Code signing-identiteit gevonden: $signingIdentity" -ForegroundColor DarkGray
 } else {
     Write-Host "Geen code signing certificaat ingesteld; Revit kan de eerste keer een unsigned add-in melding tonen." -ForegroundColor DarkYellow
 }
@@ -77,7 +84,7 @@ $addinXml = $addinXml -replace '<Assembly>.*?</Assembly>', "<Assembly>$targetDir
 $addinXml | Set-Content $addinFile -Encoding UTF8
 Write-Host "Manifest geschreven naar: $addinFile" -ForegroundColor Green
 
-# 4. Controleer signature en schrijf settings.json als ClientSecret nog niet ingesteld is
+# 4. Controleer handtekening en geef de eenmalige configuratiestap aan
 Write-Host "`n[4/4] Controleer installatie..." -ForegroundColor Yellow
 $signature = Get-AuthenticodeSignature "$targetDir\VH_IFC_QR.dll"
 if ($signature.Status -eq "Valid") {

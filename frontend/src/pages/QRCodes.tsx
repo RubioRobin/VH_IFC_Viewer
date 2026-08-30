@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAPI, API_URL } from '../lib/api'; // Use API_URL from lib
+import { fetchAPI } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { QrCode, Plus, Trash2, Download, Copy, ExternalLink, Calendar } from 'lucide-react';
 import { Dialog } from '../components/ui/dialog';
@@ -15,7 +15,7 @@ interface QRCode {
     file_id: string;
     element_id: string;
     qr_code_url: string; // The URL *in* the QR
-    qr_image_path: string; // Local path
+    qr_image_url: string;
     created_at: string;
     filename?: string;
     project_name?: string;
@@ -39,6 +39,8 @@ export function QRCodesPage() {
         webUrl: string;
         fileId: string;
         storagePath: string;
+        targetFileName: string;
+        qrImageUrl: string;
     } | null>(null);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -129,7 +131,7 @@ export function QRCodesPage() {
                         <div className="p-4 flex gap-4">
                             <div className="w-24 h-24 bg-gray-100 rounded-lg shrink-0 overflow-hidden flex items-center justify-center border">
                                 <img
-                                    src={`${API_URL}/qr-codes/${qr.id}.png`}
+                                    src={qr.qr_image_url || getBarcodeUrl(qr.qr_code_url)}
                                     alt="QR"
                                     className="w-full h-full object-contain"
                                     onError={(e) => {
@@ -161,7 +163,7 @@ export function QRCodesPage() {
                             <div className="flex gap-1">
                                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
                                     const link = document.createElement('a');
-                                    link.href = `${API_URL}/qr-codes/${qr.id}.png`;
+                                    link.href = qr.qr_image_url;
                                     link.download = `QR_${qr.filename || 'code'}.png`;
                                     link.click();
                                 }}>
@@ -220,7 +222,7 @@ export function QRCodesPage() {
                                 onChange={(e) => setFileName(e.target.value)}
                             />
                             <p className="text-xs text-muted-foreground">
-                                Je krijgt een unieke ID die je moet toevoegen aan deze bestandsnaam.
+                                De reservering maakt automatisch een unieke, veilige IFC-bestandsnaam.
                             </p>
                         </div>
                     </div>
@@ -228,7 +230,7 @@ export function QRCodesPage() {
                     <div className="space-y-4">
                         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg flex gap-4 items-start">
                             <img
-                                src={getBarcodeUrl(reservedResult.webUrl)}
+                                src={reservedResult.qrImageUrl}
                                 alt="QR"
                                 className="w-32 h-32 bg-white p-2 rounded border"
                             />
@@ -238,28 +240,18 @@ export function QRCodesPage() {
 
                                 <div className="p-2 bg-black/5 dark:bg-white/10 rounded flex items-center justify-between group cursor-pointer"
                                     onClick={() => {
-                                        // Construct filename logic simulation
-                                        const ext = fileName.split('.').pop() || 'ifc';
-                                        const base = fileName.replace('.' + ext, '');
-                                        const safeBase = base.replace(/[^a-zA-Z0-9_\-]/g, '_');
-                                        const targetName = `${safeBase}_${reservedResult.fileId}.${ext}`;
-                                        navigator.clipboard.writeText(targetName);
+                                        navigator.clipboard.writeText(reservedResult.targetFileName);
                                         toast({ type: 'info', title: 'Gekopieerd', message: 'Bestandsnaam gekopieerd' });
                                     }}>
                                     <code className="text-xs break-all font-mono">
-                                        {(() => {
-                                            const ext = fileName.split('.').pop() || 'ifc';
-                                            const base = fileName.replace('.' + ext, '');
-                                            const safeBase = base.replace(/[^a-zA-Z0-9_\-]/g, '_');
-                                            return `${safeBase}_${reservedResult.fileId}.${ext}`;
-                                        })()}
+                                        {reservedResult.targetFileName}
                                     </code>
                                     <Copy className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                                 </div>
 
                                 <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => {
                                     const link = document.createElement('a');
-                                    link.href = getBarcodeUrl(reservedResult.webUrl);
+                                    link.href = reservedResult.qrImageUrl;
                                     link.download = "reserved_qr.png";
                                     link.click();
                                 }}>

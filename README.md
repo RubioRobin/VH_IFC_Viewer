@@ -1,6 +1,6 @@
 # VH IFC Viewer
 
-Een IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-modellen. De actieve Revit-export en publieke viewer gebruiken Supabase Edge Functions en Storage; de Express-backend is uitsluitend legacy voor het adminportaal.
+Een IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-modellen. Revit-export, adminportaal en publieke viewer gebruiken rechtstreeks Supabase Auth, Edge Functions en Storage. De Express-backend is alleen nog bewaarde legacycode en wordt niet naar productie gedeployed.
 
 ---
 
@@ -19,7 +19,7 @@ Een IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-modellen. D
 ```
 VH_IFC_Viewer/
 ├── src/
-├── backend/             → Legacy Node.js/Express API voor admin
+├── backend/             → Legacy Node.js/Express API; geen productieonderdeel
 ├── frontend/            → Vite/React/TypeScript viewer (Vercel)
 ├── addin/               → C# Revit add-in
 └── supabase/            → Edge Functions, migraties en Storage-configuratie
@@ -67,7 +67,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 ## Gebruik
 
-### Legacy admin-backend starten (optioneel)
+### Legacy Express-backend starten (alleen voor regressieonderzoek)
 
 ```bash
 cd backend
@@ -100,10 +100,11 @@ npm run dev:frontend
 
 ---
 
-## Omgevingsvariabelen voor het legacy adminportaal
+## Omgevingsvariabelen voor de legacy Express-backend
 
-Deze variabelen zijn **niet** nodig voor Revit-export, QR-codes of de publieke
-IFC-viewer. Zie voor de actieve route `docs/SUPABASE_DIRECTE_KOPPELING.md`.
+Deze variabelen zijn **niet** nodig voor het actieve adminportaal, Revit-export,
+QR-codes of de publieke IFC-viewer. Zie voor de actieve route
+`docs/SUPABASE_DIRECTE_KOPPELING.md`.
 
 | Variabele | Beschrijving | Vereist |
 |---|---|---|
@@ -137,7 +138,7 @@ IFC-viewer. Zie voor de actieve route `docs/SUPABASE_DIRECTE_KOPPELING.md`.
 
 ## Deployment
 
-### Supabase (Revit en publieke viewer)
+### Supabase (admin, Revit en publieke viewer)
 - Zie `docs/SUPABASE_DIRECTE_KOPPELING.md` voor de migration, Edge Function secrets en deployment.
 
 ### Frontend (Vercel)
@@ -181,6 +182,7 @@ IFC-viewer. Zie voor de actieve route `docs/SUPABASE_DIRECTE_KOPPELING.md`.
 ## Probleemoplossing
 
 ### Backend start niet
+- Deze service is niet nodig voor de productieapp
 - Controleer of alle omgevingsvariabelen in `.env` zijn ingevuld
 - Controleer of `SESSION_SECRET` is ingesteld
 - Bekijk de consolelogs voor specifieke foutmeldingen

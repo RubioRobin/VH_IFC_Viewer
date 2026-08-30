@@ -2,13 +2,18 @@
 
 De actieve IFC-keten is:
 
-`Revit add-in -> Supabase Auth + Edge Function -> signed/TUS upload -> private Storage -> QR-link -> viewer-link Function -> Vercel viewer`
+`Revit/admin -> Supabase Auth + Edge Functions -> private Storage -> QR-link -> viewer-link Function -> Vercel viewer`
 
-Een externe Express-host is geen onderdeel van deze keten. De add-in en browser ontvangen nooit een Supabase secret/service-role key.
+Een externe Express-host is geen onderdeel van deze keten. `admin-api` behandelt
+het adminportaal; `revit-api` behandelt de add-in en uploads; `viewer-link`
+behandelt publieke sharetokens. De add-in en browser ontvangen nooit een
+Supabase secret/service-role key.
 
 ## Wat wordt waar beveiligd
 
 - Revit meldt de gebruiker aan via **Supabase Auth** (e-mail + wachtwoord).
+- Het adminportaal gebruikt dezelfde Auth-sessie en accepteert uitsluitend een
+  gebruiker met `app_metadata.role = "admin"`.
 - `revit-api` valideert zowel de gebruikerssessie als `VH_REVIT_PLUGIN_KEY`.
 - IFC-bestanden staan in private bucket `ifc-models`.
 - Grote IFC-bestanden gebruiken de directe Supabase Storage-hostnaam met TUS-resume.
@@ -51,14 +56,15 @@ Een externe Express-host is geen onderdeel van deze keten. De add-in en browser 
 4. Deploy de functies:
 
    ```powershell
+   supabase functions deploy admin-api
    supabase functions deploy revit-api
    supabase functions deploy viewer-link
    ```
 
-   `verify_jwt = false` in `supabase/config.toml` is bewust: `revit-api`
-   controleert de Auth JWT zelf zodat de health-check zonder gebruikerssessie
-   kan werken; `viewer-link` is publiek maar geeft uitsluitend actieve,
-   niet-verlopen share-links door.
+   `verify_jwt = false` in `supabase/config.toml` is bewust: `admin-api` en
+   `revit-api` valideren de Auth JWT zelf; `revit-api` houdt zo een health-check
+   zonder gebruikerssessie beschikbaar. `viewer-link` is publiek maar geeft
+   uitsluitend actieve, niet-verlopen share-links door.
 
 5. Configureer Vercel met **Root Directory = `frontend`** en:
 
@@ -71,8 +77,8 @@ Een externe Express-host is geen onderdeel van deze keten. De add-in en browser 
    compatibel. Stel voor nieuwe deployments bij voorkeur de moderne
    `VITE_SUPABASE_PUBLISHABLE_KEY` in.
 
-   `VITE_API_URL` is niet nodig voor de IFC-viewer. Het kan uitsluitend nog
-   bestaan voor het niet-gemigreerde legacy adminportaal.
+   `VITE_API_URL` is niet meer nodig. Het adminportaal bouwt de URL van
+   `admin-api` uit `VITE_SUPABASE_URL` op.
 
    In het gekoppelde Vercel-project is `frontend/vercel.json` de geldende
    configuratie en verzorgt die de SPA-rewrite voor `/v/<share-token>`.
@@ -85,6 +91,19 @@ Een externe Express-host is geen onderdeel van deze keten. De add-in en browser 
    - Supabase project-URL
    - Supabase publishable key
    - Revit toegangssleutel (`VH_REVIT_PLUGIN_KEY`)
+
+7. Ken de adminrol alleen server-side toe. Bewaar autorisatie nooit in
+   `user_metadata`:
+
+   ```sql
+   update auth.users
+   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+       || '{"role":"admin"}'::jsonb
+   where email = '<beheerder>@<domein>';
+   ```
+
+   Laat de gebruiker daarna opnieuw inloggen zodat de JWT de nieuwe
+   `app_metadata` bevat.
 
 ## Controle vóór eerste export
 
@@ -120,6 +139,14 @@ npm run verify:direct-viewer
 ```
 
 Dezelfde controle draait in `.github/workflows/direct-supabase-viewer.yml`.
+
+Controleer daarnaast het admincontract met een geldige adminsessie:
+
+- `GET /functions/v1/admin-api/auth/me` geeft de actuele gebruiker;
+- `GET /functions/v1/admin-api/projects` en `/qr` geven HTTP 200;
+- `POST /functions/v1/admin-api/upload/reserve` maakt een uploadticket plus
+  blijvende sharetoken;
+- een niet-admin JWT krijgt HTTP 403 en een ontbrekende JWT HTTP 401.
 
 ## Bestaande IFC-bestanden
 

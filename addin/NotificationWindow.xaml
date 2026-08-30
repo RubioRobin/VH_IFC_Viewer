@@ -4,7 +4,7 @@
         Title="VH IFC" MinHeight="210" Width="460" MaxHeight="430"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        FontFamily="Segoe UI"
+        FontFamily="Segoe UI" MouseDown="Window_MouseDown"
         SizeToContent="Height">
 
     <WindowChrome.WindowChrome>

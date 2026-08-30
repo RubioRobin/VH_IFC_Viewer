@@ -1,49 +1,60 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+
+#nullable enable
 
 namespace VH_IFC_QR
 {
-    public class ResultSummary
+    internal sealed class ResultSummary
     {
         public ResultSummary(string subtitle, IReadOnlyList<string> sheetLines)
         {
             Subtitle = subtitle;
-            SheetLines = sheetLines ?? Array.Empty<string>();
+            SheetLines = sheetLines;
         }
 
         public string Subtitle { get; }
         public IReadOnlyList<string> SheetLines { get; }
     }
 
-    public static class ResultSummaryFormatter
+    internal static class ResultSummaryFormatter
     {
-        public static ResultSummary ForQrSheets(IEnumerable<string> sheetLabels)
+        public static ResultSummary ForQrSheets(IEnumerable<string?>? sheetLabels)
         {
-            List<string> lines = (sheetLabels ?? Enumerable.Empty<string>())
-                .Select(label => (label ?? string.Empty).Trim())
-                .Where(label => !string.IsNullOrWhiteSpace(label))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            List<string> uniqueSheetLabels = new List<string>();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (lines.Count == 0)
+            if (sheetLabels != null)
+            {
+                foreach (string? sheetLabel in sheetLabels)
+                {
+                    string? label = sheetLabel?.Trim();
+                    if (string.IsNullOrWhiteSpace(label))
+                        continue;
+
+                    if (seen.Add(label))
+                        uniqueSheetLabels.Add(label);
+                }
+            }
+
+            if (uniqueSheetLabels.Count == 0)
             {
                 return new ResultSummary(
                     "Er is geen QR-code op een sheet geplaatst.",
                     new[] { "Geen sheets met QR-code." });
             }
 
-            string subtitle = lines.Count == 1
+            string subtitle = uniqueSheetLabels.Count == 1
                 ? "Deze sheet heeft nu een QR-code."
                 : "Deze sheets hebben nu een QR-code.";
 
-            return new ResultSummary(subtitle, lines);
+            return new ResultSummary(subtitle, uniqueSheetLabels);
         }
 
-        public static string FormatSheetLabel(string sheetNumber, string sheetName)
+        public static string FormatSheetLabel(string? sheetNumber, string? sheetName)
         {
-            string number = (sheetNumber ?? string.Empty).Trim();
-            string name = (sheetName ?? string.Empty).Trim();
+            string? number = sheetNumber?.Trim();
+            string? name = sheetName?.Trim();
 
             if (string.IsNullOrWhiteSpace(number))
                 return string.IsNullOrWhiteSpace(name) ? "Onbekende sheet" : name;

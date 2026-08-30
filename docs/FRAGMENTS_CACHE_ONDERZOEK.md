@@ -1,13 +1,34 @@
 # Onderzoek: vooraf gegenereerde Fragments-cache
 
-Datum: 2026-08-18
-Status: Advies gereed; implementatie pas na benchmark
+Datum: 2026-08-30
+Status: Desktop-pilot geslaagd; centrale productiecache nog niet activeren
 
 ## Besluit
 
-Sla per `model_version` naast het originele IFC-bestand één gecomprimeerd `.frag`-bestand op. Laat een asynchrone Node-worker dit bestand direct na een geslaagde IFC-upload genereren. De publieke viewer vraagt via `viewer-link` eerst een tijdelijke URL voor het Fragments-bestand op en valt automatisch terug op IFC wanneer het artifact ontbreekt, verouderd is of niet kan worden geladen.
+De lokale desktopbenchmark is positief: de drie aangeleverde IFC's leveren een
+gecomprimeerd Fragments-artifact van 8,1–9,0% van de IFC-grootte en laden in de
+vergelijkbare testruns 19–24% sneller. Aantallen items, categorieën en de
+steekproef van eigenschappen bleven gelijk.
+
+Activeer de centrale productiecache nog niet. De testset is klein en de pilot is
+alleen in headless desktop-Chrome uitgevoerd. Test eerst een representatief
+zwaar IFC-model en een gangbare telefoon via een beperkt mobiel netwerk. Als die
+acceptatie slaagt, sla per `model_version` naast het originele IFC-bestand één
+gecomprimeerd `.frag`-bestand op via een asynchrone worker.
 
 Het originele IFC blijft de bron. Fragments is uitsluitend een reproduceerbare viewer-cache.
+
+## Gemeten resultaten
+
+| Model | IFC | Fragments | Verhouding | IFC laden | Fragments laden | Items |
+|---|---:|---:|---:|---:|---:|---:|
+| BP2-03.ifc | 1.027.139 B | 85.132 B | 8,29% | 2.281 ms | 1.778 ms | 23 = 23 |
+| BP2-02A.ifc | 1.090.730 B | 88.662 B | 8,13% | 2.083 ms | 1.680 ms | 39 = 39 |
+| BP4-01.ifc | 3.929.039 B | 354.679 B | 9,03% | 2.667 ms | 2.027 ms | 30 = 30 |
+
+De benchmarkroute is inert in normaal gebruik en wordt alleen geactiveerd met
+`?benchmark=fragments`. De bron-IFC's en gegenereerde artifacts worden niet in
+Git opgenomen.
 
 De gebruikte pakketten ondersteunen deze route rechtstreeks:
 
