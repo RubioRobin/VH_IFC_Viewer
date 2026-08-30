@@ -306,6 +306,23 @@ async function listProjectFiles(supabase: any, projectId: string) {
   }));
 }
 
+async function removeStoredObjects(
+  supabase: any,
+  objects: Array<{ bucket?: string | null; path?: string | null }>,
+) {
+  const objectPaths = new Map<string, Set<string>>();
+  for (const item of objects) {
+    if (!item.path) continue;
+    const bucket = item.bucket || IFC_BUCKET;
+    (objectPaths.get(bucket) || objectPaths.set(bucket, new Set()).get(bucket)!)
+      .add(item.path);
+  }
+  for (const [bucket, paths] of objectPaths) {
+    const { error } = await supabase.storage.from(bucket).remove([...paths]);
+    if (error) throw error;
+  }
+}
+
 async function deleteProject(supabase: any, projectId: string) {
   const { data: files, error: filesError } = await supabase.from("files")
     .select("path, storage_bucket").eq("project_id", projectId);
@@ -316,21 +333,39 @@ async function deleteProject(supabase: any, projectId: string) {
   const modelIds = (models || []).map((model: any) => model.id);
   const versionRows = modelIds.length
     ? await supabase.from("model_versions").select(
-      "storage_path_ifc, storage_bucket",
+      "id, storage_path_ifc, storage_bucket",
     ).in("model_id", modelIds)
     : { data: [], error: null };
   if (versionRows.error) throw versionRows.error;
-  const objectPaths = new Map<string, Set<string>>();
-  for (const item of [...(files || []), ...(versionRows.data || [])]) {
-    const bucket = item.storage_bucket || IFC_BUCKET;
-    const path = item.path || item.storage_path_ifc;
-    if (path) {
-      (objectPaths.get(bucket) ||
-        objectPaths.set(bucket, new Set()).get(bucket)!).add(path);
-    }
+  const versionIds = (versionRows.data || []).map((version: any) => version.id);
+  const qrRows = versionIds.length
+    ? await supabase.from("qr_assets").select("storage_path_png").in(
+      "model_version_id",
+      versionIds,
+    )
+    : { data: [], error: null };
+  if (qrRows.error) throw qrRows.error;
+  if (versionIds.length) {
+    const { error } = await supabase.from("shares").update({ is_active: false })
+      .in("model_version_id", versionIds);
+    if (error) throw error;
   }
-  for (const [bucket, paths] of objectPaths) {
-    const { error } = await supabase.storage.from(bucket).remove([...paths]);
+  await removeStoredObjects(supabase, [
+    ...(files || []).map((item: any) => ({
+      bucket: item.storage_bucket,
+      path: item.path,
+    })),
+    ...(versionRows.data || []).map((item: any) => ({
+      bucket: item.storage_bucket,
+      path: item.storage_path_ifc,
+    })),
+    ...(qrRows.data || []).map((item: any) => ({
+      bucket: QR_BUCKET,
+      path: item.storage_path_png,
+    })),
+  ]);
+  if (modelIds.length) {
+    const { error } = await supabase.from("models").delete().in("id", modelIds);
     if (error) throw error;
   }
   const { error } = await supabase.from("projects").delete().eq(
@@ -831,18 +866,47 @@ Deno.serve(async (request) => {
     }
     if (method === "DELETE" && parts[0] === "files" && parts.length === 2) {
       const { data: file, error } = await supabase.from("files").select(
-        "project_id, path, storage_bucket, filename",
+        "project_id, path, storage_bucket, filename, model_version_id",
       ).eq("id", parts[1]).maybeSingle();
       if (error) throw error;
       if (!file) throw new ApiError(404, "Bestand niet gevonden.");
-      const { error: storageError } = await supabase.storage.from(
-        file.storage_bucket || IFC_BUCKET,
-      ).remove([file.path]);
-      if (storageError) throw storageError;
-      const { error: deleteError } = await supabase.from("files").delete().eq(
-        "id",
-        parts[1],
-      );
+
+      let qrAssets: any[] = [];
+      if (file.model_version_id) {
+        const [revokeResult, qrResult] = await Promise.all([
+          supabase.from("shares").update({ is_active: false }).eq(
+            "model_version_id",
+            file.model_version_id,
+          ),
+          supabase.from("qr_assets").select("storage_path_png").eq(
+            "model_version_id",
+            file.model_version_id,
+          ),
+        ]);
+        if (revokeResult.error || qrResult.error) {
+          throw revokeResult.error || qrResult.error;
+        }
+        qrAssets = qrResult.data || [];
+      }
+
+      await removeStoredObjects(supabase, [
+        { bucket: file.storage_bucket, path: file.path },
+        ...qrAssets.map((asset: any) => ({
+          bucket: QR_BUCKET,
+          path: asset.storage_path_png,
+        })),
+      ]);
+
+      if (file.model_version_id) {
+        const { error: versionDeleteError } = await supabase.from(
+          "model_versions",
+        ).delete().eq("id", file.model_version_id);
+        if (versionDeleteError) throw versionDeleteError;
+      }
+      const deleteQuery = supabase.from("files").delete();
+      const { error: deleteError } = file.model_version_id
+        ? await deleteQuery.eq("model_version_id", file.model_version_id)
+        : await deleteQuery.eq("id", parts[1]);
       if (deleteError) throw deleteError;
       await audit(
         supabase,

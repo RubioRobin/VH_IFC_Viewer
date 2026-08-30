@@ -20,7 +20,8 @@ Supabase secret/service-role key.
 - Alleen `viewer-link` maakt een download-URL van 15 minuten voor een actieve QR-share.
 - Bij een vervangende upload verplaatst `publish_model_version` de bestaande
   share en QR atomair naar de nieuwe versie. De vorige IFC blijft zeven dagen
-  als herstelversie bewaard.
+  als herstelversie bewaard; `retention-cleanup` ruimt verlopen versies en hun
+  Storage-objecten dagelijks op zonder bestaande deadlines te verlengen.
 - Een publieke viewerlink is altijd `/v/<share-token>`; `?model=` en `?fileId=`
   zijn geen geldige toegangsroute meer.
 - De Revit-sessie wordt per Windows-gebruiker DPAPI-versleuteld opgeslagen en
@@ -46,6 +47,7 @@ Supabase secret/service-role key.
 
    ```powershell
    supabase secrets set VH_VIEWER_URL=https://<jouw-vercel-domein>
+   supabase secrets set VH_RETENTION_CLEANUP_KEY=<willekeurige-sterke-sleutel>
    ```
 
    `SUPABASE_SECRET_KEYS` wordt door Supabase zelf aan Edge Functions geleverd;
@@ -66,12 +68,19 @@ Supabase secret/service-role key.
    supabase functions deploy admin-api
    supabase functions deploy revit-api
    supabase functions deploy viewer-link
+   supabase functions deploy retention-cleanup
    ```
 
    `verify_jwt = false` in `supabase/config.toml` is bewust: `admin-api` en
    `revit-api` valideren de Auth JWT zelf; `revit-api` houdt zo een health-check
    zonder gebruikerssessie beschikbaar. `viewer-link` is publiek maar geeft
    uitsluitend actieve, niet-verlopen share-links door.
+
+   Zet dezelfde cleanup-sleutel in GitHub Actions secret
+   `VH_RETENTION_CLEANUP_KEY` en zet de volledige Function-URL in
+   `VH_RETENTION_CLEANUP_ENDPOINT`. Workflow
+   `.github/workflows/retention-cleanup.yml` voert de cleanup dagelijks uit en
+   kan voor een gecontroleerde test ook handmatig worden gestart.
 
 5. Configureer Vercel met **Root Directory = `frontend`** en:
 
@@ -152,6 +161,8 @@ Controleer daarnaast het admincontract met een geldige adminsessie:
   blijvende sharetoken;
 - een tweede complete upload voor hetzelfde model houdt de bestaande
   `/v/<share-token>` bruikbaar en zet de vorige versie op zeven dagen retentie;
+- een handmatige run van **Supabase model retention cleanup** geeft HTTP 200 en
+  rapporteert alleen verlopen, niet-actuele versies;
 - een niet-admin JWT krijgt HTTP 403 en een ontbrekende JWT HTTP 401.
 
 ## Bestaande IFC-bestanden

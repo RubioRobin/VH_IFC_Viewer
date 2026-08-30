@@ -85,11 +85,12 @@ jobs:
 
       - name: Type-check Supabase Edge Functions
         run: |
-          deno fmt --check supabase/functions/_shared/supabase-admin.ts supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.ts supabase/functions/admin-api/domain.test.ts supabase/functions/admin-api/index.ts supabase/functions/revit-api/index.ts supabase/functions/viewer-link/index.ts
+          deno fmt --check supabase/functions/_shared/supabase-admin.ts supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.ts supabase/functions/admin-api/domain.test.ts supabase/functions/admin-api/index.ts supabase/functions/retention-cleanup/domain.ts supabase/functions/retention-cleanup/domain.test.ts supabase/functions/retention-cleanup/index.ts supabase/functions/revit-api/index.ts supabase/functions/viewer-link/index.ts
           deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/admin-api/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/retention-cleanup/index.ts
           deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/revit-api/index.ts
           deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/viewer-link/index.ts
-          deno test --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.test.ts
+          deno test --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.test.ts supabase/functions/retention-cleanup/domain.test.ts
 
       - name: Verify signed TUS contract
         run: |

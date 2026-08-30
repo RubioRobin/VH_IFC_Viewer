@@ -39,6 +39,11 @@ De browser en de add-in ontvangen nooit een Supabase secret/service-role key.
 7. De add-in maakt zo nodig een share en QR-code. De QR-link is
    `https://<viewer-domein>/v/<token>`.
 
+De dagelijkse GitHub Actions-workflow roept `retention-cleanup` aan. Die
+verwijdert na de vaste retentiedeadline eerst de private Storage-objecten en
+daarna de oude metadata. Een mislukte cleanup trekt eventuele capabilities in
+en wordt bij de volgende run veilig opnieuw geprobeerd.
+
 ## Viewerflow
 
 1. Vercel serveert de SPA voor `/v/<token>`.
@@ -91,7 +96,10 @@ blijven uitsluitend via de server-side Edge Functions bereikbaar.
 5. `supabase functions deploy revit-api`
 6. `supabase functions deploy admin-api`
 7. `supabase functions deploy viewer-link`
-8. Deploy de Vercel-viewer met `VITE_SUPABASE_URL` en
+8. `supabase functions deploy retention-cleanup`
+9. Configureer de cleanup-sleutel in Supabase én GitHub Actions en test de
+   workflow **Supabase model retention cleanup** handmatig.
+10. Deploy de Vercel-viewer met `VITE_SUPABASE_URL` en
    `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
 Gebruik bij voorkeur `frontend` als Vercel Root Directory. De root
@@ -116,3 +124,7 @@ en statistieken. De Function controleert de Supabase-JWT en gebruikt uitsluitend
 `app_metadata.role` voor adminautorisatie. `backend/` is alleen bewaarde
 legacycode voor regressieonderzoek; `VITE_API_URL` is uit de actieve route
 verwijderd.
+
+Bij verwijderen van een gepubliceerd bestand trekt `admin-api` eerst de share
+in en verwijdert daarna IFC, QR-asset en gekoppelde modelversie. Het dashboard
+kan daardoor geen actief ogende QR-link naar een verwijderd object achterlaten.

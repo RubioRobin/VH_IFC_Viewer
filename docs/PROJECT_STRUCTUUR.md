@@ -35,7 +35,7 @@ VH_IFC_Viewer/
 │       └── 📁 viewer/              ← IFC viewer hulpmodules
 │
 ├── 📁 supabase/                    ← Edge Functions, migraties en Storage
-│   ├── 📁 functions/               ← revit-api en viewer-link
+│   ├── 📁 functions/               ← admin-, Revit-, viewer- en retention-Edge Functions
 │   └── 📁 migrations/              ← Directe Revit/Supabase schema migraties
 │
 ├── 📁 addin/                       ← C# Revit add-in (voorheen RevitPlugin)

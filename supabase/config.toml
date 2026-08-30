@@ -1,6 +1,6 @@
 [functions.revit-api]
-# Health checks have no user JWT, so the function performs the validation itself:
-# a Supabase Auth bearer token plus the dedicated Revit installation key.
+# Health checks have no user JWT; protected routes validate Supabase Auth inside
+# the function. The desktop add-in contains no separate shared secret.
 verify_jwt = false
 
 [functions.viewer-link]
@@ -11,4 +11,9 @@ verify_jwt = false
 # The function validates Supabase sessions and admin app_metadata itself. The
 # legacy username bridge is intentionally pre-authentication and only copies an
 # existing bcrypt hash; Supabase Auth still verifies the plaintext password.
+verify_jwt = false
+
+[functions.retention-cleanup]
+# GitHub Actions invokes this scheduled maintenance endpoint with a dedicated,
+# high-entropy cleanup key that the function validates itself.
 verify_jwt = false
