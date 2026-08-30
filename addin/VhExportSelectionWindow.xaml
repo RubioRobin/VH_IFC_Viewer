@@ -113,8 +113,8 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,24" MouseLeftButtonDown="Header_MouseDown" Background="Transparent">
-                <StackPanel>
+            <Grid Grid.Row="0" Margin="0,0,0,24" Background="Transparent">
+                <StackPanel MouseLeftButtonDown="Header_MouseDown">
                     <TextBlock Text="VH Engineering" FontSize="24" FontWeight="Bold" Foreground="#111827"/>
                     <TextBlock Text="IFC export voorbereiden" FontSize="15" Foreground="#6B7280" Margin="0,2,0,0"/>
                 </StackPanel>

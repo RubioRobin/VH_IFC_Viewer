@@ -1,6 +1,9 @@
 # Project Structuur — VH IFC Viewer
 
-Bijgewerkt: 19 februari 2026
+Bijgewerkt: juli 2026
+
+> De actieve Revit-export, QR-link en publieke viewer lopen rechtstreeks via
+> `supabase/`. `backend/` blijft alleen voor het legacy adminportaal bestaan.
 
 ---
 
@@ -9,7 +12,7 @@ Bijgewerkt: 19 februari 2026
 ```
 VH_IFC_Viewer/
 │
-├── 📁 backend/                     ← Node.js/Express API server
+├── 📁 backend/                     ← Legacy Node.js/Express API voor admin
 │   ├── 📄 app.js                   ← Entry point: middleware, routes, server
 │   ├── 📄 database.js              ← Supabase client + service exports
 │   ├── 📄 package.json             ← Backend afhankelijkheden
@@ -30,6 +33,10 @@ VH_IFC_Viewer/
 │       ├── 📁 pages/               ← Paginacomponenten
 │       ├── 📁 components/          ← Herbruikbare UI-componenten
 │       └── 📁 viewer/              ← IFC viewer hulpmodules
+│
+├── 📁 supabase/                    ← Edge Functions, migraties en Storage
+│   ├── 📁 functions/               ← admin-, Revit-, viewer- en retention-Edge Functions
+│   └── 📁 migrations/              ← Directe Revit/Supabase schema migraties
 │
 ├── 📁 addin/                       ← C# Revit add-in (voorheen RevitPlugin)
 │   ├── 📄 Command.cs                   ← Hoofdcommando (export + QR)
@@ -54,9 +61,10 @@ VH_IFC_Viewer/
 
 | Map | Doel |
 |---|---|
-| `backend/` | REST API, authenticatie, bestandsbeheer (Node.js/Express) |
-| `frontend/` | Dashboard en IFC-viewer (React/Vite) |
-| `addin/` | Revit add-in voor export en QR-tagging (C#) |
+| `backend/` | Legacy REST API voor het bestaande adminportaal |
+| `frontend/` | Dashboard en IFC-viewer (React/Vite); QR-viewer gebruikt `viewer-link` |
+| `addin/` | Revit add-in voor export en QR-tagging (C#); gebruikt Supabase Auth/Functions |
+| `supabase/` | Directe Edge Function-, Storage- en database-inrichting |
 | `docs/` | Centrale documentatie en handleidingen |
 
 ---

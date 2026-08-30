@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace VH_IFC_QR
 {
-using System.Windows.Media;
+    using System.Windows.Media;
 
     public partial class LoginWindow : Window
     {
@@ -26,11 +26,11 @@ using System.Windows.Media;
                 btnLogin.IsEnabled = false;
                 lblStatus.Foreground = new SolidColorBrush(Color.FromRgb(22, 163, 74)); // Green-600
                 lblStatus.Text = "Bezig met inloggen...";
-                
-                string username = txtUsername.Text;
+
+                string email = txtUsername.Text.Trim();
                 string password = txtPassword.Password;
 
-                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 {
                     lblStatus.Foreground = Brushes.Red;
                     lblStatus.Text = "Vul alle velden in.";
@@ -39,7 +39,7 @@ using System.Windows.Media;
                 }
 
                 // Authenticate
-                bool success = await _client.LoginUserAsync(username, password);
+                bool success = await _client.LoginUserAsync(email, password);
 
                 if (success)
                 {
@@ -52,7 +52,7 @@ using System.Windows.Media;
                 else
                 {
                     lblStatus.Foreground = Brushes.Red;
-                    lblStatus.Text = "Ongeldige gebruikersnaam of wachtwoord.";
+                    lblStatus.Text = "Ongeldig e-mailadres of wachtwoord.";
                 }
             }
             catch (Exception ex)
@@ -64,12 +64,6 @@ using System.Windows.Media;
             {
                 btnLogin.IsEnabled = true;
             }
-        }
-
-        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
-                this.DragMove();
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

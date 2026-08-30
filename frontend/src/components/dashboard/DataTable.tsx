@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { ChevronDown, ChevronUp, ChevronsUpDown, Search, Filter } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react';
 
 export interface Column<T> {
     key: keyof T;

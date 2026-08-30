@@ -1,0 +1,106 @@
+name: Direct Supabase Viewer
+
+on:
+  push:
+    branches: ["main", "master", "release/**"]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "supabase/**"
+      - "addin/PluginClient.cs"
+      - "scripts/verify-direct-viewer-build.mjs"
+      - "package.json"
+      - "deno.lock"
+      - "vercel.json"
+      - ".github/workflows/direct-supabase-viewer.yml"
+  pull_request:
+    branches: ["main", "master"]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "supabase/**"
+      - "addin/PluginClient.cs"
+      - "scripts/verify-direct-viewer-build.mjs"
+      - "package.json"
+      - "deno.lock"
+      - "vercel.json"
+      - ".github/workflows/direct-supabase-viewer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and verify direct viewer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      - name: Install viewer dependencies
+        run: npm --prefix frontend ci --no-audit --no-fund
+
+      - name: Install and test legacy regression backend
+        run: |
+          npm --prefix backend ci --no-audit --no-fund
+          npm --prefix backend test
+
+      - name: Audit production dependencies
+        run: |
+          npm --prefix frontend audit --omit=dev --audit-level=high
+          npm --prefix backend audit --omit=dev --audit-level=high
+
+      - name: Build direct Supabase viewer
+        env:
+          VITE_SUPABASE_URL: https://ci.supabase.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
+        run: npm --prefix frontend run build
+
+      - name: Verify viewer route contract
+        run: npm run verify:direct-viewer
+
+      - name: Verify legacy anon-key compatibility
+        env:
+          VITE_SUPABASE_URL: https://ci.supabase.invalid
+          VITE_SUPABASE_ANON_KEY: legacy_anon_ci_test
+        run: |
+          npm --prefix frontend run build
+          npm run verify:direct-viewer
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          # Keep the frozen lockfile reproducible across Deno minor releases.
+          deno-version: v2.5.6
+
+      - name: Type-check Supabase Edge Functions
+        run: |
+          deno fmt --check supabase/functions/_shared/routing.ts supabase/functions/_shared/supabase-admin.ts supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.ts supabase/functions/admin-api/domain.test.ts supabase/functions/admin-api/index.ts supabase/functions/retention-cleanup/domain.ts supabase/functions/retention-cleanup/domain.test.ts supabase/functions/retention-cleanup/index.ts supabase/functions/revit-api/domain.ts supabase/functions/revit-api/domain.test.ts supabase/functions/revit-api/index.ts supabase/functions/viewer-link/domain.ts supabase/functions/viewer-link/domain.test.ts supabase/functions/viewer-link/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/admin-api/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/retention-cleanup/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/revit-api/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/viewer-link/index.ts
+          deno test --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/_shared/supabase-admin.test.ts supabase/functions/admin-api/domain.test.ts supabase/functions/retention-cleanup/domain.test.ts supabase/functions/revit-api/domain.test.ts supabase/functions/viewer-link/domain.test.ts
+
+      - name: Verify signed TUS contract
+        run: |
+          grep -Fq '/storage/v1/upload/resumable/sign' supabase/functions/revit-api/index.ts
+          grep -Fq '"x-signature"' addin/PluginClient.cs
+          grep -Fq '_storageClient.DefaultRequestHeaders.Add("apikey", _publishableKey)' addin/PluginClient.cs
+          grep -Fq 'rpc("publish_model_version"' supabase/functions/admin-api/index.ts
+          grep -Fq 'from("public_links")' supabase/functions/viewer-link/index.ts
+          grep -Fq 'action: "viewer_scan"' supabase/functions/viewer-link/index.ts
+          grep -Fq 'return json(await currentOrLegacyFiles(supabase, data ?? []));' supabase/functions/revit-api/index.ts
+          ! grep -Fq 'url.searchParams.get("fileId")' supabase/functions/viewer-link/index.ts
+          ! grep -Fq '/api/files/' frontend/src/main.ts

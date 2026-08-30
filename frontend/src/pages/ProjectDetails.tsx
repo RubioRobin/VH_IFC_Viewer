@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../lib/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 import { Button } from '../components/ui/button';
 import { Upload, FileText, Download, Trash2, Loader2, HardDrive, Eye, Calendar, Database } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
@@ -14,6 +13,7 @@ import { ConfirmDialog } from '../components/ui/confirm-dialog';
 interface FileData {
     id: string;
     filename: string;
+    share_token?: string | null;
     filepath?: string;
     size: number;
     upload_date?: string;
@@ -214,14 +214,26 @@ export function ProjectDetailsPage() {
         setIsConfirmOpen(true);
     };
 
+    const handleOpenViewer = (file: FileData) => {
+        if (!file.share_token) {
+            toast({
+                type: 'info',
+                title: 'Nog geen share-link',
+                message: 'Maak eerst een QR- of share-link aan in Revit voordat je dit IFC-bestand publiek opent.'
+            });
+            return;
+        }
+
+        window.open(
+            `${window.location.origin}/v/${encodeURIComponent(file.share_token)}`,
+            '_blank',
+            'noopener,noreferrer'
+        );
+    };
+
     const handleDownload = async (file: FileData) => {
         try {
-            const signedResponse = await fetch(`${BASE_URL}/api/files/${file.id}/signed-url`, {
-                credentials: 'include'
-            });
-            if (!signedResponse.ok) throw new Error();
-
-            const signedData = await signedResponse.json();
+            const signedData = await fetchAPI(`/files/${file.id}/signed-url`);
             const response = await fetch(signedData.url);
             if (!response.ok) throw new Error();
 
@@ -401,7 +413,8 @@ export function ProjectDetailsPage() {
                                                     size="sm"
                                                     variant="outline"
                                                     className="h-9 gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                                                    onClick={() => window.open(`${window.location.origin}/?fileId=${f.id}`, '_blank')}
+                                                    title={f.share_token ? 'Open publieke share-link' : 'Maak eerst een QR- of share-link aan'}
+                                                    onClick={() => handleOpenViewer(f)}
                                                 >
                                                     <Eye className="w-4 h-4" /> Openen
                                                 </Button>

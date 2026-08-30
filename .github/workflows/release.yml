@@ -1,0 +1,124 @@
+name: Publish signed release
+
+on:
+  push:
+    branches:
+      - "release/**"
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v prefix"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          $refName = "${{ github.ref_name }}"
+          $version = if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "${{ inputs.version }}"
+          } elseif ($refName -match '^v?(\d+\.\d+\.\d+)$') {
+            $Matches[1]
+          } elseif ($refName -match '^release/(\d+\.\d+\.\d+)$') {
+            $Matches[1]
+          } else {
+            throw "Cannot resolve a release version from ref: $refName"
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid release version: $version" }
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build and verify frontend
+        shell: pwsh
+        env:
+          VITE_SUPABASE_URL: https://ci.supabase.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
+        run: |
+          npm --prefix frontend ci --no-audit --no-fund
+          npm --prefix frontend run build
+          npm run verify:direct-viewer
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Prepare ephemeral signing certificate
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.VH_CODE_SIGN_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.VH_CODE_SIGN_PASSWORD }}
+        run: |
+          if (-not $env:PFX_BASE64 -or -not $env:PFX_PASSWORD) { throw "Signing secrets are missing." }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "vh-code-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Filter signtool.exe -Recurse -File |
+            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "signtool.exe was not found on the Windows runner." }
+          "VH_CODE_SIGN_CERT=$pfxPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "SIGNTOOL_PATH=$($signTool.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build and sign Revit add-in
+        shell: pwsh
+        env:
+          VH_CODE_SIGN_PASSWORD: ${{ secrets.VH_CODE_SIGN_PASSWORD }}
+        run: |
+          dotnet clean addin/VH_IFC_QR.csproj -c Release -p:CopyToRevitAddins=false --nologo
+          dotnet restore addin/VH_IFC_QR.csproj -p:UseInstalledRevitReferences=false
+          dotnet build addin/VH_IFC_QR.csproj -c Release --no-restore -p:CopyToRevitAddins=false -p:UseInstalledRevitReferences=false "-p:CodeSigningCertificatePath=$env:VH_CODE_SIGN_CERT" "-p:SignToolPath=$env:SIGNTOOL_PATH" --nologo
+          $signature = Get-AuthenticodeSignature addin/bin/Release/net8.0-windows/VH_IFC_QR.dll
+          if (-not $signature.SignerCertificate -or
+              $signature.SignerCertificate.Thumbprint -ne "656792BC1651D3FD84AFA614E7DA21E720125A7A" -or
+              -not $signature.TimeStamperCertificate -or
+              $signature.Status -in @("HashMismatch", "NotSigned")) {
+            throw "Signed add-in verification failed: $($signature.Status)"
+          }
+
+      - name: Package release artifacts
+        shell: pwsh
+        run: |
+          ./scripts/package-release.ps1 -Version $env:RELEASE_VERSION
+          Compress-Archive -Path frontend/dist/* -DestinationPath "artifacts/VH-IFC-Viewer-$env:RELEASE_VERSION-Web.zip" -CompressionLevel Optimal
+          $webHash = Get-FileHash "artifacts/VH-IFC-Viewer-$env:RELEASE_VERSION-Web.zip" -Algorithm SHA256
+          "$($webHash.Hash.ToLowerInvariant())  VH-IFC-Viewer-$env:RELEASE_VERSION-Web.zip" | Set-Content "artifacts/VH-IFC-Viewer-$env:RELEASE_VERSION-Web.zip.sha256" -Encoding ascii
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vh-ifc-viewer-release
+          path: artifacts/*
+
+      - name: Remove ephemeral signing certificate
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:VH_CODE_SIGN_CERT -and (Test-Path -LiteralPath $env:VH_CODE_SIGN_CERT)) {
+            Remove-Item -LiteralPath $env:VH_CODE_SIGN_CERT -Force
+          }
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" artifacts/* --verify-tag --generate-notes --title "VH IFC Viewer $env:RELEASE_VERSION"

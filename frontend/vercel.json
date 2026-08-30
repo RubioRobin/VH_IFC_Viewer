@@ -1,10 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/api/:path*",
-            "destination": "https://vh-ifc-backend.onrender.com/api/:path*"
-        },
-        {
             "source": "/((?!assets/|.*\\..*).*)",
             "destination": "/index.html"
         }

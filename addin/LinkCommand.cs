@@ -14,9 +14,6 @@ namespace VH_IFC_QR
     [Transaction(TransactionMode.Manual)]
     public class LinkQRCommand : IExternalCommand
     {
-        private static string BaseUrl => SettingsManager.Instance.BackendUrl;
-        private static string ClientId => SettingsManager.Instance.ClientId;
-        private static string ClientSecret => SettingsManager.Instance.ClientSecret;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -27,12 +24,12 @@ namespace VH_IFC_QR
             try
             {
                 // 1. API Client initialiseren
-                var client = new PluginClient(BaseUrl);
+                var client = DirectSupabaseConnection.CreateClient();
 
                 // Plugin Niveau Authenticatie
                 try
                 {
-                    Task.Run(() => client.LoginPluginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
+                    Task.Run(() => client.CheckConnectionAsync()).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
@@ -166,7 +163,7 @@ namespace VH_IFC_QR
                     progress.Update("Klaar!", 100);
                     progress.Close();
 
-                    ResultWindow resWin = new ResultWindow(qrSheetLabels, SettingsManager.Instance.AdminUrl);
+                    ResultWindow resWin = new ResultWindow(qrSheetLabels, DirectSupabaseConnection.AdminUrl);
                     resWin.ShowDialog();
                 }
                 catch (Exception ex)

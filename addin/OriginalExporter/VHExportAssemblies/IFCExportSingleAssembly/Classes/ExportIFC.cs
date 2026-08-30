@@ -14,9 +14,6 @@ namespace IFCExportSingleAssembly.Classes
     [SupportedOSPlatform("windows")]
     public class ExportIFC
     {
-        private static string filePathPropertySet =
-            $@"C:\Users\{Environment.UserName}\AppData\Roaming\Autodesk\Revit\Addins\IFCExport\PropertySet.txt";
-
         public ExportIFC()
         {
 
@@ -29,46 +26,19 @@ namespace IFCExportSingleAssembly.Classes
             SiteTransformBasis coordinateBaseOption
             )
         {
-            var config = new IFCExportConfiguration
-            {
-                Name = "ExportMetInstellingen",
+            // Gebruik ongewijzigd de standaardconfiguratie van de officiële
+            // Revit IFC-exporter. Zo blijven alle brondefaults, waaronder
+            // Export IFC Common Property Sets, leidend voor deze export.
+            var config = IFCExportConfiguration.CreateDefaultConfiguration();
 
-                // General Settings
-                IFCVersion = ifcVersion,
-                IFCFileType = Autodesk.Revit.DB.IFC.IFCFileFormat.Ifc,
-                // ActivePhaseId; fase wordt uit de geselecteerde view gehaald
-                // opletten als je ook VisibleElementsOfCurrentView = true, 
-                // want dan wordt ActivePhaseId genegeerd
-                SpaceBoundaries = 0,
-                SplitWallsAndColumns = false,
-
-                // additional content
-                ExportLinkedFiles = Revit.IFC.Export.Utility.LinkedFileExportAs.DontExport,
-                UseActiveViewGeometry = true,
-                VisibleElementsOfCurrentView = true,
-                ExportRoomsInView = false,
-                IncludeSteelElements = false,
-                Export2DElements = false,
-                ExportCeilingGrids = false,
-
-                // Property sets
-                ExportIFCCommonPropertySets = false,
-                ExportInternalRevitPropertySets = false,
-                ExportBaseQuantities = false,
-                ExportUserDefinedPsets = true,
-                ExportUserDefinedPsetsFileName = filePathPropertySet,
-                ExportUserDefinedParameterMapping = false,
-
-                // level of detail for some element geometry
-                TessellationLevelOfDetail = 0.2,
-
-                // Advanced settings
-                Use2DRoomBoundaryForVolume = false,
-                ActiveViewId = exportView.Id,
-
-                // Geographic Reference
-                SitePlacement = coordinateBaseOption
-            };
+            // Deze waarden zijn alleen nodig voor de bestaande VH-workflow:
+            // één IFC per gefilterde assemblageview.
+            config.Name = "VH Assembly IFC Export";
+            config.IFCVersion = ifcVersion;
+            config.UseActiveViewGeometry = true;
+            config.VisibleElementsOfCurrentView = true;
+            config.ActiveViewId = exportView.Id;
+            config.SitePlacement = coordinateBaseOption;
 
             // Zorg dat de map bestaat
             exportFolder = exportFolder?.Trim() ?? "";

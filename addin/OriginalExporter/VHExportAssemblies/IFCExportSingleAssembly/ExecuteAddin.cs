@@ -3,6 +3,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using IFCExportSingleAssembly.Classes;
 using IFCExportSingleAssemblyUI.Model;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace IFCExportSingleAssembly
     // op basis van de sheet filtert hij de juiste assembly
     // dat de filter 'VH Assembly Code (assembly naam) al bestaat
     // het script maakt namelijk geen nieuwe filter aan
-    
+
     // nog te doen
     // wanneer bij assembly de cb assembly code parameter gelijk is aan de assembly naam
     // in de 3D view niet de VH maar de CB Assembly Code filter toepassen
@@ -75,17 +76,26 @@ namespace IFCExportSingleAssembly
               })
               .ToList();
 
+            // Eén IFC wordt per unieke assembly geëxporteerd. Bereken de aantallen
+            // vooraf uit dezelfde sheet-/assembly-koppeling als de export.
+            var phaseIfcCounts = GetPhaseIfcCounts(doc, AllSheets, viewItems);
+
             // Compose viewmodels in de add-in (composition root)
             var exportVm = new IFCExportSingleAssemblyUI.ViewModels.ExportIFCViewModel(viewItems);
-            var config =   new IFCExportSingleAssemblyUI.Services.AddinConfigSettings();
-            var mainVm =   new IFCExportSingleAssemblyUI.ViewModels.MainWindowViewModel(exportVm, config);
+            var config = new IFCExportSingleAssemblyUI.Services.AddinConfigSettings();
+            var mainVm = new IFCExportSingleAssemblyUI.ViewModels.MainWindowViewModel(exportVm, config);
 
-            // Window tonen met vooraf samengestelde VM's
-            var dialog = new IFCExportSingleAssemblyUI.MainWindow { DataContext = mainVm };
+            // Toon de exportinstellingen in de VH-stijl. De bestaande viewmodels
+            // blijven de bron voor alle instellingen en geselecteerde fases.
+            var dialog = new VH_IFC_QR.VhExporterWindow(mainVm, exportVm, phaseIfcCounts);
 
             // if user cancels the UI
             bool? result = dialog.ShowDialog();
-            if (result != true) return Result.Cancelled;
+            if (result != true)
+            {
+                message = string.Empty;
+                return Result.Cancelled;
+            }
 
             // ✔ Aangevinkt ophalen uit dezelfde VM-instantie
             var checkedItems = exportVm.GetChecked().ToList();
@@ -93,6 +103,7 @@ namespace IFCExportSingleAssembly
 
             if (selectedNames == null || selectedNames.Count == 0)
             {
+                message = string.Empty;
                 return Result.Cancelled;
             }
 
@@ -227,6 +238,51 @@ namespace IFCExportSingleAssembly
             //}
 
             return Result.Succeeded; 
+        }
+
+        private static Dictionary<string, int> GetPhaseIfcCounts(
+            RevitDb.Document doc,
+            IEnumerable<RevitDb.ViewSheet> sheets,
+            IEnumerable<IfcViewItem> viewItems)
+        {
+            var assembliesPerPhase = new Dictionary<string, HashSet<long>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in viewItems ?? Enumerable.Empty<IfcViewItem>())
+            {
+                if (!string.IsNullOrWhiteSpace(item?.ViewName))
+                    assembliesPerPhase[item.ViewName] = new HashSet<long>();
+            }
+
+            if (doc == null || assembliesPerPhase.Count == 0)
+                return assembliesPerPhase.ToDictionary(pair => pair.Key, pair => 0, StringComparer.OrdinalIgnoreCase);
+
+            Dictionary<string, RevitDb.AssemblyInstance> assemblyLookup =
+                GetAssemblies.GetAssemblyLookupByAssemblyCode(doc);
+
+            foreach (RevitDb.ViewSheet sheet in sheets ?? Enumerable.Empty<RevitDb.ViewSheet>())
+            {
+                if (sheet == null || sheet.IsPlaceholder || string.IsNullOrWhiteSpace(sheet.SheetNumber) ||
+                    char.IsDigit(sheet.SheetNumber[0]))
+                {
+                    continue;
+                }
+
+                RevitDb.Parameter phaseParameter = sheet.LookupParameter("VH Designphase");
+                string phaseName = phaseParameter?.AsString();
+                if (string.IsNullOrWhiteSpace(phaseName) ||
+                    !assembliesPerPhase.TryGetValue(phaseName, out HashSet<long> assemblyIds))
+                {
+                    continue;
+                }
+
+                if (assemblyLookup.TryGetValue(sheet.SheetNumber, out RevitDb.AssemblyInstance assembly))
+                    assemblyIds.Add(assembly.Id.Value);
+            }
+
+            return assembliesPerPhase.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.Count,
+                StringComparer.OrdinalIgnoreCase);
         }
     }
 }

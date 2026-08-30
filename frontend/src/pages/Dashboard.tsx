@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -6,7 +6,6 @@ import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    LayoutDashboard,
     FolderKanban,
     FileUp,
     QrCode,
@@ -18,7 +17,6 @@ import {
     Search,
     ArrowUpRight
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
 
 interface Stats {
     total_projects: number;
@@ -84,7 +82,8 @@ export function Dashboard() {
             case 'upload_file': return 'een bestand geüpload';
             case 'create_project': return 'een project aangemaakt';
             case 'update_project_status': return 'projectstatus gewijzigd';
-            case 'scan': return 'een QR code gescand';
+            case 'scan':
+            case 'viewer_scan': return 'een QR-code gescand';
             case 'create_link': return 'een publieke link aangemaakt';
             case 'login': return 'ingelogd';
             default: return type.replace(/_/g, ' ');

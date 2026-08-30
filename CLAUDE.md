@@ -1,19 +1,18 @@
 # VH_IFC_Viewer — Claude Code Context
 
 ## Project
-Volledig systeem voor het bekijken van IFC-bestanden vanuit Revit. Bestaat uit een web frontend, Express backend en een Revit C# plugin.
+Volledig systeem voor het bekijken van IFC-bestanden vanuit Revit. De actieve Revit- en publieke viewerstroom gebruikt Supabase Edge Functions en Supabase Storage; de Express-backend is alleen legacy voor het bestaande adminportaal.
 
 ## Structuur
 ```
 vh-ifc-viewer/
 ├── frontend/     → Vite/React IFC viewer (deploy: Vercel)
 │   └── public/   → Statische bestanden (incl. VH logo)
-├── backend/      → Express.js API server (deploy: Render.com)
+├── backend/      → Legacy Express.js API voor het adminportaal
 ├── addin/        → Revit plugin manifests (C#)
 ├── docs/         → Documentatie
 ├── package.json  → Root scripts (coördineert frontend + backend)
-├── Procfile      → Heroku config
-└── render.yaml   → Render.com deploy config
+└── supabase/     → Edge Functions, Storage-configuratie en migraties
 ```
 
 ## Tech Stack
@@ -30,7 +29,7 @@ vh-ifc-viewer/
 - **Auth:** JWT (`jsonwebtoken`), bcryptjs, express-session
 - **Security:** Helmet, express-rate-limit, xss-clean, CORS
 - **Overig:** QR-code generatie, UUID
-- **Deploy:** Render.com
+- **Status:** Legacy; niet nodig voor Revit-export, QR of publieke viewer
 
 ### Revit Plugin (`addin/`)
 - C# plugin voor Revit
@@ -64,11 +63,11 @@ Backend vereist `.env`:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 - `JWT_SECRET`, `SESSION_SECRET`
 
-## Deployment URLs
+## Actieve deployment
 - **Frontend:** Vercel (zie Vercel dashboard voor live URL)
-- **Backend:** Render.com (zie `render.yaml` voor configuratie)
+- **API en IFC-opslag:** Supabase Edge Functions + private Storage
 
-> `Procfile` in de root is legacy (origineel Heroku). De actieve deploy gaat via `render.yaml`.
+Zie `docs/SUPABASE_DIRECTE_KOPPELING.md` voor migratie, secrets en deployment.
 
 ## Veiligheidsregels
 - NOOIT `.env` committen naar git

@@ -4,34 +4,28 @@ using System.Text.Json;
 
 namespace VH_IFC_QR
 {
-    public class AppSettings
+    /// <summary>
+    /// Persists only non-sensitive user preferences. Connection details belong to
+    /// the deployed add-in and are never read from or written to settings.json.
+    /// </summary>
+    public sealed class AppSettings
     {
-        public string LastProjectId { get; set; }
-        public string LastPrefix { get; set; }
-        public string LastExportFolder { get; set; }
-
-        // Server Settings
-        public string BackendUrl { get; set; } = "https://vh-ifc-backend.onrender.com";
-        public string AdminUrl { get; set; } = "https://vh-ifc-viewer.vercel.app/admin.html#/login";
-
-        // Plugin Auth — stel in via Instellingen venster, wordt NOOIT in source code opgeslagen
-        public string ClientId { get; set; } = "revit_plugin";
-        public string ClientSecret { get; set; } = "0a50db56042b384daa545b904c1d76bae3ad9437a23fa620431e2d5844f8d3c9";
-
-        // QR Settings
-        public double QrSizeMm { get; set; } = 50.0;
-        public double QrOffsetMm { get; set; } = 10.0;
-        public string QrLocation { get; set; } = "BottomRight"; // BottomRight, BottomLeft, TopRight, TopLeft
-
-        // IFC Settings
-        public string IfcVersion { get; set; } = "IFC4"; // IFC2x3, IFC4, etc.
+        public double QrSizeMm { get; set; } = 20.6;
+        public double QrOffsetMm { get; set; } = 10;
+        public string QrLocation { get; set; } = "BottomRight";
+        public string IfcVersion { get; set; } = "IFC4";
         public bool ExportOnlyVisible { get; set; } = true;
+        public string LastProjectId { get; set; } = "";
+        public string LastExportFolder { get; set; } = "";
+        public string LastPrefix { get; set; } = "";
     }
 
     public static class SettingsManager
     {
-        private static readonly string SettingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VH_IFC_Viewer");
-        private static readonly string SettingsFile = Path.Combine(SettingsFolder, "settings.json");
+        private static readonly string SettingsFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VH_IFC_Viewer",
+            "settings.json");
 
         public static AppSettings Instance { get; private set; } = new AppSettings();
 
@@ -44,28 +38,51 @@ namespace VH_IFC_QR
         {
             try
             {
-                if (File.Exists(SettingsFile))
+                if (!File.Exists(SettingsFile))
+                    return;
+
+                string json = File.ReadAllText(SettingsFile);
+                var settings = JsonSerializer.Deserialize<AppSettings>(json);
+                if (settings != null)
                 {
-                    string json = File.ReadAllText(SettingsFile);
-                    var settings = JsonSerializer.Deserialize<AppSettings>(json);
-                    if (settings != null)
-                    {
-                        Instance = settings;
-                    }
+                    Instance = settings;
+
+                    // Earlier settings schemas stored connection fields in this
+                    // file. Preserve user preferences, but erase those obsolete
+                    // values on the next add-in start.
+                    if (ContainsLegacyConnectionFields(json))
+                        Save();
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SettingsManager] Laden mislukt, standaardwaarden gebruikt: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SettingsManager] Laden mislukt, standaardwaarden gebruikt: {ex.Message}");
+            }
         }
 
         public static void Save()
         {
             try
             {
-                Directory.CreateDirectory(SettingsFolder);
-                string json = JsonSerializer.Serialize(Instance, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(SettingsFile, json);
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile)!);
+                File.WriteAllText(
+                    SettingsFile,
+                    JsonSerializer.Serialize(Instance, new JsonSerializerOptions { WriteIndented = true }));
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SettingsManager] Opslaan mislukt: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Instellingen konden niet worden opgeslagen.", ex);
+            }
+        }
+
+        private static bool ContainsLegacyConnectionFields(string json)
+        {
+            return json.IndexOf("\"BackendUrl\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   json.IndexOf("\"ClientId\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   json.IndexOf("\"ClientSecret\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   json.IndexOf("\"SupabaseUrl\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   json.IndexOf("\"SupabasePublishableKey\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   json.IndexOf("\"PluginAccessKey\"", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

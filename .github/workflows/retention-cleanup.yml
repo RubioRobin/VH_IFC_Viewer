@@ -1,0 +1,30 @@
+name: Supabase model retention cleanup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-model-retention-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Remove expired retained model versions
+        env:
+          CLEANUP_ENDPOINT: ${{ secrets.VH_RETENTION_CLEANUP_ENDPOINT }}
+          CLEANUP_KEY: ${{ secrets.VH_RETENTION_CLEANUP_KEY }}
+        run: |
+          test -n "$CLEANUP_ENDPOINT"
+          test -n "$CLEANUP_KEY"
+          curl --fail-with-body --silent --show-error --retry 3 \
+            --request POST \
+            --header "x-cleanup-key: $CLEANUP_KEY" \
+            "$CLEANUP_ENDPOINT"

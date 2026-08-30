@@ -111,6 +111,55 @@ test('getFileById maps uploaded_at to upload_date for the dashboard API', async 
     assert.equal(result.upload_date, uploadedAt);
 });
 
+test('getFilesByProjectId exposes only active unexpired share tokens', async () => {
+    const now = new Date();
+    const future = new Date(now.getTime() + 60_000).toISOString();
+    const past = new Date(now.getTime() - 60_000).toISOString();
+    const files = [
+        { id: 'file-a', filename: 'A.ifc', project_id: 'project-id', model_version_id: 'version-a' },
+        { id: 'file-b', filename: 'B.ifc', project_id: 'project-id', model_version_id: 'version-b' }
+    ];
+    const shares = [
+        { model_version_id: 'version-a', token: 'active-token', expires_at: future, created_at: future },
+        { model_version_id: 'version-b', token: 'expired-token', expires_at: past, created_at: future }
+    ];
+
+    const supabase = {
+        from(table) {
+            if (table === 'files') {
+                const builder = {
+                    select() { return builder; },
+                    eq(column, value) {
+                        assert.equal(column, 'project_id');
+                        assert.equal(value, 'project-id');
+                        return Promise.resolve({ data: files, error: null });
+                    }
+                };
+                return builder;
+            }
+
+            assert.equal(table, 'shares');
+            const builder = {
+                select() { return builder; },
+                in(column, values) {
+                    assert.equal(column, 'model_version_id');
+                    assert.deepEqual(values, ['version-a', 'version-b']);
+                    return builder;
+                },
+                or() { return builder; },
+                order() { return Promise.resolve({ data: shares, error: null }); }
+            };
+            return builder;
+        }
+    };
+
+    const service = createFilesService(supabase);
+    const result = await service.getFilesByProjectId('project-id');
+
+    assert.equal(result.find(file => file.id === 'file-a').share_token, 'active-token');
+    assert.equal(result.find(file => file.id === 'file-b').share_token, null);
+});
+
 test('updateFile translates legacy upload_date input to uploaded_at column', async () => {
     let updatePayload;
     const uploadedAt = '2026-07-01T12:00:00.000Z';

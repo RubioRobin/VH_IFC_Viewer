@@ -17,9 +17,6 @@ namespace VH_IFC_QR
     [SupportedOSPlatform("windows")]
     public class UploadExportCommand : IExternalCommand
     {
-        private static string BaseUrl => SettingsManager.Instance.BackendUrl;
-        private static string ClientId => SettingsManager.Instance.ClientId;
-        private static string ClientSecret => SettingsManager.Instance.ClientSecret;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -43,11 +40,11 @@ namespace VH_IFC_QR
                     return HandledFailure(ref message);
                 }
 
-                var client = new PluginClient(BaseUrl);
+                var client = DirectSupabaseConnection.CreateClient();
 
                 try
                 {
-                    Task.Run(() => client.LoginPluginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
+                    Task.Run(() => client.CheckConnectionAsync()).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
@@ -62,6 +59,7 @@ namespace VH_IFC_QR
                 }
 
                 ProjectInfo defaultProject = null;
+                string projectResolutionError = null;
                 var projectIdentity = RevitProjectIdentity.FromDocument(doc);
                 if (projectIdentity.HasValue)
                 {
@@ -71,9 +69,10 @@ namespace VH_IFC_QR
                             projectIdentity.ProjectNumber,
                             projectIdentity.ProjectName)).GetAwaiter().GetResult();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         defaultProject = null;
+                        projectResolutionError = ex.Message;
                     }
                 }
 
@@ -85,36 +84,23 @@ namespace VH_IFC_QR
 
                 if (defaultProject == null)
                 {
-                    NotificationWindow.ShowError("Kan geen project bepalen uit Revit Project Information.\n\nVul Project Number en/of Project Name in en probeer opnieuw.");
+                    string error = string.IsNullOrWhiteSpace(projectResolutionError)
+                        ? "Kan geen projectnaam bepalen uit dit Revit-model.\n\nSla het model op met een naam en probeer opnieuw."
+                        : $"Project synchroniseren met Supabase mislukt.\n\n{projectResolutionError}";
+                    NotificationWindow.ShowError(error);
                     return HandledFailure(ref message);
                 }
 
                 try
                 {
                     List<LocalIfcUploadItem> exportedItems = BuildUploadItems(exportResult, sheets);
-                    if (exportedItems.Count > 0)
+                    if (exportedItems.Count == 0)
                     {
-                        SettingsManager.Instance.LastProjectId = defaultProject.id;
-                        SettingsManager.Instance.LastExportFolder = exportResult.ExportFolder ?? Path.GetDirectoryName(exportedItems[0].FilePath);
-                        SettingsManager.Save();
-
-                        return UploadItems(doc, client, defaultProject.id, exportedItems);
+                        NotificationWindow.ShowWarning("Er zijn geen nieuwe IFC-bestanden gevonden om te uploaden.");
+                        return Result.Cancelled;
                     }
 
-                    var projects = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
-                    if (defaultProject != null && projects.All(p => p.id != defaultProject.id))
-                        projects.Insert(0, defaultProject);
-
-                    UploadExportWindow uploadWin = new UploadExportWindow(
-                        projects,
-                        sheets,
-                        client.CurrentUsername,
-                        defaultProject?.id,
-                        exportResult.ExportFolder);
-                    uploadWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
-
-                    if (uploadWin.ShowDialog() != true) return Result.Cancelled;
-                    return UploadItems(doc, client, uploadWin.SelectedProject.id, uploadWin.ValidItems);
+                    return UploadItems(doc, client, defaultProject.id, exportedItems);
                 }
                 catch (Exception ex)
                 {
@@ -222,63 +208,7 @@ namespace VH_IFC_QR
 
         private ViewSheet FindSheetForAssemblyCode(List<ViewSheet> sheets, string assemblyCode)
         {
-            if (sheets == null || string.IsNullOrWhiteSpace(assemblyCode)) return null;
-
-            return sheets.FirstOrDefault(sheet => SheetMatchesAssemblyCode(sheet, assemblyCode));
-        }
-
-        private static bool SheetMatchesAssemblyCode(ViewSheet sheet, string assemblyCode)
-        {
-            if (sheet == null || string.IsNullOrWhiteSpace(assemblyCode))
-                return false;
-
-            string search = assemblyCode.Trim();
-            string sheetNumber = sheet.SheetNumber?.Trim();
-            string sheetName = sheet.Name?.Trim();
-
-            if (EqualsIgnoreCase(sheetNumber, search) || EqualsIgnoreCase(sheetName, search))
-                return true;
-
-            string normalizedSearch = NormalizeMatchText(search);
-            string normalizedSheetNumber = NormalizeMatchText(sheetNumber);
-            string normalizedSheetName = NormalizeMatchText(sheetName);
-
-            if (EqualsIgnoreCase(normalizedSheetNumber, normalizedSearch) ||
-                EqualsIgnoreCase(normalizedSheetName, normalizedSearch))
-                return true;
-
-            return ContainsMatch(normalizedSheetNumber, normalizedSearch) ||
-                   ContainsMatch(normalizedSheetName, normalizedSearch);
-        }
-
-        private static bool ContainsMatch(string value, string search)
-        {
-            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(search))
-                return false;
-
-            if (value.Length < 3 || search.Length < 3)
-                return false;
-
-            return value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   search.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private static bool EqualsIgnoreCase(string value, string search)
-        {
-            return !string.IsNullOrWhiteSpace(value) &&
-                   !string.IsNullOrWhiteSpace(search) &&
-                   string.Equals(value.Trim(), search.Trim(), StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string NormalizeMatchText(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            return new string(value
-                .Where(char.IsLetterOrDigit)
-                .Select(char.ToUpperInvariant)
-                .ToArray());
+            return SheetMatcher.FindSheet(sheets, assemblyCode);
         }
 
         private Result UploadItems(Document doc, PluginClient client, string projectId, List<LocalIfcUploadItem> items)
@@ -293,7 +223,10 @@ namespace VH_IFC_QR
             progress.Show();
 
             List<string> qrSheetLabels = new List<string>();
+            List<string> uploadErrors = new List<string>();
+            List<string> qrWarnings = new List<string>();
             int completed = 0;
+            int successfulUploads = 0;
 
             try
             {
@@ -313,10 +246,12 @@ namespace VH_IFC_QR
 
                     if (!string.IsNullOrEmpty(uploadResult.Error))
                     {
+                        uploadErrors.Add($"{item.FileName}: {uploadResult.Error}{FormatDiagnostics(uploadResult.Diagnostics)}");
                         completed++;
                         continue;
                     }
 
+                    successfulUploads++;
                     bool qrPlaced = false;
 
                     if (item.SelectedSheet != null && !string.IsNullOrEmpty(uploadResult.QrTempPath))
@@ -337,6 +272,7 @@ namespace VH_IFC_QR
                         catch (Exception ex)
                         {
                             Debug.WriteLine($"QR plaatsen mislukt voor {item.FileName}: {ex.Message}");
+                            qrWarnings.Add($"{item.FileName}: QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber} - {ex.Message}");
                         }
                     }
 
@@ -353,7 +289,12 @@ namespace VH_IFC_QR
                 progress.Update("Klaar!", 100);
                 progress.Close();
 
-                ResultWindow resultWindow = new ResultWindow(qrSheetLabels, SettingsManager.Instance.AdminUrl);
+                ShowUploadWarnings(uploadErrors, qrWarnings);
+
+                if (successfulUploads == 0 && uploadErrors.Count > 0)
+                    return Result.Cancelled;
+
+                ResultWindow resultWindow = new ResultWindow(qrSheetLabels, DirectSupabaseConnection.AdminUrl);
                 resultWindow.ShowDialog();
                 return Result.Succeeded;
             }
@@ -399,7 +340,7 @@ namespace VH_IFC_QR
 
                     stepTimer.Restart();
                     await client.UploadFileAsync(
-                        session.uploadUrl,
+                        session,
                         item.FilePath,
                         (uploaded, total) =>
                         {
@@ -509,6 +450,34 @@ namespace VH_IFC_QR
                 : $" ({string.Join(", ", parts)})";
         }
 
+        private static void ShowUploadWarnings(List<string> uploadErrors, List<string> qrWarnings)
+        {
+            if ((uploadErrors == null || uploadErrors.Count == 0) &&
+                (qrWarnings == null || qrWarnings.Count == 0))
+                return;
+
+            List<string> parts = new List<string>();
+
+            if (uploadErrors != null && uploadErrors.Count > 0)
+            {
+                parts.Add("Niet alle IFC-bestanden zijn geupload:");
+                parts.AddRange(uploadErrors.Take(6));
+                if (uploadErrors.Count > 6)
+                    parts.Add($"+ {uploadErrors.Count - 6} extra fout(en)");
+            }
+
+            if (qrWarnings != null && qrWarnings.Count > 0)
+            {
+                if (parts.Count > 0) parts.Add(string.Empty);
+                parts.Add("Upload gelukt, maar QR plaatsen gaf waarschuwingen:");
+                parts.AddRange(qrWarnings.Take(4));
+                if (qrWarnings.Count > 4)
+                    parts.Add($"+ {qrWarnings.Count - 4} extra waarschuwing(en)");
+            }
+
+            NotificationWindow.ShowWarning(string.Join(Environment.NewLine, parts));
+        }
+
         private static void TryDeleteTempFile(string path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -540,7 +509,7 @@ namespace VH_IFC_QR
                 foreach (var img in existingImages)
                 {
                     var imgType = doc.GetElement(img.GetTypeId()) as ImageType;
-                    if (imgType != null && imgType.Name.Contains($"upload_{AssemblyUploadNaming.SafeToken(label)}_"))
+                    if (IsVhQrImage(imgType, label))
                         doc.Delete(img.Id);
                 }
             }
@@ -549,7 +518,7 @@ namespace VH_IFC_QR
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
 
-            double sizeInMm = 20.6;
+            const double sizeInMm = 20.6;
             double targetSizeInFeet = sizeInMm / 304.8;
 
             try
@@ -576,14 +545,19 @@ namespace VH_IFC_QR
                     BoundingBoxXYZ bbox = titleBlock.get_BoundingBox(sheet);
                     if (bbox != null)
                     {
-                        double cornerRightOffsetMm = 249.4;
-                        double cornerDownOffsetMm = 245.0;
+                        // Vaste positie op het VH-titleblock, gelijk aan de
+                        // productieversie op de Z-schijf.
+                        const double cornerRightOffsetMm = 249.4;
+                        const double cornerDownOffsetMm = 245.0;
                         double halfSizeMm = sizeInMm / 2.0;
 
                         double rightOffsetFeet = (cornerRightOffsetMm + halfSizeMm) / 304.8;
                         double downOffsetFeet = (cornerDownOffsetMm + halfSizeMm) / 304.8;
 
-                        placementPoint = new XYZ(bbox.Min.X + rightOffsetFeet, bbox.Max.Y - downOffsetFeet, 0);
+                        placementPoint = new XYZ(
+                            bbox.Min.X + rightOffsetFeet,
+                            bbox.Max.Y - downOffsetFeet,
+                            0);
                         manualPlacement = true;
                     }
                 }
@@ -634,6 +608,22 @@ namespace VH_IFC_QR
             catch { }
 
             return true;
+        }
+
+        // A sheet has one dedicated QR position. Remove both the current upload
+        // format and the older Link QR format before placing the replacement.
+        // This prevents a re-upload from leaving two QR codes on the same sheet.
+        private static bool IsVhQrImage(ImageType imageType, string label)
+        {
+            if (imageType == null || string.IsNullOrWhiteSpace(imageType.Name))
+                return false;
+
+            string name = imageType.Name;
+            string safeLabel = AssemblyUploadNaming.SafeToken(label);
+            return name.IndexOf($"upload_{safeLabel}_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf($"link_{label}_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.StartsWith("upload_", StringComparison.OrdinalIgnoreCase) ||
+                   name.StartsWith("link_", StringComparison.OrdinalIgnoreCase);
         }
 
         public void DoEvents()

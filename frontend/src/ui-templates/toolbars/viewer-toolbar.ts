@@ -6,7 +6,6 @@ import * as THREE from "three";
 import { appIcons } from "../../globals";
 import { customButton } from "../components/custom-button";
 import { TransparencyManager } from "../../viewer/transparency-manager";
-import { triggerDownload } from "../../viewer/download-store";
 
 export interface ViewerToolbarState {
   components: OBC.Components;
@@ -14,56 +13,84 @@ export interface ViewerToolbarState {
   transparencyManager: TransparencyManager;
 }
 
-const originalColors = new Map<
-  FRAGS.BIMMaterial,
-  { color: number; transparent: boolean; opacity: number }
->();
+type MeasurementAxis = "3d" | "x" | "y" | "z";
 
-const setModelTransparent = (components: OBC.Components) => {
-  const fragments = components.get(OBC.FragmentsManager);
-
-  const materials = [...fragments.core.models.materials.list.values()];
-  for (const material of materials) {
-    if (material.userData.customId) continue;
-    // save colors
-    let color: number | undefined;
-    if ("color" in material) {
-      color = material.color.getHex();
-    } else {
-      color = material.lodColor.getHex();
-    }
-
-    originalColors.set(material, {
-      color,
-      transparent: material.transparent,
-      opacity: material.opacity,
-    });
-
-    // set color
-    material.transparent = true;
-    material.opacity = 0.05;
-    material.needsUpdate = true;
-    if ("color" in material) {
-      material.color.setColorName("white");
-    } else {
-      material.lodColor.setColorName("white");
-    }
-  }
+const axisLabels: Record<MeasurementAxis, string> = {
+  "3d": "3D",
+  x: "X",
+  y: "Y",
+  z: "Z",
 };
 
-const restoreModelMaterials = () => {
-  for (const [material, data] of originalColors) {
-    const { color, transparent, opacity } = data;
-    material.transparent = transparent;
-    material.opacity = opacity;
-    if ("color" in material) {
-      material.color.setHex(color);
-    } else {
-      material.lodColor.setHex(color);
+const formatMillimeters = (distanceInMeters: number) =>
+  `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 0 }).format(
+    Math.abs(distanceInMeters) * 1000,
+  )} mm`;
+
+const disposeMeasurementGroup = (group: THREE.Group) => {
+  group.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    mesh.geometry?.dispose();
+
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : mesh.material
+        ? [mesh.material]
+        : [];
+    for (const material of materials) {
+      const map = (material as THREE.Material & { map?: THREE.Texture }).map;
+      map?.dispose();
+      material.dispose();
     }
-    material.needsUpdate = true;
-  }
-  originalColors.clear();
+  });
+  group.removeFromParent();
+};
+
+const createMeasurementLabel = (text: string) => {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+
+  const fontSize = 52;
+  const paddingX = 26;
+  const paddingY = 16;
+  context.font = `600 ${fontSize}px Arial`;
+  const textWidth = Math.ceil(context.measureText(text).width);
+  canvas.width = textWidth + paddingX * 2;
+  canvas.height = fontSize + paddingY * 2;
+
+  context.font = `600 ${fontSize}px Arial`;
+  context.fillStyle = "rgba(27, 30, 33, 0.94)";
+  context.roundRect(0, 0, canvas.width, canvas.height, 12);
+  context.fill();
+  context.fillStyle = "#ffffff";
+  context.textBaseline = "middle";
+  context.fillText(text, paddingX, canvas.height / 2 + 1);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const label = new THREE.Sprite(material);
+  const aspectRatio = canvas.width / canvas.height;
+  label.scale.set(0.36 * aspectRatio, 0.36, 1);
+  label.renderOrder = 1002;
+  return label;
+};
+
+const projectToAxis = (
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  axis: Exclude<MeasurementAxis, "3d">,
+) => {
+  const projectedEnd = start.clone();
+  projectedEnd[axis] = end[axis];
+  return projectedEnd;
 };
 
 export const viewerToolbarTemplate: BUI.StatefullComponent<
@@ -84,11 +111,107 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     FRAGS.SnappingClass.LINE,
     FRAGS.SnappingClass.FACE,
   ];
-  lengthMeasurement.rounding = 2;
-  lengthMeasurement.units = "m";
+  lengthMeasurement.rounding = 0;
+  lengthMeasurement.units = "mm";
   lengthMeasurement.enabled = false;
 
   let distanceMeasurementActive = false;
+  let measurementAxis: MeasurementAxis = "3d";
+  const axisMeasurementGroups = new Set<THREE.Group>();
+
+  const clearAxisMeasurements = () => {
+    for (const group of axisMeasurementGroups) disposeMeasurementGroup(group);
+    axisMeasurementGroups.clear();
+  };
+
+  const createAxisMeasurement = (
+    start: THREE.Vector3,
+    end: THREE.Vector3,
+    axis: Exclude<MeasurementAxis, "3d">,
+  ) => {
+    const projectedEnd = projectToAxis(start, end, axis);
+    const distance = Math.abs(end[axis] - start[axis]);
+    const group = new THREE.Group();
+    group.name = `VH ${axis.toUpperCase()} measurement`;
+
+    const dimensionMaterial = new THREE.LineBasicMaterial({
+      color: 0xc1a979,
+      depthTest: false,
+      toneMapped: false,
+    });
+    const dimensionGeometry = new THREE.BufferGeometry().setFromPoints([
+      start,
+      projectedEnd,
+    ]);
+    const dimensionLine = new THREE.Line(
+      dimensionGeometry,
+      dimensionMaterial,
+    );
+    dimensionLine.renderOrder = 1000;
+    group.add(dimensionLine);
+
+    // Korte eindstrepen geven de maatlijn dezelfde leesbaarheid als een
+    // uitgelijnde Revit/AutoCAD-maat, ook in een schuine camerastand.
+    const tickDirection = new THREE.Vector3();
+    tickDirection[axis === "y" ? "z" : "y"] = 0.08;
+    const tickPoints = [
+      start.clone().sub(tickDirection),
+      start.clone().add(tickDirection),
+      projectedEnd.clone().sub(tickDirection),
+      projectedEnd.clone().add(tickDirection),
+    ];
+    const ticks = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints(tickPoints),
+      dimensionMaterial,
+    );
+    ticks.renderOrder = 1000;
+    group.add(ticks);
+
+    // De stippellijn maakt zichtbaar welk geselecteerd punt naar de as is geprojecteerd.
+    if (projectedEnd.distanceToSquared(end) > 0.0000001) {
+      const extensionGeometry = new THREE.BufferGeometry().setFromPoints([
+        projectedEnd,
+        end,
+      ]);
+      const extensionLine = new THREE.Line(
+        extensionGeometry,
+        new THREE.LineDashedMaterial({
+          color: 0xc1a979,
+          dashSize: 0.08,
+          gapSize: 0.04,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      extensionLine.computeLineDistances();
+      extensionLine.renderOrder = 999;
+      group.add(extensionLine);
+    }
+
+    const label = createMeasurementLabel(
+      `${axisLabels[axis]} · ${formatMillimeters(distance)}`,
+    );
+    if (label) {
+      label.position.copy(start).lerp(projectedEnd, 0.5);
+      label.position.y += 0.22;
+      group.add(label);
+    }
+
+    world.scene.three.add(group);
+    axisMeasurementGroups.add(group);
+  };
+
+  // LengthMeasurement verzorgt betrouwbare IFC-snapping. Na de tweede klik
+  // vervangen we de standaard 3D-maatlijn alleen bij een asmeting.
+  lengthMeasurement.list.onItemAdded.add((line) => {
+    if (measurementAxis === "3d") return;
+
+    const start = line.start.clone();
+    const end = line.end.clone();
+    const axis = measurementAxis;
+    lengthMeasurement.list.delete(line);
+    createAxisMeasurement(start, end, axis);
+  });
 
   const onToggleGhost = () => {
     const current = transparencyManager.getCurrentTransparency();
@@ -134,7 +257,6 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
   const onShowAll = async () => {
     await hider.set(true);
-    restoreModelMaterials();
   };
 
   const clipper = components.get(OBC.Clipper);
@@ -165,7 +287,20 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
     if (tool.labels?.clear) tool.labels.clear();
     if (tool.volumes?.clear) tool.volumes.clear();
 
+    clearAxisMeasurements();
+
     setDistanceMeasurementActive(false);
+  };
+
+  const setMeasurementAxis = (axis: MeasurementAxis) => {
+    measurementAxis = axis;
+    lengthMeasurement.cancelCreation();
+
+    document.querySelectorAll<HTMLButtonElement>("[data-measurement-axis]").forEach((button) => {
+      const isActive = button.dataset.measurementAxis === axis;
+      button.classList.toggle("custom-btn--active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
   };
 
   const disableAll = () => {
@@ -203,14 +338,7 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
 
     // Use button state as truth for toggle
     if (btn.active) {
-      if ("deleteAll" in clipper) {
-        (clipper as any).deleteAll();
-      } else {
-        const planes = Array.from(clipper.list);
-        for (const plane of planes) {
-          clipper.delete(world as any, plane);
-        }
-      }
+      (clipper as any).deleteAll();
       clipper.enabled = false;
       btn.active = false;
       return;
@@ -281,6 +409,20 @@ export const viewerToolbarTemplate: BUI.StatefullComponent<
       <bim-toolbar-section>
         ${customButton({ icon: appIcons.RULER, label: "Afstand meten", onClick: onMeasureDistance })}
         ${customButton({ icon: appIcons.DELETE, label: "Afstand wissen", onClick: clearDistanceMeasurements })}
+      </bim-toolbar-section>
+
+      <bim-toolbar-section aria-label="Meetmethode">
+        ${(["3d", "x", "y", "z"] as MeasurementAxis[]).map((axis) => BUI.html`
+          <button
+            class="custom-btn ${axis === measurementAxis ? "custom-btn--active" : ""}"
+            data-measurement-axis="${axis}"
+            aria-label="Meet alleen in ${axisLabels[axis]}-richting"
+            aria-pressed="${axis === measurementAxis}"
+            @click=${() => setMeasurementAxis(axis)}
+          >
+            <span class="custom-btn__label">${axisLabels[axis]}</span>
+          </button>
+        `)}
       </bim-toolbar-section>
 
       <bim-toolbar-section>

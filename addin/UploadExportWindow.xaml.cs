@@ -11,16 +11,6 @@ using Forms = System.Windows.Forms;
 
 namespace VH_IFC_QR
 {
-    public class LocalIfcUploadItem
-    {
-        public bool IsSelected { get; set; } = true;
-        public string FilePath { get; set; }
-        public string FileName => Path.GetFileName(FilePath);
-        public string AssemblyCode { get; set; }
-        public ViewSheet SelectedSheet { get; set; }
-        public List<ViewSheet> AllSheets { get; set; }
-    }
-
     public partial class UploadExportWindow : Window
     {
         public ProjectInfo SelectedProject { get; private set; }
@@ -78,8 +68,11 @@ namespace VH_IFC_QR
 
         private void Header_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
-                DragMove();
+            if (e.ChangedButton != MouseButton.Left || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            DragMove();
+            e.Handled = true;
         }
 
         [SupportedOSPlatform("windows")]
@@ -129,17 +122,7 @@ namespace VH_IFC_QR
 
         private ViewSheet FindSheetForAssemblyCode(string assemblyCode)
         {
-            if (string.IsNullOrWhiteSpace(assemblyCode)) return null;
-
-            return _sheets.FirstOrDefault(sheet =>
-                ContainsIgnoreCase(sheet.SheetNumber, assemblyCode) ||
-                ContainsIgnoreCase(sheet.Name, assemblyCode));
-        }
-
-        private static bool ContainsIgnoreCase(string value, string search)
-        {
-            return !string.IsNullOrEmpty(value) &&
-                   value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            return SheetMatcher.FindSheet(_sheets, assemblyCode);
         }
 
         private void HeaderCheckBox_Click(object sender, RoutedEventArgs e)

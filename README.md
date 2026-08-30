@@ -1,6 +1,6 @@
 # VH IFC Viewer
 
-Een volledig IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-modellen. Het systeem bestaat uit een webapplicatie (frontend + backend) en een Revit add-in.
+Een IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-modellen. Revit-export, adminportaal en publieke viewer gebruiken rechtstreeks Supabase Auth, Edge Functions en Storage. De Express-backend is alleen nog bewaarde legacycode en wordt niet naar productie gedeployed.
 
 ---
 
@@ -19,11 +19,10 @@ Een volledig IFC 3D-viewersysteem voor het bekijken, beheren en delen van BIM-mo
 ```
 VH_IFC_Viewer/
 ├── src/
-│   ├── backend/        → Node.js/Express API (draait op Render.com)
-│   └── frontend/       → Vite/React/TypeScript viewer (draait op Vercel)
-├── RevitPlugin/        → C# Revit add-in (lokaal geïnstalleerd)
-├── addin/              → Revit addin-manifest bestanden
-└── scripts/            → Hulpscripts voor deployment
+├── backend/             → Legacy Node.js/Express API; geen productieonderdeel
+├── frontend/            → Vite/React/TypeScript viewer (Vercel)
+├── addin/               → C# Revit add-in
+└── supabase/            → Edge Functions, migraties en Storage-configuratie
 ```
 
 ---
@@ -43,42 +42,35 @@ git clone <repository-url>
 cd VH_IFC_Viewer
 ```
 
-### 2. Backend instellen
+### 2. Directe Revit/Supabase-koppeling instellen
 
 ```bash
-cd src/backend
-npm install
+Zie `docs/SUPABASE_DIRECTE_KOPPELING.md`. Dit is de actieve route voor
+Revit-export, QR-codes en de publieke viewer.
 ```
-
-Maak een `.env` bestand aan op basis van het template:
-
-```bash
-copy .env.template .env
-```
-
-Vul alle waarden in `.env` in (zie commentaar in het bestand voor uitleg).
 
 ### 3. Frontend instellen
 
 ```bash
-cd src/frontend
+cd frontend
 npm install
 ```
 
-Maak een `.env.local` bestand aan:
+Maak een `.env.local` bestand aan voor de viewer:
 
 ```bash
-VITE_API_URL=http://localhost:3001
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
 ---
 
 ## Gebruik
 
-### Backend starten (ontwikkeling)
+### Legacy Express-backend starten (alleen voor regressieonderzoek)
 
 ```bash
-cd src/backend
+cd backend
 npm run dev
 ```
 
@@ -87,7 +79,7 @@ De backend draait op `http://localhost:3001`.
 ### Frontend starten (ontwikkeling)
 
 ```bash
-cd src/frontend
+cd frontend
 npm run dev
 ```
 
@@ -108,7 +100,11 @@ npm run dev:frontend
 
 ---
 
-## Omgevingsvariabelen
+## Omgevingsvariabelen voor de legacy Express-backend
+
+Deze variabelen zijn **niet** nodig voor het actieve adminportaal, Revit-export,
+QR-codes of de publieke IFC-viewer. Zie voor de actieve route
+`docs/SUPABASE_DIRECTE_KOPPELING.md`.
 
 | Variabele | Beschrijving | Vereist |
 |---|---|---|
@@ -129,28 +125,31 @@ npm run dev:frontend
 
 ## Revit Plugin Installeren
 
-1. Bouw het project in Visual Studio (Release configuratie)
-2. Kopieer de bestanden uit `RevitPlugin/publish/` naar:
+1. Bouw `addin/VH_IFC_QR.csproj` voor Revit 2025.
+2. Kopieer de output uit `addin/bin/Release/net8.0-windows/` naar:
    ```
-   %AppData%\Autodesk\Revit\Addins\2024\
+   %AppData%\Autodesk\Revit\Addins\2025\
    ```
-3. Kopieer `addin/VH_IFC_QR.addin` naar dezelfde map
+3. Registreer de add-in met `addin/VH_IFC_QR.addin` of gebruik het
+   buildtarget dat de manifest en DLL automatisch naar Revit kopieert.
 4. Herstart Revit
 
 ---
 
 ## Deployment
 
-### Backend (Render.com)
-- Configureer omgevingsvariabelen via Render dashboard
-- Buildcommando: `cd src/backend && npm install`
-- Startcommando: `cd src/backend && node app.js`
+### Supabase (admin, Revit en publieke viewer)
+- Zie `docs/SUPABASE_DIRECTE_KOPPELING.md` voor de migration, Edge Function secrets en deployment.
 
 ### Frontend (Vercel)
-- Root directory: `src/frontend`
+- Root directory: `frontend`
 - Buildcommando: `npm run build`
 - Output directory: `dist`
-- Voeg omgevingsvariabele toe: `VITE_API_URL=<jouw-render-url>`
+- Voeg `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` toe. Een bestaand
+  `VITE_SUPABASE_ANON_KEY` blijft compatibel tijdens de key-migratie.
+- Met Root Directory `frontend` is `frontend/vercel.json` de geldende
+  configuratie voor de `/v/<share-token>` SPA-route. De root `vercel.json` is
+  uitsluitend bedoeld voor een project dat bewust vanaf repository-root bouwt.
 
 ---
 
@@ -183,22 +182,22 @@ npm run dev:frontend
 ## Probleemoplossing
 
 ### Backend start niet
+- Deze service is niet nodig voor de productieapp
 - Controleer of alle omgevingsvariabelen in `.env` zijn ingevuld
 - Controleer of `SESSION_SECRET` is ingesteld
 - Bekijk de consolelogs voor specifieke foutmeldingen
 
 ### IFC-model laadt niet in de viewer
-- Controleer of `VITE_API_URL` correct is ingesteld
-- Controleer of de backend bereikbaar is via de health endpoint: `GET /api/health`
-- Controleer of het Supabase bucket `ifc-models` bestaat en de juiste rechten heeft
+- Controleer `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY`
+- Controleer de Revit health-check uit `docs/SUPABASE_DIRECTE_KOPPELING.md`
+- Controleer of `ifc-models` bestaat en de uploadstatus `uploaded` is
 
 ### Revit plugin werkt niet
 - Controleer of het `.addin` bestand in de juiste Revit-map staat
-- Controleer of `PLUGIN_CLIENT_ID` en `PLUGIN_CLIENT_SECRET` overeenkomen in de plugin en backend
-- Controleer of de backend bereikbaar is via het ingestelde serveradres
+- Controleer of aanmelden met een bevestigde Supabase Auth-gebruiker lukt
+- Controleer of de gebruiker bestaat in Supabase Auth
 
 ### QR-code scan werkt niet op mobiel
-- Controleer of `VIEWER_URL` de correcte publieke URL is (geen localhost)
-- Zorg dat de backend CORS toestaat voor de frontend URL
+- Controleer of `VH_VIEWER_URL` in Supabase secrets de correcte publieke Vercel URL is
 204: 
 205: <!-- Deployment trigger -->

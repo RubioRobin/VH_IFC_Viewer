@@ -32,7 +32,8 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // --- CONFIG ---
-app.set('trust proxy', 1); // Important for secure cookies on Render/Heroku
+// The API may run behind one trusted reverse proxy in production.
+app.set('trust proxy', 1);
 const frontendUrl = process.env.FRONTEND_URL || '*';
 
 // --- SECURITY MIDDLEWARE ---
@@ -110,7 +111,7 @@ app.use(cors({
 
 app.use(express.json({ limit: '10kb' })); // Body limit against DoS
 
-const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Veiligheidscheck: SESSION_SECRET is verplicht in productie
 const sessionSecret = process.env.SESSION_SECRET;
@@ -127,7 +128,7 @@ app.use(session({
     secret: sessionSecret || 'lokale-dev-secret-niet-voor-productie',
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Vereist voor Render/Heroku om de proxy te vertrouwen voor beveiligde cookies
+    proxy: isProduction,
     store: sessionStore,
     cookie: {
         secure: isProduction, // Beveiligd vereist HTTPS

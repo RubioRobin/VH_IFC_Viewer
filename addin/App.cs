@@ -10,7 +10,7 @@ namespace VH_IFC_QR
     {
         public Result OnStartup(UIControlledApplication application)
         {
-// Removed startup message as requested
+            // Removed startup message as requested
             string tabName = "VH";
             try
             {
@@ -29,7 +29,8 @@ namespace VH_IFC_QR
 
             // Laad iconen vanuit dezelfde map als de DLL
             string dllDir = Path.GetDirectoryName(thisAssemblyPath);
-            BitmapImage LoadIcon(string name) {
+            BitmapImage LoadIcon(string name)
+            {
                 string iconPath = Path.Combine(dllDir, name);
                 if (!File.Exists(iconPath)) return null;
                 var img = new BitmapImage();

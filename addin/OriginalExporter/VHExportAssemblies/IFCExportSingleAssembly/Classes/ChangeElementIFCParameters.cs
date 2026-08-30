@@ -13,7 +13,7 @@ namespace IFCExportSingleAssembly.Classes
     {
         public ChangeElementIFCParameters()
         {
-            
+
         }
 
         public static void ChangeParameters(Autodesk.Revit.DB.Document doc, List<AssemblyInstance> assemblies)
