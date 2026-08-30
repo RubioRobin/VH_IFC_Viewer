@@ -61,7 +61,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Import ephemeral signing certificate
+      - name: Prepare ephemeral signing certificate
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.VH_CODE_SIGN_PFX_BASE64 }}
@@ -70,37 +70,29 @@ jobs:
           if (-not $env:PFX_BASE64 -or -not $env:PFX_PASSWORD) { throw "Signing secrets are missing." }
           $pfxPath = Join-Path $env:RUNNER_TEMP "vh-code-signing.pfx"
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
-          $flags = [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::UserKeySet -bor
-            [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::PersistKeySet -bor
-            [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable
-          $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
-            $pfxPath,
-            $env:PFX_PASSWORD,
-            $flags
-          )
-          foreach ($storeName in @('My', 'Root', 'TrustedPublisher')) {
-            $store = [Security.Cryptography.X509Certificates.X509Store]::new(
-              $storeName,
-              [Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
-            )
-            try {
-              $store.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-              $store.Add($certificate)
-            } finally {
-              $store.Close()
-            }
-          }
-          Remove-Item -LiteralPath $pfxPath -Force
-          "SIGNING_THUMBPRINT=$($certificate.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Filter signtool.exe -Recurse -File |
+            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "signtool.exe was not found on the Windows runner." }
+          "VH_CODE_SIGN_CERT=$pfxPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "SIGNTOOL_PATH=$($signTool.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Build and sign Revit add-in
         shell: pwsh
+        env:
+          VH_CODE_SIGN_PASSWORD: ${{ secrets.VH_CODE_SIGN_PASSWORD }}
         run: |
           dotnet clean addin/VH_IFC_QR.csproj -c Release -p:CopyToRevitAddins=false --nologo
-          dotnet restore addin/VH_IFC_QR.csproj
-          dotnet build addin/VH_IFC_QR.csproj -c Release --no-restore -p:CopyToRevitAddins=false -p:UseInstalledRevitReferences=false -p:CodeSigningCertificateThumbprint=$env:SIGNING_THUMBPRINT --nologo
+          dotnet restore addin/VH_IFC_QR.csproj -p:UseInstalledRevitReferences=false
+          dotnet build addin/VH_IFC_QR.csproj -c Release --no-restore -p:CopyToRevitAddins=false -p:UseInstalledRevitReferences=false "-p:CodeSigningCertificatePath=$env:VH_CODE_SIGN_CERT" "-p:SignToolPath=$env:SIGNTOOL_PATH" --nologo
           $signature = Get-AuthenticodeSignature addin/bin/Release/net8.0-windows/VH_IFC_QR.dll
-          if ($signature.Status -ne "Valid" -or -not $signature.TimeStamperCertificate) { throw "Signed add-in verification failed: $($signature.Status)" }
+          if (-not $signature.SignerCertificate -or
+              $signature.SignerCertificate.Thumbprint -ne "656792BC1651D3FD84AFA614E7DA21E720125A7A" -or
+              -not $signature.TimeStamperCertificate -or
+              $signature.Status -in @("HashMismatch", "NotSigned")) {
+            throw "Signed add-in verification failed: $($signature.Status)"
+          }
 
       - name: Package release artifacts
         shell: pwsh
@@ -115,6 +107,14 @@ jobs:
         with:
           name: vh-ifc-viewer-release
           path: artifacts/*
+
+      - name: Remove ephemeral signing certificate
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:VH_CODE_SIGN_CERT -and (Test-Path -LiteralPath $env:VH_CODE_SIGN_CERT)) {
+            Remove-Item -LiteralPath $env:VH_CODE_SIGN_CERT -Force
+          }
 
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
