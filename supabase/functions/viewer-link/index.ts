@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "../_shared/supabase-admin.ts";
 import {
   isExpired,
+  isLegacyPublicLinkToken,
   isMissingLegacyRelationError,
   isShareToken,
 } from "./domain.ts";
@@ -134,7 +135,9 @@ Deno.serve(async (request) => {
     // revocation makes a capability unavailable; the migration normalises
     // legacy NULL values to true as well.
     if (!share) {
-      const legacy = await resolveLegacyPublicLink(supabase, token);
+      const legacy = isLegacyPublicLinkToken(token)
+        ? await resolveLegacyPublicLink(supabase, token)
+        : null;
       if (legacy) return legacy;
       return json({ error: "Viewer-link niet gevonden of ingetrokken." }, 404);
     }
