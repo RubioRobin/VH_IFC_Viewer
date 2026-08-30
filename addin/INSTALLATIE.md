@@ -27,6 +27,7 @@ Controleer na installatie in Revit:
 - aanmelden met een bevestigde Supabase Auth-gebruiker;
 - projectnummer wordt correct herkend;
 - één klein model exporteren, uploaden en via de QR-link openen;
-- een tweede upload met dezelfde bestandsnaam vervangt de vorige versie;
+- een tweede upload met dezelfde bestandsnaam vervangt de actuele versie,
+  terwijl de bestaande QR-link blijft werken;
 - een afgebroken upload kan worden hervat;
 - eigenschappen, selectie, zichtbaarheid en meetfunctie werken in de viewer.

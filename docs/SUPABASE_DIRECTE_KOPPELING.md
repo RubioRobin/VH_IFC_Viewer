@@ -18,6 +18,9 @@ Supabase secret/service-role key.
 - IFC-bestanden staan in private bucket `ifc-models`.
 - Grote IFC-bestanden gebruiken de directe Supabase Storage-hostnaam met TUS-resume.
 - Alleen `viewer-link` maakt een download-URL van 15 minuten voor een actieve QR-share.
+- Bij een vervangende upload verplaatst `publish_model_version` de bestaande
+  share en QR atomair naar de nieuwe versie. De vorige IFC blijft zeven dagen
+  als herstelversie bewaard.
 - Een publieke viewerlink is altijd `/v/<share-token>`; `?model=` en `?fileId=`
   zijn geen geldige toegangsroute meer.
 - De Revit-sessie wordt per Windows-gebruiker DPAPI-versleuteld opgeslagen en
@@ -33,9 +36,11 @@ Supabase secret/service-role key.
    supabase db push
    ```
 
-   Dit voert zowel `202607190001_revit_direct_storage.sql` als
-   `202607190002_direct_revit_schema.sql` uit. De tweede migratie is
-   niet-destructief en maakt/upgrade de tabellen, RLS en `service_role` grants.
+   Dit voert onder meer `202607190001_revit_direct_storage.sql`,
+   `202607190002_direct_revit_schema.sql`, de versiepublicatie-migratie en
+   `202608300001_lock_legacy_data_api.sql` uit. Deze migraties zijn
+   niet-destructief, maken/upgraden de tabellen en verwijderen de permissieve
+   prototypepolicies voor `anon` en `authenticated`.
 
 2. Stel in Supabase Edge Function Secrets in:
 
@@ -52,6 +57,8 @@ Supabase secret/service-role key.
 3. Activeer Email/Password in **Authentication > Providers** en maak voor elke
    Revit-gebruiker een bevestigde Supabase Auth-gebruiker aan in
    **Authentication > Users**. De add-in gebruikt het e-mailadres als login.
+   Nieuwe accounts via het adminportaal vereisen daarom ook een echt,
+   bereikbaar e-mailadres; alleen een losse gebruikersnaam is niet voldoende.
 
 4. Deploy de functies:
 
@@ -143,6 +150,8 @@ Controleer daarnaast het admincontract met een geldige adminsessie:
 - `GET /functions/v1/admin-api/projects` en `/qr` geven HTTP 200;
 - `POST /functions/v1/admin-api/upload/reserve` maakt een uploadticket plus
   blijvende sharetoken;
+- een tweede complete upload voor hetzelfde model houdt de bestaande
+  `/v/<share-token>` bruikbaar en zet de vorige versie op zeven dagen retentie;
 - een niet-admin JWT krijgt HTTP 403 en een ontbrekende JWT HTTP 401.
 
 ## Bestaande IFC-bestanden

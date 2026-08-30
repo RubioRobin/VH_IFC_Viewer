@@ -34,7 +34,9 @@ De browser en de add-in ontvangen nooit een Supabase secret/service-role key.
    via TUS in chunks van 6 MB en worden na netwerkverlies hervat.
 5. De functie valideert het opgeslagen object en markeert de modelversie als
    `uploaded`.
-6. De add-in maakt een share en QR-code. De QR-link is
+6. `publish_model_version` zet de nieuwe versie atomair op actueel, verhuist
+   bestaande shares/QR-assets en bewaart de vorige versie zeven dagen.
+7. De add-in maakt zo nodig een share en QR-code. De QR-link is
    `https://<viewer-domein>/v/<token>`.
 
 ## Viewerflow
@@ -63,10 +65,16 @@ Alle migraties onder `supabase/migrations/` zijn vereist. De tweede migratie
 behoudt de oude `revisions`/`share_id`-gegevens en brengt ze over naar het
 actuele modelversiecontract zonder tabellen te verwijderen.
 
+De laatste hardeningmigratie verwijdert ook de permissieve prototypepolicies
+op `users`, `projects`, `files`, `activity`, `qr_codes` en `shares`. De tabellen
+blijven uitsluitend via de server-side Edge Functions bereikbaar.
+
 ## Beveiliging
 
 - RLS sluit de BIM-tabellen voor `anon` en `authenticated`; alleen Edge
   Functions met de server-side sleutel behandelen metadata.
+- Nieuwe gebruikers uit het adminportaal krijgen een echt Supabase
+  Auth-e-mailadres, zodat dezelfde accountgegevens in Revit werken.
 - De add-in bevat alleen de openbare project-URL en publishable key. Een
   service-role key of schijnveilig desktopsecret wordt niet meegeleverd.
 - De add-in bewaart de gebruikerssessie met Windows DPAPI in

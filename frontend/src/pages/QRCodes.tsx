@@ -163,7 +163,7 @@ export function QRCodesPage() {
                             <div className="flex gap-1">
                                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
                                     const link = document.createElement('a');
-                                    link.href = qr.qr_image_url;
+                                    link.href = qr.qr_image_url || getBarcodeUrl(qr.qr_code_url);
                                     link.download = `QR_${qr.filename || 'code'}.png`;
                                     link.click();
                                 }}>

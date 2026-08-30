@@ -5,6 +5,7 @@ import {
   buildReservedFileName,
   buildReservedModelName,
   matchQrAdminRoute,
+  normalizeAccountEmail,
 } from "./domain.ts";
 
 const IFC_BUCKET = "ifc-models";
@@ -528,6 +529,7 @@ async function reserveUpload(
       id: fileId,
       project_id: projectId,
       filename: targetFileName,
+      original_name: targetFileName,
       path: storagePath,
       size: 0,
       storage_bucket: IFC_BUCKET,
@@ -702,6 +704,9 @@ Deno.serve(async (request) => {
       const code = String(body.code || "").trim().toUpperCase().slice(0, 100) ||
         null;
       const { data, error } = await supabase.from("projects").insert({
+        // The original VH schema has a required text primary key without a
+        // default; a UUID string remains compatible with newer UUID schemas.
+        id: crypto.randomUUID(),
         name: requireText(body.name, "Projectnaam"),
         code,
         description: String(body.description || "").slice(0, 5000),
@@ -790,6 +795,7 @@ Deno.serve(async (request) => {
         id: fileId,
         project_id: projectId,
         filename: fileName,
+        original_name: fileName,
         path: storagePath,
         size,
         storage_bucket: IFC_BUCKET,
@@ -858,14 +864,17 @@ Deno.serve(async (request) => {
     }
     if (method === "POST" && parts[0] === "users" && parts.length === 1) {
       const body = await requestJson(request);
-      const username = requireText(
-        body.username || body.email,
-        "Gebruikersnaam of e-mailadres",
-        320,
-      );
-      const email = username.includes("@")
-        ? username.toLowerCase()
-        : legacyAdminEmail(username);
+      let email: string;
+      try {
+        email = normalizeAccountEmail(body.email || body.username);
+      } catch (error) {
+        throw new ApiError(
+          400,
+          error instanceof Error
+            ? error.message
+            : "Vul een geldig, bereikbaar e-mailadres in.",
+        );
+      }
       const password = requireText(body.password, "Wachtwoord", 256);
       if (password.length < 8) {
         throw new ApiError(
@@ -873,13 +882,16 @@ Deno.serve(async (request) => {
           "Het wachtwoord moet minimaal 8 tekens bevatten.",
         );
       }
-      const role = String(body.role || "user").slice(0, 50);
+      const role = String(body.role || "user");
+      if (role !== "user" && role !== "admin") {
+        throw new ApiError(400, "Rol moet user of admin zijn.");
+      }
       const { data, error } = await supabase.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
         app_metadata: { role },
-        user_metadata: { username },
+        user_metadata: { username: email },
       });
       if (error || !data.user) {
         throw new ApiError(

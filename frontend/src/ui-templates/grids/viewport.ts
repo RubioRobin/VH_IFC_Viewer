@@ -1,4 +1,4 @@
-﻿import * as BUI from "@thatopen/ui";
+import * as BUI from "@thatopen/ui";
 import * as OBC from "@thatopen/components";
 import { viewerToolbarTemplate } from "../toolbars/viewer-toolbar";
 import { TransparencyManager } from "../../viewer/transparency-manager";

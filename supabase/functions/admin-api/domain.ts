@@ -60,3 +60,20 @@ export function buildReservedModelName(reservedFileName: string): string {
   }
   return name.slice(0, -4);
 }
+
+export function normalizeAccountEmail(value: unknown): string {
+  const email = String(value || "").trim().toLowerCase();
+  const parts = email.split("@");
+  const domain = parts[1] || "";
+  const reservedDomain = /(?:^|\.)(?:invalid|localhost|test|example)$/i;
+
+  if (
+    email.length > 320 || parts.length !== 2 || !parts[0] ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.includes("..") ||
+    reservedDomain.test(domain)
+  ) {
+    throw new Error("Vul een geldig, bereikbaar e-mailadres in.");
+  }
+
+  return email;
+}

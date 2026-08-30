@@ -259,103 +259,21 @@ async function createQr(
   return data.publicUrl;
 }
 
-async function removeStorageObjects(
-  supabase: any,
-  objects: Array<{ bucket: string; path: string }>,
-) {
-  const byBucket = new Map<string, string[]>();
-  for (const object of objects) {
-    if (!object.bucket || !object.path) continue;
-    const paths = byBucket.get(object.bucket) || [];
-    paths.push(object.path);
-    byBucket.set(object.bucket, paths);
-  }
-
-  for (const [bucket, paths] of byBucket) {
-    const { error } = await supabase.storage.from(bucket).remove(paths);
-    if (error) throw error;
-  }
-}
-
-// Once the replacement IFC is safely in Storage, remove all older uploads with
-// the same filename in this project. This keeps the website, QR assets and
-// public shares in sync with the file that was just uploaded.
-async function replacePreviousUpload(
+// Publish only after Storage and file metadata are complete. The database RPC
+// moves existing QR/share capabilities atomically and retains older IFCs for
+// recovery instead of invalidating printed QR codes.
+async function publishModelVersion(
   supabase: any,
   modelId: string,
   versionId: string,
-  version: any,
 ) {
-  const model = asOne<any>(version.models);
-  const projectId = String(model?.project_id || "");
-  const modelName = String(model?.name || "");
-  if (!projectId || !modelName) {
-    throw new ApiError(500, "Model heeft geen gekoppeld project of naam.");
-  }
-
-  const { data: matchingModels, error: modelsError } = await supabase
-    .from("models")
-    .select("id")
-    .eq("project_id", projectId)
-    .eq("name", modelName);
-  if (modelsError) throw modelsError;
-
-  const modelIds = (matchingModels || []).map((item: any) => item.id);
-  if (!modelIds.includes(modelId)) modelIds.push(modelId);
-
-  const { data: oldVersions, error: versionsError } = await supabase
-    .from("model_versions")
-    .select("id, model_id, storage_bucket, storage_path_ifc")
-    .in("model_id", modelIds)
-    .neq("id", versionId);
-  if (versionsError) throw versionsError;
-
-  const oldVersionIds = (oldVersions || []).map((item: any) => item.id);
-  const { data: oldQrAssets, error: qrAssetsError } = oldVersionIds.length
-    ? await supabase.from("qr_assets").select("storage_path_png")
-      .in("model_version_id", oldVersionIds)
-    : { data: [], error: null };
-  if (qrAssetsError) throw qrAssetsError;
-
-  const { data: matchingFiles, error: filesError } = await supabase
-    .from("files")
-    .select("id, path, storage_bucket, model_version_id")
-    .eq("project_id", projectId)
-    .eq("filename", version.file_name);
-  if (filesError) throw filesError;
-
-  const filesToRemove = (matchingFiles || []).filter((file: any) =>
-    file.model_version_id !== versionId
-  );
-  await removeStorageObjects(supabase, [
-    ...(oldVersions || []).map((item: any) => ({
-      bucket: item.storage_bucket || IFC_BUCKET,
-      path: item.storage_path_ifc,
-    })),
-    ...(oldQrAssets || []).map((item: any) => ({
-      bucket: QR_BUCKET,
-      path: item.storage_path_png,
-    })),
-    ...filesToRemove.map((item: any) => ({
-      bucket: item.storage_bucket || IFC_BUCKET,
-      path: item.path,
-    })),
-  ]);
-
-  if (oldVersionIds.length) {
-    const { error } = await supabase.from("model_versions").delete().in(
-      "id",
-      oldVersionIds,
-    );
-    if (error) throw error;
-  }
-  if (filesToRemove.length) {
-    const { error } = await supabase.from("files").delete().in(
-      "id",
-      filesToRemove.map((item: any) => item.id),
-    );
-    if (error) throw error;
-  }
+  const retainedUntil = new Date(Date.now() + 7 * 86400000).toISOString();
+  const { error } = await supabase.rpc("publish_model_version", {
+    p_model_id: modelId,
+    p_version_id: versionId,
+    p_retained_until: retainedUntil,
+  });
+  if (error) throw error;
 }
 
 async function assertReadyVersion(
@@ -667,10 +585,6 @@ Deno.serve(async (request) => {
         throw new ApiError(500, "Model heeft geen gekoppeld project.");
       }
 
-      // Do this only after all validation has passed, so a failed replacement
-      // leaves the previously published IFC and QR code untouched.
-      await replacePreviousUpload(supabase, modelId, versionId, version);
-
       const { data: files, error: filesError } = await supabase
         .from("files")
         .select("id")
@@ -715,6 +629,10 @@ Deno.serve(async (request) => {
         })
         .eq("id", versionId);
       if (updateError) throw updateError;
+
+      // This is the final atomic switch. A failed RPC can be retried without
+      // deleting either the previous version or its public capabilities.
+      await publishModelVersion(supabase, modelId, versionId);
 
       return json({ ok: true });
     }

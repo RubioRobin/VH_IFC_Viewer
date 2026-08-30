@@ -2,6 +2,7 @@ import {
   buildReservedFileName,
   buildReservedModelName,
   matchQrAdminRoute,
+  normalizeAccountEmail,
 } from "./domain.ts";
 
 Deno.test("QR admin routes cover the dashboard contract", () => {
@@ -59,5 +60,26 @@ Deno.test("reserved model names match Revit model naming without extension", () 
   const modelName = buildReservedModelName(fileName);
   if (modelName !== "Constructie_V1_c572db54-6ca9-4e5d-97bb-875af9ee741d") {
     throw new Error(`Unexpected reserved model name: ${modelName}`);
+  }
+});
+
+Deno.test("account e-mail is normalized and must be a usable address", () => {
+  if (
+    normalizeAccountEmail(" Robin@VH-Engineering.nl ") !==
+      "robin@vh-engineering.nl"
+  ) {
+    throw new Error("Account e-mail was not normalized.");
+  }
+
+  for (const invalid of ["robin", "robin@localhost", "robin@example.invalid"]) {
+    let rejected = false;
+    try {
+      normalizeAccountEmail(invalid);
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) {
+      throw new Error(`Invalid account e-mail was accepted: ${invalid}`);
+    }
   }
 });

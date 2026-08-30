@@ -27,7 +27,7 @@ export function UsersPage() {
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [newUsername, setNewUsername] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [newRole, setNewRole] = useState('user');
     const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
@@ -59,7 +59,7 @@ export function UsersPage() {
 
     useEffect(() => {
         if (createDialogOpen) {
-            setNewUsername('');
+            setNewEmail('');
             setNewPassword('');
             setNewRole('user');
         }
@@ -88,14 +88,14 @@ export function UsersPage() {
 
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newUsername.trim() || !newPassword.trim()) return;
+        if (!newEmail.trim() || !newPassword.trim()) return;
 
         setCreating(true);
         try {
             const newUser = await fetchAPI('/users', {
                 method: 'POST',
                 body: JSON.stringify({
-                    username: newUsername,
+                    email: newEmail,
                     password: newPassword,
                     role: newRole
                 })
@@ -104,7 +104,7 @@ export function UsersPage() {
             toast({ type: 'success', title: 'Succes', message: 'Gebruiker aangemaakt!' });
             setData([newUser, ...data]);
             setCreateDialogOpen(false);
-            setNewUsername('');
+            setNewEmail('');
             setNewPassword('');
             setNewRole('user');
         } catch (error: any) {
@@ -280,7 +280,7 @@ export function UsersPage() {
                 footer={
                     <>
                         <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Annuleren</Button>
-                        <Button onClick={handleCreateUser} disabled={creating || !newUsername || !newPassword} className="bg-primary hover:bg-primary/90 min-w-[100px]">
+                        <Button onClick={handleCreateUser} disabled={creating || !newEmail || !newPassword} className="bg-primary hover:bg-primary/90 min-w-[100px]">
                             {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Aanmaken
                         </Button>
@@ -289,11 +289,13 @@ export function UsersPage() {
             >
                 <form onSubmit={handleCreateUser} className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Gebruikersnaam</label>
+                        <label className="text-sm font-medium">E-mailadres</label>
                         <Input
-                            placeholder="Bijv. jan.jansen"
-                            value={newUsername}
-                            onChange={(e) => setNewUsername(e.target.value)}
+                            type="email"
+                            placeholder="Bijv. jan.jansen@vh-engineering.nl"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            autoComplete="email"
                             autoFocus
                         />
                     </div>
