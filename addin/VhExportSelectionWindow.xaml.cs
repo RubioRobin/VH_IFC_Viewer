@@ -104,8 +104,11 @@ namespace VH_IFC_QR
 
         private void Header_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
-                DragMove();
+            if (e.ChangedButton != MouseButton.Left || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            DragMove();
+            e.Handled = true;
         }
     }
 }

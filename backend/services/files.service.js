@@ -11,7 +11,7 @@ module.exports = (supabase, logActivity) => {
         return {
             ...f,
             filename: f.filename || f.original_name,
-            upload_date: f.upload_date || f.created_at
+            upload_date: f.upload_date || f.uploaded_at || f.created_at || f.updated_at
         };
     }
 
@@ -22,22 +22,73 @@ module.exports = (supabase, logActivity) => {
             .sort((a, b) => naturalCollator.compare(a.filename || '', b.filename || ''));
     }
 
+    async function attachActiveShareTokens(files) {
+        const mappedFiles = sortFiles(files);
+        const versionIds = [...new Set(mappedFiles
+            .map(file => file.model_version_id)
+            .filter(Boolean))];
+
+        if (versionIds.length === 0) return mappedFiles;
+
+        const { data: shares, error } = await supabase
+            .from('shares')
+            .select('model_version_id, token, expires_at, created_at')
+            .in('model_version_id', versionIds)
+            .or('is_active.eq.true,is_active.is.null')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.warn('[Files] Actieve share-links konden niet worden opgehaald:', error.message);
+            return mappedFiles;
+        }
+
+        const now = Date.now();
+        const tokenByVersionId = new Map();
+        for (const share of shares || []) {
+            const expiresAt = share.expires_at ? Date.parse(share.expires_at) : null;
+            const isActive = !share.expires_at || (!Number.isNaN(expiresAt) && expiresAt > now);
+            if (isActive && share.token && !tokenByVersionId.has(share.model_version_id)) {
+                tokenByVersionId.set(share.model_version_id, share.token);
+            }
+        }
+
+        return mappedFiles.map(file => ({
+            ...file,
+            share_token: tokenByVersionId.get(file.model_version_id) || null
+        }));
+    }
+
     return {
         async getFilesByProjectId(projectId) {
             if (!supabase) return [];
             const { data } = await supabase.from('files').select('*').eq('project_id', projectId);
-            return sortFiles(data);
+            return await attachActiveShareTokens(data);
         },
 
         async getAllFiles() {
             if (!supabase) return [];
             const { data } = await supabase.from('files').select('*');
-            return sortFiles(data);
+            return await attachActiveShareTokens(data);
         },
 
         async getFileById(id) {
             if (!supabase) return null;
             const { data, error } = await supabase.from('files').select('*').eq('id', id).single();
+            if (error) return null;
+            return mapFile(data);
+        },
+
+        async getFileByProjectAndName(projectId, filename) {
+            if (!supabase || !projectId || !filename) return null;
+            const { data, error } = await supabase
+                .from('files')
+                .select('*')
+                .eq('project_id', projectId)
+                .eq('filename', filename)
+                .order('uploaded_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
             if (error) return null;
             return mapFile(data);
         },
@@ -82,9 +133,10 @@ module.exports = (supabase, logActivity) => {
             await supabase.from('files').delete().eq('id', id);
         },
 
-        async createFile(id, projectId, filename, path, size, user = 'Admin') {
+        async createFile(id, projectId, filename, path, size, user = 'Admin', options = {}) {
             if (!supabase) return null;
             const finalName = filename || 'unnamed_file_' + Date.now();
+            const uploadDate = options.uploadedAt || new Date().toISOString();
 
             const { data: existing } = await supabase
                 .from('files')
@@ -98,7 +150,8 @@ module.exports = (supabase, logActivity) => {
                 filename: finalName,
                 original_name: finalName,
                 path: path,
-                size: size
+                size: size,
+                uploaded_at: uploadDate
             };
 
             let data;
@@ -132,6 +185,10 @@ module.exports = (supabase, logActivity) => {
         async updateFile(id, updates) {
             if (!supabase) return null;
             const cleanUpdates = { ...updates };
+
+            if (cleanUpdates.upload_date && !cleanUpdates.uploaded_at) {
+                cleanUpdates.uploaded_at = cleanUpdates.upload_date;
+            }
             delete cleanUpdates.upload_date;
 
             if (cleanUpdates.filename) {

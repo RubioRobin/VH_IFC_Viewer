@@ -52,9 +52,10 @@ export function ProfilePage() {
 
         setSaving(true);
         try {
-            const data = await fetchAPI('/auth/profile', {
+            await fetchAPI('/auth/profile', {
                 method: 'PUT',
                 body: JSON.stringify({
+                    username,
                     email,
                     avatar_url: avatarUrl,
                     password: newPassword || undefined

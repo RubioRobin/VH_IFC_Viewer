@@ -1,6 +1,5 @@
 ﻿using Autodesk.Revit.Creation;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,15 +13,11 @@ namespace IFCExportSingleAssembly.Classes
     {
         public ChangeElementIFCParameters()
         {
-            
+
         }
 
         public static void ChangeParameters(Autodesk.Revit.DB.Document doc, List<AssemblyInstance> assemblies)
         {
-            // toggle to show messagebox
-            bool toggleParameterFault = false;
-
-
             string revitVersionNumber = doc.Application.VersionNumber;
 
             //
@@ -93,7 +88,6 @@ namespace IFCExportSingleAssembly.Classes
 
                 if (biggestElementMaterial == null)
                 {
-                    TaskDialog.Show("info", $"bij assembly: {assembly.Name} gaat het fout!");
                     continue;
                 }
 
@@ -142,11 +136,6 @@ namespace IFCExportSingleAssembly.Classes
                 biggestElementInAssembly.IFCAssemblyDiepte = assemblyDimensions[1];
                 biggestElementInAssembly.IFCAssemblyHoogte = assemblyDimensions[2];
 
-                if (assemblyDimensions.Count == 4)
-                {
-                    toggleParameterFault = true;
-                }
-
                 //
                 // overriding the parameter values of the main (precast) element in the assembly
                 biggestElementInAssembly.ChangeInstanceParameter("Merknaam", biggestElementInAssembly.IFCMerknaam);
@@ -181,14 +170,6 @@ namespace IFCExportSingleAssembly.Classes
 
                     assemblyIFCElement.ChangeInstanceParameter
                         (IfcExportAsParamName, biggestElementInAssembly.IFCExportAs);
-                }
-                else if (versionNumber == "2026")
-                {
-                    TaskDialog.Show("Info", "IFC Export As parameter moet nog worden bekeken....");
-                }
-                else if (versionNumber == "2027")
-                {
-                    TaskDialog.Show("Info", "IFC Export As parameter moet nog worden bekeken....");
                 }
 
                 // loop over each element in the allElementsInAssembly list

@@ -21,7 +21,7 @@ interface User {
 
 export function UsersPage() {
     const [data, setData] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const { toast } = useToast();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -140,7 +140,7 @@ export function UsersPage() {
         if (!userToReset || !newResetPassword.trim()) return;
         setResetting(true);
         try {
-            await fetchAPI(`/users/${userToReset.id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword: newResetPassword }) });
+            await fetchAPI(`/users/${userToReset.id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ password: newResetPassword }) });
             toast({ type: 'success', title: 'Wachtwoord gereset', message: `Wachtwoord van ${userToReset.username} is gewijzigd.` });
             setResetPasswordDialogOpen(false);
             setNewResetPassword('');
@@ -276,14 +276,6 @@ export function UsersPage() {
             <Dialog
                 isOpen={createDialogOpen}
                 onClose={() => setCreateDialogOpen(false)}
-                onOpenChange={(open) => {
-                    if (open) {
-                        setNewUsername('');
-                        setNewPassword('');
-                        setNewRole('user');
-                    }
-                    setCreateDialogOpen(open);
-                }}
                 title="Nieuwe Gebruiker"
                 footer={
                     <>
@@ -340,7 +332,6 @@ export function UsersPage() {
             <Dialog
                 isOpen={resetPasswordDialogOpen}
                 onClose={() => setResetPasswordDialogOpen(false)}
-                onOpenChange={(open) => { if (!open) { setResetPasswordDialogOpen(false); setNewResetPassword(''); } }}
                 title={`Wachtwoord resetten — ${userToReset?.username}`}
                 footer={
                     <>

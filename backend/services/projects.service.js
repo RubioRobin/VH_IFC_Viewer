@@ -57,7 +57,7 @@ module.exports = (supabase, logActivity) => {
         return {
             ...f,
             filename: f.filename || f.original_name,
-            upload_date: f.upload_date || f.created_at
+            upload_date: f.upload_date || f.uploaded_at || f.created_at || f.updated_at
         };
     }
 

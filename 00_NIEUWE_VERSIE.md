@@ -1,6 +1,6 @@
-# Nieuwe versie - VH IFC Viewer
+# Nieuwe versie - VH IFC Viewer 1.1.0 (werkversie)
 
-Datum: 2026-05-16
+Datum: 2026-07-20
 
 Deze map bevat de nieuwe versie van de VH IFC Viewer add-in en website.
 
@@ -19,4 +19,6 @@ Let op:
 
 - De map `addin/OriginalExporter` hoort bij deze nieuwe versie en moet mee in Git/deploy.
 - Na build moet Revit opnieuw gestart worden om de nieuwe add-in te laden.
-- Na backend/frontend deploy zijn de QR-link en websitevolgorde actief op productie.
+- Voor de actieve QR/viewerroute: voer eerst de Supabase-migraties uit, deploy
+  daarna de Edge Functions en deploy vervolgens de Vercel-frontend. De
+  Express-backend is alleen nog relevant voor het legacy adminportaal.

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,9 +17,6 @@ namespace VH_IFC_QR
     [SupportedOSPlatform("windows")]
     public class UploadExportCommand : IExternalCommand
     {
-        private static string BaseUrl => SettingsManager.Instance.BackendUrl;
-        private static string ClientId => SettingsManager.Instance.ClientId;
-        private static string ClientSecret => SettingsManager.Instance.ClientSecret;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -40,19 +37,19 @@ namespace VH_IFC_QR
                 if (exportResult.Status == ResultStatus.Failed)
                 {
                     NotificationWindow.ShowError($"IFC export mislukt.\n\n{exportResult.Message}");
-                    return Result.Failed;
+                    return HandledFailure(ref message);
                 }
 
-                var client = new PluginClient(BaseUrl);
+                var client = DirectSupabaseConnection.CreateClient();
 
                 try
                 {
-                    Task.Run(() => client.LoginPluginAsync(ClientId, ClientSecret)).GetAwaiter().GetResult();
+                    Task.Run(() => client.CheckConnectionAsync()).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
                     NotificationWindow.ShowError($"Kon niet verbinden met VH Server.\n\nDetails: {ex.Message}");
-                    return Result.Failed;
+                    return HandledFailure(ref message);
                 }
 
                 if (!client.LoadToken())
@@ -62,6 +59,7 @@ namespace VH_IFC_QR
                 }
 
                 ProjectInfo defaultProject = null;
+                string projectResolutionError = null;
                 var projectIdentity = RevitProjectIdentity.FromDocument(doc);
                 if (projectIdentity.HasValue)
                 {
@@ -71,9 +69,10 @@ namespace VH_IFC_QR
                             projectIdentity.ProjectNumber,
                             projectIdentity.ProjectName)).GetAwaiter().GetResult();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         defaultProject = null;
+                        projectResolutionError = ex.Message;
                     }
                 }
 
@@ -85,43 +84,28 @@ namespace VH_IFC_QR
 
                 if (defaultProject == null)
                 {
-                    NotificationWindow.ShowError("Kan geen project bepalen uit Revit Project Information.\n\nVul Project Number en/of Project Name in en probeer opnieuw.");
-                    return Result.Failed;
+                    string error = string.IsNullOrWhiteSpace(projectResolutionError)
+                        ? "Kan geen projectnaam bepalen uit dit Revit-model.\n\nSla het model op met een naam en probeer opnieuw."
+                        : $"Project synchroniseren met Supabase mislukt.\n\n{projectResolutionError}";
+                    NotificationWindow.ShowError(error);
+                    return HandledFailure(ref message);
                 }
 
                 try
                 {
                     List<LocalIfcUploadItem> exportedItems = BuildUploadItems(exportResult, sheets);
-                    if (exportedItems.Count > 0)
+                    if (exportedItems.Count == 0)
                     {
-                        SettingsManager.Instance.LastProjectId = defaultProject.id;
-                        SettingsManager.Instance.LastExportFolder = exportResult.ExportFolder ?? Path.GetDirectoryName(exportedItems[0].FilePath);
-                        SettingsManager.Save();
-
-                        return UploadItems(doc, client, defaultProject.id, exportedItems);
+                        NotificationWindow.ShowWarning("Er zijn geen nieuwe IFC-bestanden gevonden om te uploaden.");
+                        return Result.Cancelled;
                     }
 
-                    var projects = Task.Run(() => client.GetProjectsAsync()).GetAwaiter().GetResult();
-                    if (defaultProject != null && projects.All(p => p.id != defaultProject.id))
-                        projects.Insert(0, defaultProject);
-
-                    UploadExportWindow uploadWin = new UploadExportWindow(
-                        projects,
-                        sheets,
-                        client.CurrentUsername,
-                        defaultProject?.id,
-                        exportResult.ExportFolder);
-                    uploadWin.OnLogout += () => { client.Logout(); NotificationWindow.ShowInfo("Je bent uitgelogd."); };
-
-                    NotificationWindow.ShowInfo("De IFC exporter is afgerond, maar ik kon geen nieuwe IFC-bestanden automatisch vinden.\n\nControleer de exportmap en upload daarna de bestanden.");
-
-                    if (uploadWin.ShowDialog() != true) return Result.Cancelled;
-                    return UploadItems(doc, client, uploadWin.SelectedProject.id, uploadWin.ValidItems);
+                    return UploadItems(doc, client, defaultProject.id, exportedItems);
                 }
                 catch (Exception ex)
                 {
                     NotificationWindow.ShowError($"Er is een fout opgetreden bij exporteren of uploaden:\n{ex.Message}");
-                    return Result.Failed;
+                    return HandledFailure(ref message);
                 }
             }
             catch (Exception ex)
@@ -130,8 +114,14 @@ namespace VH_IFC_QR
                     ? "De server is tijdelijk niet bereikbaar.\n\nControleer je internetverbinding en probeer het opnieuw."
                     : "Er is een onverwachte fout opgetreden.\n\nProbeer het opnieuw of neem contact op met de beheerder.";
                 NotificationWindow.ShowError(userMsg);
-                return Result.Failed;
+                return HandledFailure(ref message);
             }
+        }
+
+        private static Result HandledFailure(ref string message)
+        {
+            message = string.Empty;
+            return Result.Cancelled;
         }
 
         private List<LocalIfcUploadItem> BuildUploadItems(VhAssemblyIfcExportResult exportResult, List<ViewSheet> sheets)
@@ -218,63 +208,7 @@ namespace VH_IFC_QR
 
         private ViewSheet FindSheetForAssemblyCode(List<ViewSheet> sheets, string assemblyCode)
         {
-            if (sheets == null || string.IsNullOrWhiteSpace(assemblyCode)) return null;
-
-            return sheets.FirstOrDefault(sheet => SheetMatchesAssemblyCode(sheet, assemblyCode));
-        }
-
-        private static bool SheetMatchesAssemblyCode(ViewSheet sheet, string assemblyCode)
-        {
-            if (sheet == null || string.IsNullOrWhiteSpace(assemblyCode))
-                return false;
-
-            string search = assemblyCode.Trim();
-            string sheetNumber = sheet.SheetNumber?.Trim();
-            string sheetName = sheet.Name?.Trim();
-
-            if (EqualsIgnoreCase(sheetNumber, search) || EqualsIgnoreCase(sheetName, search))
-                return true;
-
-            string normalizedSearch = NormalizeMatchText(search);
-            string normalizedSheetNumber = NormalizeMatchText(sheetNumber);
-            string normalizedSheetName = NormalizeMatchText(sheetName);
-
-            if (EqualsIgnoreCase(normalizedSheetNumber, normalizedSearch) ||
-                EqualsIgnoreCase(normalizedSheetName, normalizedSearch))
-                return true;
-
-            return ContainsMatch(normalizedSheetNumber, normalizedSearch) ||
-                   ContainsMatch(normalizedSheetName, normalizedSearch);
-        }
-
-        private static bool ContainsMatch(string value, string search)
-        {
-            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(search))
-                return false;
-
-            if (value.Length < 3 || search.Length < 3)
-                return false;
-
-            return value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   search.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private static bool EqualsIgnoreCase(string value, string search)
-        {
-            return !string.IsNullOrWhiteSpace(value) &&
-                   !string.IsNullOrWhiteSpace(search) &&
-                   string.Equals(value.Trim(), search.Trim(), StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string NormalizeMatchText(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            return new string(value
-                .Where(char.IsLetterOrDigit)
-                .Select(char.ToUpperInvariant)
-                .ToArray());
+            return SheetMatcher.FindSheet(sheets, assemblyCode);
         }
 
         private Result UploadItems(Document doc, PluginClient client, string projectId, List<LocalIfcUploadItem> items)
@@ -288,36 +222,44 @@ namespace VH_IFC_QR
             ProgressWindow progress = new ProgressWindow();
             progress.Show();
 
-            List<string> results = new List<string>();
+            List<string> qrSheetLabels = new List<string>();
+            List<string> uploadErrors = new List<string>();
+            List<string> qrWarnings = new List<string>();
             int completed = 0;
+            int successfulUploads = 0;
 
             try
             {
                 foreach (var item in items)
                 {
-                    int startPercent = (int)((double)completed / items.Count * 100);
-                    progress.Update($"Uploaden: {item.FileName}...", startPercent);
+                    progress.Update(
+                        $"Bestand {completed + 1}/{items.Count}: {item.FileName}",
+                        PercentForItem(completed, items.Count, 0.02));
 
                     UploadQrPlacement uploadResult = UploadAndCreateQr(
                         client,
                         projectId,
                         item,
                         progress,
-                        startPercent,
+                        completed,
                         items.Count).GetAwaiter().GetResult();
 
                     if (!string.IsNullOrEmpty(uploadResult.Error))
                     {
-                        results.Add($"Mislukt: {item.FileName} - {uploadResult.Error}");
+                        uploadErrors.Add($"{item.FileName}: {uploadResult.Error}{FormatDiagnostics(uploadResult.Diagnostics)}");
                         completed++;
                         continue;
                     }
 
+                    successfulUploads++;
                     bool qrPlaced = false;
-                    string qrPlacementError = null;
 
                     if (item.SelectedSheet != null && !string.IsNullOrEmpty(uploadResult.QrTempPath))
                     {
+                        progress.Update(
+                            $"Bestand {completed + 1}/{items.Count}: QR plaatsen op sheet...",
+                            PercentForItem(completed, items.Count, 0.94));
+
                         try
                         {
                             using (Transaction t = new Transaction(doc, "Plaats QR code"))
@@ -329,35 +271,30 @@ namespace VH_IFC_QR
                         }
                         catch (Exception ex)
                         {
-                            qrPlacementError = ex.Message;
+                            Debug.WriteLine($"QR plaatsen mislukt voor {item.FileName}: {ex.Message}");
+                            qrWarnings.Add($"{item.FileName}: QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber} - {ex.Message}");
                         }
                     }
 
                     TryDeleteTempFile(uploadResult.QrTempPath);
 
                     if (qrPlaced)
-                        results.Add($"OK: {item.FileName} geupload en QR geplaatst op sheet {item.SelectedSheet.SheetNumber}");
-                    else if (item.SelectedSheet == null)
-                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst: geen sheet gekoppeld");
-                    else if (!string.IsNullOrWhiteSpace(qrPlacementError))
-                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber}: {qrPlacementError}");
-                    else
-                        results.Add($"OK: {item.FileName} geupload, QR niet geplaatst op sheet {item.SelectedSheet.SheetNumber}");
+                        qrSheetLabels.Add(ResultSummaryFormatter.FormatSheetLabel(
+                            item.SelectedSheet?.SheetNumber,
+                            item.SelectedSheet?.Name));
 
                     completed++;
-                }
-
-                if (!string.IsNullOrEmpty(doc.PathName))
-                {
-                    progress.Update("Opslaan...", 98);
-                    DoEvents();
-                    doc.Save();
                 }
 
                 progress.Update("Klaar!", 100);
                 progress.Close();
 
-                ResultWindow resultWindow = new ResultWindow(results);
+                ShowUploadWarnings(uploadErrors, qrWarnings);
+
+                if (successfulUploads == 0 && uploadErrors.Count > 0)
+                    return Result.Cancelled;
+
+                ResultWindow resultWindow = new ResultWindow(qrSheetLabels, DirectSupabaseConnection.AdminUrl);
                 resultWindow.ShowDialog();
                 return Result.Succeeded;
             }
@@ -365,7 +302,7 @@ namespace VH_IFC_QR
             {
                 progress.Close();
                 NotificationWindow.ShowError($"Er is een fout opgetreden bij uploaden:\n{ex.Message}");
-                return Result.Failed;
+                return Result.Cancelled;
             }
             finally
             {
@@ -378,39 +315,78 @@ namespace VH_IFC_QR
             string projectId,
             LocalIfcUploadItem item,
             ProgressWindow progress,
-            int startPercent,
+            int completedItems,
             int totalCount)
         {
             var task = Task.Run(async () =>
             {
+                var timings = new UploadTiming();
+
                 try
                 {
+                    Stopwatch stepTimer = Stopwatch.StartNew();
                     string modelName = AssemblyUploadNaming.BuildModelName(item.FilePath);
-                    string checksum = GetSha256(item.FilePath);
                     long fileSize = new FileInfo(item.FilePath).Length;
+                    timings.Add("voorbereiden", stepTimer.Elapsed);
 
+                    progress.Update(
+                        $"Bestand {completedItems + 1}/{totalCount}: upload voorbereiden...",
+                        PercentForItem(completedItems, totalCount, 0.08));
+
+                    stepTimer.Restart();
                     string modelId = await client.CreateModelAsync(projectId, modelName, client.CurrentUsername);
-                    var session = await client.CreateUploadSessionAsync(modelId, item.FileName, fileSize, checksum, client.CurrentUsername);
+                    var session = await client.CreateUploadSessionAsync(modelId, item.FileName, fileSize, null, client.CurrentUsername);
+                    timings.Add("metadata", stepTimer.Elapsed);
 
-                    progress.Update($"Bestand versturen: {item.FileName}...", Math.Min(startPercent + 10, 95));
-                    await client.UploadFileAsync(session.uploadUrl, item.FilePath);
+                    stepTimer.Restart();
+                    await client.UploadFileAsync(
+                        session,
+                        item.FilePath,
+                        (uploaded, total) =>
+                        {
+                            double uploadRatio = total > 0
+                                ? Math.Min(1.0, Math.Max(0.0, (double)uploaded / total))
+                                : 0.0;
+
+                            progress.Update(
+                                $"Bestand {completedItems + 1}/{totalCount}: uploaden {FormatBytes(uploaded)} / {FormatBytes(total)}",
+                                PercentForItem(completedItems, totalCount, 0.18 + (0.58 * uploadRatio)));
+                        });
+                    timings.Add("upload", stepTimer.Elapsed);
+
+                    stepTimer.Restart();
                     await client.CompleteVersionAsync(modelId, session.versionId);
+                    timings.Add("afronden", stepTimer.Elapsed);
 
-                    progress.Update($"QR maken: {item.AssemblyCode}...", Math.Min(startPercent + 20, 95));
+                    progress.Update(
+                        $"Bestand {completedItems + 1}/{totalCount}: QR-link maken...",
+                        PercentForItem(completedItems, totalCount, 0.80));
+
+                    stepTimer.Restart();
                     var share = await client.CreateShareAsync(modelId, session.versionId);
                     string qrUrl = await client.GenerateQRAsync(modelId, session.versionId, share.viewerUrl, projectId);
-                    byte[] qrBytes = await client.DownloadQRAsync(qrUrl);
+                    timings.Add("qr maken", stepTimer.Elapsed);
 
+                    progress.Update(
+                        $"Bestand {completedItems + 1}/{totalCount}: QR ophalen...",
+                        PercentForItem(completedItems, totalCount, 0.88));
+
+                    stepTimer.Restart();
+                    byte[] qrBytes = await client.DownloadQRAsync(qrUrl);
+                    timings.Add("qr downloaden", stepTimer.Elapsed);
+
+                    stepTimer.Restart();
                     string qrTempPath = Path.Combine(
                         Path.GetTempPath(),
                         $"upload_{AssemblyUploadNaming.SafeToken(item.AssemblyCode)}_{DateTime.Now.Ticks}_qr.png");
                     File.WriteAllBytes(qrTempPath, qrBytes);
+                    timings.Add("qr schrijven", stepTimer.Elapsed);
 
-                    return new UploadQrPlacement { QrTempPath = qrTempPath };
+                    return new UploadQrPlacement { QrTempPath = qrTempPath, Diagnostics = timings };
                 }
                 catch (Exception ex)
                 {
-                    return new UploadQrPlacement { Error = ex.Message };
+                    return new UploadQrPlacement { Error = ex.Message, Diagnostics = timings };
                 }
             });
 
@@ -421,6 +397,85 @@ namespace VH_IFC_QR
             }
 
             return await task.ConfigureAwait(false);
+        }
+
+        private static int PercentForItem(int completedItems, int totalItems, double itemProgress)
+        {
+            if (totalItems <= 0)
+                return 0;
+
+            double clamped = Math.Min(1.0, Math.Max(0.0, itemProgress));
+            return (int)Math.Min(99, Math.Round(((completedItems + clamped) / totalItems) * 100.0));
+        }
+
+        private static string FormatBytes(long bytes)
+        {
+            if (bytes < 0)
+                return "?";
+
+            string[] units = { "B", "KB", "MB", "GB" };
+            double value = bytes;
+            int unit = 0;
+
+            while (value >= 1024 && unit < units.Length - 1)
+            {
+                value /= 1024;
+                unit++;
+            }
+
+            return unit == 0
+                ? $"{bytes} {units[unit]}"
+                : $"{value:0.0} {units[unit]}";
+        }
+
+        private static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalMinutes >= 1)
+                return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+
+            return $"{duration.TotalSeconds:0.0}s";
+        }
+
+        private static string FormatDiagnostics(UploadTiming diagnostics, TimeSpan? qrPlacement = null)
+        {
+            if (diagnostics == null && qrPlacement == null)
+                return string.Empty;
+
+            List<string> parts = diagnostics?.FormatParts() ?? new List<string>();
+            if (qrPlacement.HasValue)
+                parts.Add($"QR plaatsen {FormatDuration(qrPlacement.Value)}");
+
+            return parts.Count == 0
+                ? string.Empty
+                : $" ({string.Join(", ", parts)})";
+        }
+
+        private static void ShowUploadWarnings(List<string> uploadErrors, List<string> qrWarnings)
+        {
+            if ((uploadErrors == null || uploadErrors.Count == 0) &&
+                (qrWarnings == null || qrWarnings.Count == 0))
+                return;
+
+            List<string> parts = new List<string>();
+
+            if (uploadErrors != null && uploadErrors.Count > 0)
+            {
+                parts.Add("Niet alle IFC-bestanden zijn geupload:");
+                parts.AddRange(uploadErrors.Take(6));
+                if (uploadErrors.Count > 6)
+                    parts.Add($"+ {uploadErrors.Count - 6} extra fout(en)");
+            }
+
+            if (qrWarnings != null && qrWarnings.Count > 0)
+            {
+                if (parts.Count > 0) parts.Add(string.Empty);
+                parts.Add("Upload gelukt, maar QR plaatsen gaf waarschuwingen:");
+                parts.AddRange(qrWarnings.Take(4));
+                if (qrWarnings.Count > 4)
+                    parts.Add($"+ {qrWarnings.Count - 4} extra waarschuwing(en)");
+            }
+
+            NotificationWindow.ShowWarning(string.Join(Environment.NewLine, parts));
         }
 
         private static void TryDeleteTempFile(string path)
@@ -435,16 +490,6 @@ namespace VH_IFC_QR
             catch
             {
                 // Tijdelijke QR-bestanden mogen de upload-flow niet alsnog laten mislukken.
-            }
-        }
-
-        private string GetSha256(string filePath)
-        {
-            using (var sha256 = SHA256.Create())
-            using (var stream = File.OpenRead(filePath))
-            {
-                var hash = sha256.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
             }
         }
 
@@ -464,7 +509,7 @@ namespace VH_IFC_QR
                 foreach (var img in existingImages)
                 {
                     var imgType = doc.GetElement(img.GetTypeId()) as ImageType;
-                    if (imgType != null && imgType.Name.Contains($"upload_{AssemblyUploadNaming.SafeToken(label)}_"))
+                    if (IsVhQrImage(imgType, label))
                         doc.Delete(img.Id);
                 }
             }
@@ -473,7 +518,7 @@ namespace VH_IFC_QR
             ImageTypeOptions options = new ImageTypeOptions(imagePath, false, ImageTypeSource.Import);
             ImageType type = ImageType.Create(doc, options);
 
-            double sizeInMm = 20.6;
+            const double sizeInMm = 20.6;
             double targetSizeInFeet = sizeInMm / 304.8;
 
             try
@@ -500,14 +545,19 @@ namespace VH_IFC_QR
                     BoundingBoxXYZ bbox = titleBlock.get_BoundingBox(sheet);
                     if (bbox != null)
                     {
-                        double cornerRightOffsetMm = 249.4;
-                        double cornerDownOffsetMm = 245.0;
+                        // Vaste positie op het VH-titleblock, gelijk aan de
+                        // productieversie op de Z-schijf.
+                        const double cornerRightOffsetMm = 249.4;
+                        const double cornerDownOffsetMm = 245.0;
                         double halfSizeMm = sizeInMm / 2.0;
 
                         double rightOffsetFeet = (cornerRightOffsetMm + halfSizeMm) / 304.8;
                         double downOffsetFeet = (cornerDownOffsetMm + halfSizeMm) / 304.8;
 
-                        placementPoint = new XYZ(bbox.Min.X + rightOffsetFeet, bbox.Max.Y - downOffsetFeet, 0);
+                        placementPoint = new XYZ(
+                            bbox.Min.X + rightOffsetFeet,
+                            bbox.Max.Y - downOffsetFeet,
+                            0);
                         manualPlacement = true;
                     }
                 }
@@ -560,6 +610,22 @@ namespace VH_IFC_QR
             return true;
         }
 
+        // A sheet has one dedicated QR position. Remove both the current upload
+        // format and the older Link QR format before placing the replacement.
+        // This prevents a re-upload from leaving two QR codes on the same sheet.
+        private static bool IsVhQrImage(ImageType imageType, string label)
+        {
+            if (imageType == null || string.IsNullOrWhiteSpace(imageType.Name))
+                return false;
+
+            string name = imageType.Name;
+            string safeLabel = AssemblyUploadNaming.SafeToken(label);
+            return name.IndexOf($"upload_{safeLabel}_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf($"link_{label}_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.StartsWith("upload_", StringComparison.OrdinalIgnoreCase) ||
+                   name.StartsWith("link_", StringComparison.OrdinalIgnoreCase);
+        }
+
         public void DoEvents()
         {
             DispatcherFrame frame = new DispatcherFrame();
@@ -577,6 +643,25 @@ namespace VH_IFC_QR
         {
             public string QrTempPath { get; set; }
             public string Error { get; set; }
+            public UploadTiming Diagnostics { get; set; }
+        }
+
+        private class UploadTiming
+        {
+            private readonly List<Tuple<string, TimeSpan>> _steps = new List<Tuple<string, TimeSpan>>();
+
+            public void Add(string label, TimeSpan duration)
+            {
+                _steps.Add(Tuple.Create(label, duration));
+            }
+
+            public List<string> FormatParts()
+            {
+                return _steps
+                    .Where(step => step.Item2.TotalMilliseconds >= 250)
+                    .Select(step => $"{step.Item1} {FormatDuration(step.Item2)}")
+                    .ToList();
+            }
         }
     }
 }

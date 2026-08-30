@@ -13,7 +13,6 @@
 
 import * as BUI from "@thatopen/ui";
 import * as OBC from "@thatopen/components";
-import * as OBF from "@thatopen/components-front";
 import * as THREE from "three";
 import { customPanel } from "../components/custom-panel";
 import { customInput } from "../components/custom-input";
@@ -48,7 +47,7 @@ async function queryStoreys(
     // Probeer via Classifier (beschikbaar in @thatopen/components)
     if (componentMgr) {
       try {
-        const classifier = componentMgr.get(OBC.Classifier);
+        const classifier = componentMgr.get(OBC.Classifier) as any;
         classifier.byEntity(model);
         const entityList = classifier.list?.Entity;
         if (entityList) {
@@ -259,7 +258,6 @@ export const modelTreeTemplate: BUI.StatefullComponent<ModelTreeState> = (state)
 
   const fragments = components.get(OBC.FragmentsManager);
   const hider = components.get(OBC.Hider);
-  const highlighter = components.get(OBF.Highlighter);
 
   // ── State ──────────────────────────────────────────────────────────────
   let entries: ModelEntry[] = [];

@@ -50,6 +50,9 @@ release/
 
 # Deployscripts (bevatten mogelijk gevoelige informatie)
 scripts/
+!scripts/
+scripts/*
+!scripts/verify-direct-viewer-build.mjs
 
 # Runtime-mappen (aangemaakt door de server, nooit committen)
 backend/qr-codes/
@@ -58,3 +61,10 @@ backend/temp/
 frontend/.env.local
 
 .vercel
+
+# Lokale browser-QA, benchmarkuitvoer en gekoppelde Supabase CLI-state
+.playwright-cli/
+frontend/.playwright-cli/
+frontend/output/
+supabase/.temp/
+toolbar-*.png

@@ -48,8 +48,11 @@ namespace VH_IFC_QR
 
         private void Header_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
-                this.DragMove();
+            if (e.ChangedButton != MouseButton.Left || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            DragMove();
+            e.Handled = true;
         }
 
         private void LoadSettings()
@@ -104,10 +107,9 @@ namespace VH_IFC_QR
                         MatchedFileId = kvp.Value.id,
                         AllSheets = _sheets,
                         IsSelected = true,
-                        // Probeer automatisch een sheet te matchen op assembly code
-                        SelectedSheet = _sheets.FirstOrDefault(s => 
-                            s.Name.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            s.SheetNumber.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                        // Prefer exact sheet numbers; an ambiguous partial match must
+                        // be selected explicitly by the user.
+                        SelectedSheet = SheetMatcher.FindSheet(_sheets, kvp.Key)
                     };
                     Matches.Add(match);
                 }

@@ -32,10 +32,12 @@ export const viewportSettingsTemplate: BUI.StatefullComponent<
     `;
   }
 
-  const onProjectionChange = ({ target }: { target: BUI.Dropdown }) => {
+  const onProjectionChange = async ({ target }: { target: BUI.Dropdown }) => {
     const [projection] = target.value;
     if (!projection) return;
-    world.camera.projection.set(projection);
+
+    await world.camera.projection.set(projection);
+
     if (world.renderer) {
       world.renderer.postproduction.updateCamera();
     }

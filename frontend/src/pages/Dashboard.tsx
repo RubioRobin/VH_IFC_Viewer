@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -6,7 +6,6 @@ import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    LayoutDashboard,
     FolderKanban,
     FileUp,
     QrCode,
@@ -18,7 +17,6 @@ import {
     Search,
     ArrowUpRight
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
 
 interface Stats {
     total_projects: number;

@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { fetchAPI } from '../lib/api';
 import { useToast } from '../components/ui/toast';
 import { Loader2 } from 'lucide-react';
+import { prepareLegacyAdminLogin, supabase } from '../lib/supabase';
 
 export function LoginPage() {
     const [username, setUsername] = useState('');
@@ -18,16 +19,26 @@ export function LoginPage() {
         setIsLoading(true);
 
         try {
-            await fetchAPI('/auth/login', {
-                method: 'POST',
-                body: JSON.stringify({ username, password })
-            });
+            const login = username.trim();
+            const email = login.includes('@')
+                ? login.toLowerCase()
+                : await prepareLegacyAdminLogin(login);
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+
+            // Verifieer ook de server-side adminrol voordat het dashboard opent.
+            await fetchAPI('/auth/me');
 
             toast({ type: 'success', title: 'Welkom terug!', message: 'Je bent succesvol ingelogd.' });
             navigate('/');
         } catch (err: any) {
             console.error(err);
-            toast({ type: 'error', title: 'Inloggen mislukt', message: 'Controleer je gegevens en probeer opnieuw.' });
+            await supabase.auth.signOut();
+            toast({
+                type: 'error',
+                title: 'Inloggen mislukt',
+                message: err instanceof Error ? err.message : 'Controleer je gegevens en probeer opnieuw.'
+            });
         } finally {
             setIsLoading(false);
         }
@@ -44,11 +55,12 @@ export function LoginPage() {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Gebruikersnaam</label>
+                        <label className="text-sm font-medium">Gebruikersnaam of e-mailadres</label>
                         <Input
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="admin"
+                            autoComplete="username"
                             disabled={isLoading}
                         />
                     </div>
@@ -59,6 +71,7 @@ export function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
+                            autoComplete="current-password"
                             disabled={isLoading}
                         />
                     </div>

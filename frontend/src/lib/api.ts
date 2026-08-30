@@ -1,21 +1,32 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? '';
+import { adminApiUrl, supabase, supabaseApiKey } from './supabase';
+
+export const API_URL = adminApiUrl;
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-    const res = await fetch(`${API_URL}/api${endpoint}`, {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+        if (!window.location.hash.startsWith('#/login')) {
+            window.location.href = '/admin.html#/login';
+        }
+        throw new Error('Je sessie is verlopen. Log opnieuw in.');
+    }
+
+    const res = await fetch(`${adminApiUrl}${endpoint}`, {
         ...options,
-        credentials: 'include',
         headers: {
             'Content-Type': 'application/json',
+            apikey: supabaseApiKey,
+            Authorization: `Bearer ${session.access_token}`,
             ...options.headers,
         },
     });
 
     if (!res.ok) {
-        if (res.status === 401 && !endpoint.includes('/auth/login')) {
+        if (res.status === 401) {
+            await supabase.auth.signOut();
             if (!window.location.hash.startsWith('#/login')) {
                 window.location.href = '/admin.html#/login';
             }
-            throw new Error("Unauthorized");
         }
 
         let errorMessage = `Verzoek mislukt met status ${res.status}`;
@@ -40,5 +51,8 @@ export const api = {
     delete: (endpoint: string) => fetchAPI(endpoint, { method: 'DELETE' }),
 
     checkAuth: () => fetchAPI('/auth/me'),
-    logout: () => fetchAPI('/auth/logout', { method: 'POST' })
+    logout: async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+    }
 };

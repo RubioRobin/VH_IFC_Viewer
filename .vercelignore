@@ -1,0 +1,18 @@
+# The linked Vercel project builds only the Vite application under frontend/.
+# Exclude the Revit SDK sources and backend from CLI uploads.
+.github/
+.playwright-cli/
+addin/
+backend/
+docs/
+node_modules/
+supabase/
+tests/
+*.md
+*.png
+deno.lock
+frontend/.playwright-cli/
+frontend/.vercel/
+frontend/dist/
+frontend/output/
+frontend/*.log

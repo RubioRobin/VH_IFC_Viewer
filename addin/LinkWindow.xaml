@@ -208,9 +208,9 @@
             </Grid.RowDefinitions>
 
             <!-- Header (Draggable) -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,25" MouseLeftButtonDown="Header_MouseDown" Background="Transparent">
+            <StackPanel Grid.Row="0" Margin="0,0,0,25" Background="Transparent">
                 <Grid>
-                    <StackPanel>
+                    <StackPanel MouseLeftButtonDown="Header_MouseDown">
                         <TextBlock Text="VH Engineering" FontSize="22" FontWeight="Bold" Foreground="#111827"/>
                         <TextBlock Text="Assembly Code ↔ IFC Linking" FontSize="14" Foreground="#6B7280" Margin="0,2,0,0"/>
                     </StackPanel>

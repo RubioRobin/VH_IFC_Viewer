@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Button } from '../components/ui/button';
-import { Plus, Folder, FileText, MoreVertical, Loader2, Trash2, Calendar, ChevronDown } from 'lucide-react';
+import { Plus, Folder, FileText, Loader2, Trash2, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -18,6 +18,7 @@ type ProjectStatus = 'actief' | 'in-uitvoering' | 'on-hold' | 'planning' | 'afge
 interface Project {
     id: string;
     name: string;
+    code?: string | null;
     description: string;
     status: ProjectStatus;
     updated_at: string;
@@ -50,6 +51,7 @@ export function ProjectsPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [newName, setNewName] = useState('');
+    const [newCode, setNewCode] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -88,7 +90,7 @@ export function ProjectsPage() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName.trim()) return;
+        if (!newName.trim() || !newCode.trim()) return;
 
         setCreating(true);
         try {
@@ -96,6 +98,7 @@ export function ProjectsPage() {
                 method: 'POST',
                 body: JSON.stringify({
                     name: newName,
+                    code: newCode,
                     description: newDesc,
                     status: 'actief'
                 })
@@ -105,6 +108,7 @@ export function ProjectsPage() {
             setProjects([res, ...projects]);
             setCreateOpen(false);
             setNewName('');
+            setNewCode('');
             setNewDesc('');
         } catch (error) {
             console.error(error);
@@ -199,7 +203,7 @@ export function ProjectsPage() {
                         <CardHeader className="pb-4 bg-gradient-to-br from-slate-50 to-white">
                             <div className="flex justify-between items-start gap-4">
                                 <CardTitle className="text-xl font-bold text-slate-900 group-hover:text-primary transition-colors break-words leading-tight">
-                                    {project.name}
+                                    {project.code ? `${project.name} - ${project.code}` : project.name}
                                 </CardTitle>
 
                                 <div className="flex gap-2 items-start shrink-0">
@@ -290,7 +294,7 @@ export function ProjectsPage() {
                 footer={
                     <div className="flex gap-2">
                         <Button variant="ghost" onClick={() => setCreateOpen(false)}>Annuleren</Button>
-                        <Button onClick={handleCreate} disabled={creating || !newName} className="bg-blue-600 hover:bg-blue-700">
+                        <Button onClick={handleCreate} disabled={creating || !newName || !newCode} className="bg-blue-600 hover:bg-blue-700">
                             {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Aanmaken
                         </Button>
@@ -305,6 +309,14 @@ export function ProjectsPage() {
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             autoFocus
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Projectnummer</label>
+                        <Input
+                            placeholder="Bijv. 25I2P435"
+                            value={newCode}
+                            onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                         />
                     </div>
                     <div className="space-y-2">

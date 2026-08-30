@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using Forms = System.Windows.Forms;
 
 namespace VH_IFC_QR
 {
@@ -43,38 +43,21 @@ namespace VH_IFC_QR
             };
         }
 
-        public static MessageBoxResult ShowMessage(
-            Window owner,
-            string message,
-            string caption,
-            MessageBoxButton buttons,
-            MessageBoxImage icon)
+        public static MessageBoxResult ShowMessage(Window owner, string message, string title, MessageBoxButton buttons, MessageBoxImage image)
         {
-            if (owner != null)
-            {
-                KeepOnTop(owner);
-                BringToFront(owner);
-                return MessageBox.Show(owner, message, caption, buttons, icon);
-            }
-
-            return MessageBox.Show(message, caption, buttons, icon);
+            KeepOnTop(owner);
+            return owner == null
+                ? MessageBox.Show(message, title, buttons, image)
+                : MessageBox.Show(owner, message, title, buttons, image);
         }
 
-#pragma warning disable CA1416
-        public static Forms.DialogResult ShowDialog(Forms.CommonDialog dialog, Window owner)
+        [SupportedOSPlatform("windows")]
+        public static System.Windows.Forms.DialogResult ShowDialog(System.Windows.Forms.CommonDialog dialog, Window owner)
         {
-            if (dialog == null)
-                return Forms.DialogResult.Cancel;
-
-            IntPtr ownerHandle = GetWindowHandle(owner);
-            if (ownerHandle == IntPtr.Zero)
-                ownerHandle = GetRevitMainWindowHandle();
-
-            return ownerHandle == IntPtr.Zero
-                ? dialog.ShowDialog()
-                : dialog.ShowDialog(new Win32WindowOwner(ownerHandle));
+            if (dialog == null) throw new ArgumentNullException(nameof(dialog));
+            IntPtr handle = GetWindowHandle(owner);
+            return dialog.ShowDialog(handle == IntPtr.Zero ? null : new NativeWindow(handle));
         }
-#pragma warning restore CA1416
 
         private static void TrySetRevitOwner(Window window)
         {
@@ -150,13 +133,9 @@ namespace VH_IFC_QR
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        private sealed class Win32WindowOwner : Forms.IWin32Window
+        private sealed class NativeWindow : System.Windows.Forms.IWin32Window
         {
-            public Win32WindowOwner(IntPtr handle)
-            {
-                Handle = handle;
-            }
-
+            public NativeWindow(IntPtr handle) => Handle = handle;
             public IntPtr Handle { get; }
         }
     }

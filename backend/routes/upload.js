@@ -13,12 +13,14 @@ router.post('/ticket', vereisAuthenticatie, async (req, res) => {
             return res.status(400).json({ error: "Project ID en bestandsnaam zijn verplicht" });
         }
 
-        // Server genereert altijd zelf het UUID
-        const id = uuidv4();
-
         // Clean filename for storage
         const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const storagePath = `${projectId}/${id}_${safeName}`;
+        // Reuse the record and Storage path for a matching filename. The
+        // signed upload URL is upsert-enabled, so this is a real overwrite
+        // instead of a second file appearing in the website.
+        const existing = await db.getFileByProjectAndName(projectId, safeName);
+        const id = existing?.id || uuidv4();
+        const storagePath = existing?.path || `${projectId}/${id}_${safeName}`;
 
         // Get Signed URL from Supabase
         const uploadData = await db.createSignedUploadUrl(storagePath);
@@ -45,16 +47,20 @@ router.post('/reserve', vereisAuthenticatie, async (req, res) => {
         const { projectId, fileName } = req.body;
         if (!projectId || !fileName) return res.status(400).json({ error: "Ontbrekende gegevens" });
 
-        const id = uuidv4();
         // Simple clean name
         const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const storagePath = `${projectId}/${id}_${safeName}`;
+        const existing = await db.getFileByProjectAndName(projectId, safeName);
+        const id = existing?.id || uuidv4();
+        const storagePath = existing?.path || `${projectId}/${id}_${safeName}`;
 
         const uploadData = await db.createSignedUploadUrl(storagePath);
         if (!uploadData) return res.status(500).json({ error: "Kon link niet genereren" });
 
-        // Create placeholder file record
-        await db.createFile(id, projectId, safeName, storagePath, 0, req.session.username);
+        // Create a placeholder only for a new name; an existing file is
+        // overwritten in place and must retain its file ID/public links.
+        if (!existing) {
+            await db.createFile(id, projectId, safeName, storagePath, 0, req.session.username);
+        }
 
         res.json({
             fileId: id,

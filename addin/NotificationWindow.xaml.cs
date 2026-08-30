@@ -18,20 +18,19 @@ namespace VH_IFC_QR
             {
                 case NotificationType.Error:
                     TitleBlock.Text = "Er ging iets mis";
-                    IconBlock.Text = "❌";
+                    IconBlock.Text = "X";
                     break;
                 case NotificationType.Warning:
                     TitleBlock.Text = "Let op";
-                    IconBlock.Text = "⚠️";
+                    IconBlock.Text = "!";
                     break;
                 default:
                     TitleBlock.Text = "Informatie";
-                    IconBlock.Text = "ℹ️";
+                    IconBlock.Text = "i";
                     break;
             }
         }
 
-        // Handig: statische methodes zodat aanroepen kort blijven
         public static void ShowError(string message)
         {
             var win = new NotificationWindow(message, NotificationType.Error);
@@ -51,9 +50,6 @@ namespace VH_IFC_QR
         }
 
         private void BtnOk_Click(object sender, RoutedEventArgs e) => Close();
-        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left) DragMove();
-        }
+
     }
 }

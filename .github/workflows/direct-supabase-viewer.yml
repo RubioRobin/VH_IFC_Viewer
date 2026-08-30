@@ -1,0 +1,85 @@
+name: Direct Supabase Viewer
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "frontend/**"
+      - "supabase/**"
+      - "addin/PluginClient.cs"
+      - "scripts/verify-direct-viewer-build.mjs"
+      - "package.json"
+      - "deno.lock"
+      - "vercel.json"
+      - ".github/workflows/direct-supabase-viewer.yml"
+  pull_request:
+    branches: ["main", "master"]
+    paths:
+      - "frontend/**"
+      - "supabase/**"
+      - "addin/PluginClient.cs"
+      - "scripts/verify-direct-viewer-build.mjs"
+      - "package.json"
+      - "deno.lock"
+      - "vercel.json"
+      - ".github/workflows/direct-supabase-viewer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and verify direct viewer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install viewer dependencies
+        run: npm --prefix frontend ci --no-audit --no-fund
+
+      - name: Build direct Supabase viewer
+        env:
+          VITE_SUPABASE_URL: https://ci.supabase.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
+        run: npm --prefix frontend run build
+
+      - name: Verify viewer route contract
+        run: npm run verify:direct-viewer
+
+      - name: Verify legacy anon-key compatibility
+        env:
+          VITE_SUPABASE_URL: https://ci.supabase.invalid
+          VITE_SUPABASE_ANON_KEY: legacy_anon_ci_test
+        run: |
+          npm --prefix frontend run build
+          npm run verify:direct-viewer
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Supabase Edge Functions
+        run: |
+          deno fmt --check supabase/functions/_shared/supabase-admin.ts supabase/functions/_shared/supabase-admin.test.ts supabase/functions/revit-api/index.ts supabase/functions/viewer-link/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/revit-api/index.ts
+          deno check --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/viewer-link/index.ts
+          deno test --lock=deno.lock --frozen --node-modules-dir=auto supabase/functions/_shared/supabase-admin.test.ts
+
+      - name: Verify signed TUS contract
+        run: |
+          grep -Fq '/storage/v1/upload/resumable/sign' supabase/functions/revit-api/index.ts
+          grep -Fq '"x-signature"' addin/PluginClient.cs
+          grep -Fq '_storageClient.DefaultRequestHeaders.Add("apikey", _publishableKey)' addin/PluginClient.cs
+          ! grep -Fq 'url.searchParams.get("fileId")' supabase/functions/viewer-link/index.ts
+          ! grep -Fq '/api/files/' frontend/src/main.ts

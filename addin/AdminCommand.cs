@@ -15,7 +15,7 @@ namespace VH_IFC_QR
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = SettingsManager.Instance.AdminUrl,
+                    FileName = DirectSupabaseConnection.AdminUrl,
                     UseShellExecute = true
                 });
                 return Result.Succeeded;

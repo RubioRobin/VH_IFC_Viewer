@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/skeleton';
 import { motion } from 'framer-motion';
 import {
     BarChart3,
     TrendingUp,
-    QrCode,
     FolderKanban,
     FileText,
     Calendar,
-    ArrowUpRight,
-    ArrowDownRight,
-    Search,
     RotateCcw,
     ExternalLink,
     Download

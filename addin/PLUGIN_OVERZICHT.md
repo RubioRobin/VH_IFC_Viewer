@@ -9,7 +9,7 @@ Project bestand: `VH_IFC_QR.csproj` (.NET 8.0 Windows, WPF, x64)
 
 De plugin voegt een tab **"VH"** toe aan de Revit ribbon met drie knoppen. Via die knoppen kunnen gebruikers:
 
-1. **IFC exporteren** – één of meerdere 3D views exporteren als IFC-bestand, uploaden naar de VH backend, een deelbare viewerlink genereren, en automatisch een **QR-code op de bijbehorende tekenbladen (sheets)** plaatsen.
+1. **IFC exporteren** – één of meerdere 3D views exporteren als IFC-bestand, rechtstreeks naar Supabase Storage uploaden, een deelbare viewerlink genereren, en automatisch een **QR-code op de bijbehorende tekenbladen (sheets)** plaatsen.
 2. **Admin Dashboard** – de beheerwebsite openen in de browser.
 3. **Instellingen** – QR-code en IFC exportopties configureren.
 
@@ -27,7 +27,7 @@ revit-plugin/
 ├── IfcSettingsCommand.cs     ← Knop: Instellingen openen
 ├── Command.cs                ← Knop: Export IFC (hoofd logica)
 │
-├── PluginClient.cs           ← HTTP API client (alle backend calls)
+├── PluginClient.cs           ← Supabase Auth, Edge Function en Storage client
 ├── SettingsManager.cs        ← Opslaan/laden van instellingen (JSON)
 │
 ├── SelectionWindow.xaml/.cs  ← UI: Project + View/Sheet selectie
@@ -87,11 +87,11 @@ Bij fout: toont `NotificationWindow.ShowError(...)`.
 
 ### `Command.cs` – `ExportIFCCommand` (hoofd logica)
 
-**Constanten (hardcoded):**
+**Instellingen (via `VH > IFC Instellingen`, niet hardcoded):**
 ```
-BaseUrl      = "https://vh-ifc-backend.onrender.com"
-ClientId     = "revit_plugin"
-ClientSecret = "0dfb4de62d095c839ed086630fef515454d4e2d374c73b3e"
+SupabaseUrl            = "https://<project-ref>.supabase.co"
+SupabasePublishableKey = "<publishable-key>"
+PluginAccessKey        = "<VH_REVIT_PLUGIN_KEY>"
 ```
 
 **Stapsgewijze flow bij klikken op "Export IFC":**
@@ -101,17 +101,17 @@ Stap 1: Revit data verzamelen
         - Alle 3D views (geen templates)
         - Alle sheets (ViewSheet)
 
-Stap 2: PluginClient aanmaken + Plugin authenticatie
-        → POST /api/plugin/login  (client_id + client_secret)
+Stap 2: PluginClient aanmaken + configuratiecontrole
+        → GET /functions/v1/revit-api/health (x-vh-plugin-key)
         → Bij fout: NotificationWindow fout, stop
 
 Stap 3: Gebruiker authenticatie
-        → Token laden uit auth.json (geldig 7 dagen)
+        → Token laden uit auth.json (geldig tot Supabase expiry)
         → Geen token? → LoginWindow tonen
         → Bij annuleren: stop
 
 Stap 4: Projecten ophalen
-        → GET /api/plugin/projects
+        → GET /functions/v1/revit-api/projects
 
 Stap 5: SelectionWindow tonen
         - Gebruiker kiest project, prefix, view→sheet mappings
@@ -126,12 +126,13 @@ Stap 7: Loop over alle geselecteerde mappings:
       
   7b. [Achtergrondthread]:
       - SHA-256 hash berekenen van IFC bestand
-      - POST /api/plugin/models/create → modelId
-      - POST /api/plugin/models/{id}/versions/upload-session → uploadUrl, versionId
-      - PUT {uploadUrl} (bestand streamen)
-      - POST /api/plugin/models/{id}/versions/{versionId}/complete
-      - POST /api/plugin/models/{id}/versions/{versionId}/share → viewerUrl
-      - POST /api/plugin/models/{id}/versions/{versionId}/qr → qrUrl
+      - POST /functions/v1/revit-api/models/create → modelId
+      - POST /functions/v1/revit-api/models/{id}/versions/upload-session
+        → signed upload-URL, TUS-token en versionId
+      - TUS upload in hervatbare chunks (signed PUT als compatibiliteitsfallback)
+      - POST /functions/v1/revit-api/models/{id}/versions/{versionId}/complete
+      - POST /functions/v1/revit-api/models/{id}/versions/{versionId}/share → viewerUrl
+      - POST /functions/v1/revit-api/models/{id}/versions/{versionId}/qr → qrUrl
 
   7c. QR code downloaden (GET qrUrl) → PNG bytes
   7d. QR PNG opslaan in temp
@@ -181,18 +182,18 @@ Stap 9: ResultWindow tonen
 ### Twee-laags authenticatie
 | Laag | Methode | Endpoint | Token |
 |------|---------|----------|-------|
-| Plugin | `LoginPluginAsync(clientId, secret)` | `POST /api/plugin/login` | `_pluginToken` → `Authorization: Bearer` header |
-| Gebruiker | `LoginUserAsync(username, password)` | `POST /api/plugin/user-login` | `_userToken` → `x-user-token` header (per request) |
+| Installatie | `LoginPluginAsync()` | `GET /functions/v1/revit-api/health` | `x-vh-plugin-key` |
+| Gebruiker | `LoginUserAsync(email, password)` | `/auth/v1/token?grant_type=password` | Supabase Auth JWT → `Authorization: Bearer` |
 
 ### Token persistentie
-- `LoadToken()` – leest `auth.json`, controleert datum (7 dagen geldig).
-- `SaveToken(AuthData)` – schrijft token + gebruikersnaam + verloopdatum naar JSON.
+- `LoadToken()` – leest het DPAPI-versleutelde `auth.json` en controleert de Supabase expiry.
+- `SaveToken(AuthData)` – schrijft de DPAPI-versleutelde sessie per Windows-gebruiker.
 - `Logout()` – wist token in geheugen en verwijdert `auth.json`.
 
 ### Data klassen
 ```
 ProjectInfo      { id, name, code }
-UploadSessionInfo{ versionId, uploadUrl, storagePath }
+UploadSessionInfo{ versionId, uploadUrl, uploadToken, tusEndpoint, storagePath, storageBucket }
 ShareInfo        { token, viewerUrl }
 AuthData         { Token, Username, Expiry (DateTime) }
 ```
@@ -200,16 +201,16 @@ AuthData         { Token, Username, Expiry (DateTime) }
 ### API methoden
 | Methode | HTTP | Endpoint |
 |---------|------|----------|
-| `GetHealthAsync()` | GET | `/api/health` |
-| `LoginPluginAsync()` | POST | `/api/plugin/login` |
-| `LoginUserAsync()` | POST | `/api/plugin/user-login` |
-| `GetProjectsAsync()` | GET | `/api/plugin/projects` |
-| `CreateModelAsync()` | POST | `/api/plugin/models/create` |
-| `CreateUploadSessionAsync()` | POST | `/api/plugin/models/{id}/versions/upload-session` |
-| `UploadFileAsync()` | PUT | `{uploadUrl}` (directe upload, bijv. Supabase Storage) |
-| `CompleteVersionAsync()` | POST | `/api/plugin/models/{id}/versions/{versionId}/complete` |
-| `CreateShareAsync()` | POST | `/api/plugin/models/{id}/versions/{versionId}/share` |
-| `GenerateQRAsync()` | POST | `/api/plugin/models/{id}/versions/{versionId}/qr` |
+| `GetHealthAsync()` | GET | `/functions/v1/revit-api/health` |
+| `LoginPluginAsync()` | GET | `/functions/v1/revit-api/health` |
+| `LoginUserAsync()` | POST | `/auth/v1/token?grant_type=password` |
+| `GetProjectsAsync()` | GET | `/functions/v1/revit-api/projects` |
+| `CreateModelAsync()` | POST | `/functions/v1/revit-api/models/create` |
+| `CreateUploadSessionAsync()` | POST | `/functions/v1/revit-api/models/{id}/versions/upload-session` |
+| `UploadFileAsync()` | TUS/PATCH | Directe hervatbare upload naar Supabase Storage |
+| `CompleteVersionAsync()` | POST | `/functions/v1/revit-api/models/{id}/versions/{versionId}/complete` |
+| `CreateShareAsync()` | POST | `/functions/v1/revit-api/models/{id}/versions/{versionId}/share` |
+| `GenerateQRAsync()` | POST | `/functions/v1/revit-api/models/{id}/versions/{versionId}/qr` |
 | `DownloadQRAsync()` | GET | `{qrUrl}` → `byte[]` |
 
 ---
@@ -318,7 +319,7 @@ Alle windows gebruiken `WindowStyle="None"` + `AllowsTransparency="True"` voor e
 ---
 
 ### 7c. `LoginWindow` (440×520 px)
-**Doel:** Gebruiker logt in met gebruikersnaam + wachtwoord.
+**Doel:** Gebruiker logt in met e-mailadres + wachtwoord via Supabase Auth.
 
 **XAML:**
 - Font: `Segoe UI`. Header: "VH Engineering" + "Inloggen om te exporteren".
@@ -440,7 +441,7 @@ Revit opstart
 Klik "Export IFC"
 └── ExportIFCCommand.Execute()
     ├── PluginClient aanmaken
-    ├── LoginPluginAsync() → plugin JWT token
+    ├── LoginPluginAsync() → health-check met installatiekey
     ├── LoadToken() → user JWT (of LoginWindow)
     ├── GetProjectsAsync() → lijst projecten
     ├── SelectionWindow.ShowDialog()
@@ -451,7 +452,7 @@ Klik "Export IFC"
         ├── [Achtergrond Task]:
         │   ├── GetSha256() → checksum
         │   ├── CreateModelAsync() → modelId
-        │   ├── CreateUploadSessionAsync() → uploadUrl + versionId
+        │   ├── CreateUploadSessionAsync() → uploadUrl + TUS-token + versionId
         │   ├── UploadFileAsync() → bestand naar storage
         │   ├── CompleteVersionAsync()
         │   ├── CreateShareAsync() → viewerUrl

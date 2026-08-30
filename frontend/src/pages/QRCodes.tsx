@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAPI, API_URL } from '../lib/api'; // Use API_URL from lib
 import { Button } from '../components/ui/button';
-import { QrCode, Plus, Trash2, Download, Copy, ExternalLink, Calendar, FileText } from 'lucide-react';
+import { QrCode, Plus, Trash2, Download, Copy, ExternalLink, Calendar } from 'lucide-react';
 import { Dialog } from '../components/ui/dialog';
 import { useToast } from '../components/ui/toast';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';

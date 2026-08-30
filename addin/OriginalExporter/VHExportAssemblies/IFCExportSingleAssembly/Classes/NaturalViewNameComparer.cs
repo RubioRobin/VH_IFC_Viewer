@@ -4,7 +4,7 @@ using System.Text;
 
 public sealed class NaturalViewNameComparer : IComparer<string>
 {
-    public int Compare(string? x, string? y)
+    public int Compare(string x, string y)
     {
         if (ReferenceEquals(x, y)) return 0;
         if (x is null) return -1;

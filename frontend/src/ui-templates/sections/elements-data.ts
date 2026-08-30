@@ -14,14 +14,10 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
   const itemsDataConfig = {
     attributesDefault: true,
-    relationsDefault: { attributes: false, relations: false },
-    relations: {
-      IsDefinedBy: { attributes: true, relations: true },
-      DefinesOcurrence: { attributes: false, relations: false },
-      ContainedInStructure: { attributes: true, relations: true },
-      ContainsElements: { attributes: false, relations: false },
-      Decomposes: { attributes: false, relations: false },
-    },
+    // Vraag de volledige IFC-grafiek op. De eerdere, beperkte configuratie
+    // laadde alleen een selectie relaties waardoor Property Sets, hoeveelheden
+    // en type-eigenschappen per element konden ontbreken.
+    relationsDefault: { attributes: true, relations: true },
   };
 
   const toTitleCase = (str: string) => {
@@ -37,7 +33,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         return formatValue(val.value);
       }
       if (Array.isArray(val)) {
-        return val.map(v => formatValue(v)).join(", ");
+        return val.length === 0 ? "[]" : val.map(v => formatValue(v)).join(", ");
       }
       try {
         return JSON.stringify(val, (k, v) => k === "type" ? undefined : v).replace(/["{}]/g, "").replace(/,/g, ", ");
@@ -51,8 +47,6 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     const keyUpper = key.toUpperCase();
 
     const isComplex = typeof value === 'object' && value !== null;
-    if ((startValue === "-" || startValue === "") && !isComplex) return null;
-
     const row = document.createElement("div");
     row.className = "vh-prop-row";
     row.style.display = "flex";
@@ -155,14 +149,18 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 
             for (const k in item) {
               const kUp = k.toUpperCase();
-              if (["TYPE", "EXPRESSID", "OWNERHISTORY", "NAME", "GLOBALID", "_CATEGORY", "_GUID", "_LOCALID"].includes(kUp)) continue;
-
               if (kUp === "HASPROPERTIES") {
                 if (Array.isArray(item[k])) {
                   item[k].forEach((prop: any) => {
-                    if (prop.Name && prop.NominalValue) {
+                    if (prop.Name && "NominalValue" in prop) {
                       const propRow = createPropertyRow(prop.Name.value || prop.Name, prop.NominalValue, indent + 0.5);
                       if (propRow) container.appendChild(propRow);
+
+                      for (const propKey in prop) {
+                        if (propKey === "Name" || propKey === "NominalValue") continue;
+                        const detailRow = createPropertyRow(propKey, prop[propKey], indent + 1);
+                        if (detailRow) container.appendChild(detailRow);
+                      }
                     } else {
                       const subRow = createPropertyRow(k, item[k], indent + 0.5);
                       if (subRow) container.appendChild(subRow);
@@ -219,20 +217,13 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
             if (el) container.appendChild(el);
           };
 
-          if (props.GlobalId) addProp("Guid", props.GlobalId);
-          if (props.Name) addProp("Naam", props.Name);
-          if (props.ObjectType) addProp("Type", props.ObjectType);
-
-          const ignored = ["GlobalId", "Name", "ObjectType", "Tag", "OwnerHistory", "expressID", "ObjectPlacement", "Representation"];
           for (const key in props) {
             const keyUpper = key.toUpperCase();
-            if (ignored.map(i => i.toUpperCase()).includes(keyUpper)) continue;
             if (key.startsWith("_")) continue;
             if (keyUpper.startsWith("_")) continue;
             if (keyUpper === "MODEL") continue;
 
             const val = props[key];
-            if (val === null || val === undefined) continue;
             if (typeof val === 'function') continue;
 
             addProp(key, val);

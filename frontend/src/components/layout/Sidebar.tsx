@@ -1,6 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, ChevronLeft, ChevronRight, LogOut, Loader2, BarChart3 } from 'lucide-react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users, FileText, ChevronLeft, ChevronRight, LogOut, BarChart3 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 
@@ -19,12 +19,11 @@ const NAV_ITEMS = [
 ];
 
 import { api } from '../../lib/api';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // ... existing imports
 
 export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }: SidebarProps) {
-    const location = useLocation();
     const navigate = useNavigate();
     const [user, setUser] = useState<any>(null);
 
@@ -41,7 +40,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
         }
     };
 
-    const sidebarVariants = {
+    const sidebarVariants: Variants = {
         expanded: {
             width: 280,
             transition: {
@@ -62,7 +61,7 @@ export function Sidebar({ expanded, isMobileOpen, toggleExpanded, closeMobile }:
         },
     };
 
-    const navItemVariants = {
+    const navItemVariants: Variants = {
         open: {
             opacity: 1,
             x: 0,

@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using db = Autodesk.Revit.DB;
+using RevitDb = Autodesk.Revit.DB;
 
 
 namespace IFCExportSingleAssembly.Classes
 {
     public static class GetAssemblies
     {
-        public static IEnumerable<AssemblyInstance> GetAllAssemliesInCurrentView(db.Document doc)
+        public static IEnumerable<AssemblyInstance> GetAllAssemliesInCurrentView(RevitDb.Document doc)
         {
             if (doc == null || doc.ActiveView == null)
                 return Enumerable.Empty<AssemblyInstance>();
