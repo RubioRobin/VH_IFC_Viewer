@@ -53,6 +53,9 @@ en wordt bij de volgende run veilig opnieuw geprobeerd.
 4. De functie levert een Storage signed URL die 15 minuten geldig is.
 5. De browser downloadt de IFC rechtstreeks uit Storage en laadt deze lokaal
    met OpenBIM/Three.js.
+6. Elke succesvolle toegang schrijft één `viewer_scan`-auditregel. Alleen die
+   regels voeden de scanstatistieken. Oude `/v/<public_id>`-capabilities uit
+   `public_links` volgen dezelfde beveiligde server-side route.
 
 ## Supabase-contract
 
@@ -71,9 +74,10 @@ Alle migraties onder `supabase/migrations/` zijn vereist. De tweede migratie
 behoudt de oude `revisions`/`share_id`-gegevens en brengt ze over naar het
 actuele modelversiecontract zonder tabellen te verwijderen.
 
-De laatste hardeningmigratie verwijdert ook de permissieve prototypepolicies
-op `users`, `projects`, `files`, `activity`, `qr_codes` en `shares`. De tabellen
-blijven uitsluitend via de server-side Edge Functions bereikbaar.
+De hardeningmigraties verwijderen ook de permissieve prototypepolicies op
+`users`, `projects`, `files`, `activity`, `qr_codes`, `shares` en, wanneer die
+legacytabel bestaat, `public_links`. De tabellen blijven uitsluitend via de
+server-side Edge Functions bereikbaar.
 
 ## Beveiliging
 
@@ -125,6 +129,12 @@ en statistieken. De Function controleert de Supabase-JWT en gebruikt uitsluitend
 `app_metadata.role` voor adminautorisatie. `backend/` is alleen bewaarde
 legacycode voor regressieonderzoek; `VITE_API_URL` is uit de actieve route
 verwijderd.
+
+Een normaal dashboard-uploadticket reserveert vooraf een unieke Storage-path,
+bestandsrij en pending modelversie. Bevestigen valideert het Storage-object,
+markeert de versie als uploaded en roept daarna `publish_model_version` aan.
+Daardoor gelden QR-continuïteit en zeven dagen retentie identiek voor Revit- en
+dashboardvervangingen.
 
 Bij verwijderen van een gepubliceerd bestand trekt `admin-api` eerst de share
 in en verwijdert daarna IFC, QR-asset en gekoppelde modelversie. Het dashboard

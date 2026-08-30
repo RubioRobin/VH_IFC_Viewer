@@ -186,6 +186,34 @@ async function findStoredObject(
   return (data || []).find((item: any) => item.name === fileName) || null;
 }
 
+async function ensureModel(
+  supabase: any,
+  projectId: string,
+  modelName: string,
+  createdBy: string,
+) {
+  const identity = normalizeModelIdentity(modelName);
+  if (!identity) throw new ApiError(400, "Modelnaam is ongeldig.");
+  const { data: created, error: createError } = await supabase.from("models")
+    .upsert({
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      name: modelName,
+      created_by: createdBy,
+    }, {
+      onConflict: "project_id,name_normalized",
+      ignoreDuplicates: true,
+    }).select("id").maybeSingle();
+  if (createError) throw createError;
+  if (created) return { id: String(created.id), created: true };
+
+  const { data: existing, error: lookupError } = await supabase.from("models")
+    .select("id").eq("project_id", projectId)
+    .eq("name_normalized", identity).single();
+  if (lookupError) throw lookupError;
+  return { id: String(existing.id), created: false };
+}
+
 async function ensureActiveShare(
   supabase: any,
   versionId: string,
@@ -439,28 +467,13 @@ Deno.serve(async (request) => {
       if (projectError) throw projectError;
       if (!project) throw new ApiError(404, "Project niet gevonden.");
 
-      const identity = normalizeModelIdentity(modelName);
-      if (!identity) throw new ApiError(400, "Modelnaam is ongeldig.");
-      const { data: created, error: createError } = await supabase
-        .from("models")
-        .upsert({
-          id: crypto.randomUUID(),
-          project_id: String(project.id),
-          name: modelName,
-          created_by: user!.email,
-        }, {
-          onConflict: "project_id,name_normalized",
-          ignoreDuplicates: true,
-        }).select("id").maybeSingle();
-      if (createError) throw createError;
-      if (created) return json({ modelId: created.id }, 201);
-
-      const { data: existing, error: lookupError } = await supabase
-        .from("models").select("id")
-        .eq("project_id", String(project.id))
-        .eq("name_normalized", identity).single();
-      if (lookupError) throw lookupError;
-      return json({ modelId: existing.id });
+      const model = await ensureModel(
+        supabase,
+        String(project.id),
+        modelName,
+        user!.email,
+      );
+      return json({ modelId: model.id }, model.created ? 201 : 200);
     }
 
     if (
@@ -732,21 +745,19 @@ Deno.serve(async (request) => {
       }
 
       if (!modelId || !versionId) {
-        const { data: model, error: modelError } = await supabase
-          .from("models")
-          .insert({
-            project_id: projectId,
-            name: file.filename,
-            created_by: user!.email,
-          })
-          .select("id")
-          .single();
-        if (modelError) throw modelError;
+        const model = await ensureModel(
+          supabase,
+          projectId,
+          file.filename,
+          user!.email,
+        );
         modelId = model.id;
 
-        const { data: version, error: versionError } = await supabase
-          .from("model_versions")
-          .insert({
+        const now = new Date().toISOString();
+        const candidateVersionId = crypto.randomUUID();
+        const { data: createdVersion, error: createVersionError } =
+          await supabase.from("model_versions").upsert({
+            id: candidateVersionId,
             model_id: modelId,
             storage_path_ifc: file.path,
             storage_bucket: storageBucket,
@@ -754,18 +765,44 @@ Deno.serve(async (request) => {
             file_size: file.size || null,
             source_file_id: String(file.id),
             upload_status: "uploaded",
-            uploaded_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-        if (versionError) throw versionError;
-        versionId = version.id;
+            uploaded_at: now,
+            completed_at: now,
+          }, {
+            onConflict: "source_file_id",
+            ignoreDuplicates: true,
+          }).select("id, model_id").maybeSingle();
+        if (createVersionError) throw createVersionError;
+
+        let linkedVersion = createdVersion;
+        if (!linkedVersion) {
+          const { data: existingVersion, error: existingVersionError } =
+            await supabase.from("model_versions").select("id, model_id")
+              .eq("source_file_id", String(file.id)).single();
+          if (existingVersionError) throw existingVersionError;
+          linkedVersion = existingVersion;
+        }
+        versionId = String(linkedVersion.id);
+        modelId = String(linkedVersion.model_id);
+
+        const { error: refreshVersionError } = await supabase.from(
+          "model_versions",
+        ).update({
+          storage_path_ifc: file.path,
+          storage_bucket: storageBucket,
+          file_name: file.filename,
+          file_size: file.size || null,
+          upload_status: "uploaded",
+          uploaded_at: now,
+          completed_at: now,
+        }).eq("id", versionId);
+        if (refreshVersionError) throw refreshVersionError;
 
         const { error: linkError } = await supabase.from("files").update({
           model_version_id: versionId,
         }).eq("id", file.id);
         if (linkError) throw linkError;
+
+        await publishModelVersion(supabase, modelId, versionId);
       }
 
       if (modelId === null || versionId === null) {

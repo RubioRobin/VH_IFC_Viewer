@@ -82,7 +82,8 @@ export function Dashboard() {
             case 'upload_file': return 'een bestand geüpload';
             case 'create_project': return 'een project aangemaakt';
             case 'update_project_status': return 'projectstatus gewijzigd';
-            case 'scan': return 'een QR code gescand';
+            case 'scan':
+            case 'viewer_scan': return 'een QR-code gescand';
             case 'create_link': return 'een publieke link aangemaakt';
             case 'login': return 'ingelogd';
             default: return type.replace(/_/g, ' ');

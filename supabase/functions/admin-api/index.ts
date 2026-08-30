@@ -1,9 +1,11 @@
 // @deno-types="npm:@types/qrcode@1.5.6"
 import QRCode from "npm:qrcode@1.5.4";
+import { normalizeModelIdentity } from "../_shared/routing.ts";
 import { createSupabaseAdminClient } from "../_shared/supabase-admin.ts";
 import {
   buildReservedFileName,
   buildReservedModelName,
+  calculateScanGrowth,
   matchQrAdminRoute,
   normalizeAccountEmail,
 } from "./domain.ts";
@@ -237,15 +239,128 @@ async function getProject(supabase: any, id: string) {
   return data;
 }
 
+async function ensureModel(
+  supabase: any,
+  projectId: string,
+  modelName: string,
+  createdBy: string,
+) {
+  const identity = normalizeModelIdentity(modelName);
+  if (!identity) throw new ApiError(400, "Modelnaam is ongeldig.");
+
+  const { data: created, error: createError } = await supabase.from("models")
+    .upsert({
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      name: modelName,
+      created_by: createdBy,
+    }, {
+      onConflict: "project_id,name_normalized",
+      ignoreDuplicates: true,
+    }).select("id").maybeSingle();
+  if (createError) throw createError;
+  if (created) return String(created.id);
+
+  const { data: existing, error: lookupError } = await supabase.from("models")
+    .select("id").eq("project_id", projectId)
+    .eq("name_normalized", identity).single();
+  if (lookupError) throw lookupError;
+  return String(existing.id);
+}
+
+async function findPublishedModelForFileName(
+  supabase: any,
+  projectId: string,
+  fileName: string,
+) {
+  const { data: files, error: filesError } = await supabase.from("files")
+    .select("model_version_id, uploaded_at")
+    .eq("project_id", projectId)
+    .eq("filename", fileName)
+    .not("model_version_id", "is", null)
+    .order("uploaded_at", { ascending: false })
+    .limit(100);
+  if (filesError) throw filesError;
+  const versionIds = (files || []).map((file: any) => file.model_version_id)
+    .filter(Boolean);
+  if (!versionIds.length) return null;
+
+  const { data: versions, error: versionsError } = await supabase.from(
+    "model_versions",
+  ).select("id, model_id, is_current").in("id", versionIds);
+  if (versionsError) throw versionsError;
+  const current = (versions || []).find((version: any) => version.is_current);
+  if (current?.model_id) return String(current.model_id);
+
+  const byId = new Map<string, any>(
+    (versions || []).map((version: any) => [String(version.id), version]),
+  );
+  for (const file of files || []) {
+    const version = byId.get(String(file.model_version_id));
+    if (version?.model_id) return String(version.model_id);
+  }
+  return null;
+}
+
+async function publishModelVersion(
+  supabase: any,
+  modelId: string,
+  versionId: string,
+) {
+  const retainedUntil = new Date(Date.now() + 7 * 86400000).toISOString();
+  const { error } = await supabase.rpc("publish_model_version", {
+    p_model_id: modelId,
+    p_version_id: versionId,
+    p_retained_until: retainedUntil,
+  });
+  if (error) throw error;
+}
+
+async function findStoredObject(
+  supabase: any,
+  bucket: string,
+  storagePath: string,
+) {
+  const parts = storagePath.split("/");
+  const fileName = parts.pop();
+  if (!fileName) throw new ApiError(400, "Ongeldig opslagpad.");
+  const { data, error } = await supabase.storage.from(bucket).list(
+    parts.join("/"),
+    { limit: 100, search: fileName },
+  );
+  if (error) throw error;
+  return (data || []).find((item: any) => item.name === fileName) || null;
+}
+
+async function currentOrLegacyFiles(supabase: any, files: any[]) {
+  const versionIds = files.map((file: any) => file.model_version_id).filter(
+    Boolean,
+  );
+  if (!versionIds.length) return files;
+
+  const { data: versions, error } = await supabase.from("model_versions")
+    .select("id, is_current").in("id", versionIds);
+  if (error) throw error;
+  const currentIds = new Set(
+    (versions || []).filter((version: any) => version.is_current).map((
+      version: any,
+    ) => String(version.id)),
+  );
+  return files.filter((file: any) =>
+    !file.model_version_id || currentIds.has(String(file.model_version_id))
+  );
+}
+
 async function listProjects(supabase: any) {
   const { data: projects, error } = await supabase.from("projects")
     .select("id, name, code, description, status, created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
 
-  const { data: files, error: filesError } = await supabase.from("files")
-    .select("project_id, size, created_at, uploaded_at");
+  const { data: allFiles, error: filesError } = await supabase.from("files")
+    .select("project_id, size, model_version_id, created_at, uploaded_at");
   if (filesError) throw filesError;
+  const files = await currentOrLegacyFiles(supabase, allFiles || []);
 
   const totals = new Map<
     string,
@@ -273,13 +388,14 @@ async function listProjects(supabase: any) {
 
 async function listProjectFiles(supabase: any, projectId: string) {
   await getProject(supabase, projectId);
-  const { data: files, error } = await supabase.from("files")
+  const { data: allFiles, error } = await supabase.from("files")
     .select(
       "id, filename, path, size, storage_bucket, model_version_id, created_at, uploaded_at",
     )
     .eq("project_id", projectId)
     .order("uploaded_at", { ascending: false });
   if (error) throw error;
+  const files = await currentOrLegacyFiles(supabase, allFiles || []);
 
   const versionIds = (files || []).map((file: any) => file.model_version_id)
     .filter(Boolean);
@@ -377,10 +493,20 @@ async function deleteProject(supabase: any, projectId: string) {
 
 async function detailedStatistics(supabase: any, days: number) {
   const since = new Date(Date.now() - days * 86400000).toISOString();
+  const previousSince = new Date(Date.now() - days * 2 * 86400000)
+    .toISOString();
   const { data: auditRows, error } = await supabase.from("revit_audit_log")
     .select("action, project_id, detail, occurred_at")
+    .eq("action", "viewer_scan")
     .gte("occurred_at", since).order("occurred_at", { ascending: false });
   if (error) throw error;
+  const { count: previousCount, error: previousError } = await supabase.from(
+    "revit_audit_log",
+  ).select("id", { count: "exact", head: true })
+    .eq("action", "viewer_scan")
+    .gte("occurred_at", previousSince)
+    .lt("occurred_at", since);
+  if (previousError) throw previousError;
 
   const projectCounts = new Map<string, number>();
   const fileCounts = new Map<string, number>();
@@ -420,7 +546,7 @@ async function detailedStatistics(supabase: any, days: number) {
       a,
       b,
     ) => a.date.localeCompare(b.date)),
-    growth: 0,
+    growth: calculateScanGrowth(auditRows?.length || 0, previousCount || 0),
   };
 }
 
@@ -801,53 +927,149 @@ Deno.serve(async (request) => {
       const body = await requestJson(request);
       const projectId = requireText(body.projectId, "Project ID", 100);
       await getProject(supabase, projectId);
-      const fileName = safeFileName(body.fileName);
-      const { data: existing, error: existingError } = await supabase.from(
-        "files",
-      ).select("id, path").eq("project_id", projectId).eq("filename", fileName)
-        .maybeSingle();
-      if (existingError) throw existingError;
-      const fileId = existing?.id || crypto.randomUUID();
-      const storagePath = existing?.path ||
-        `${projectId}/${fileId}_${fileName}`;
-      const { data, error } = await supabase.storage.from(IFC_BUCKET)
-        .createSignedUploadUrl(storagePath, { upsert: true });
-      if (error || !data) {
-        throw new ApiError(
-          500,
-          error?.message || "Kon uploadlink niet genereren.",
-        );
+      const fileName = safeFileName(
+        requireText(body.fileName, "Bestandsnaam", 180),
+      );
+      if (!fileName.toLowerCase().endsWith(".ifc")) {
+        throw new ApiError(400, "Alleen IFC-bestanden (.ifc) zijn toegestaan.");
       }
-      return json({ fileId, uploadUrl: data.signedUrl, storagePath });
+
+      const modelId = await findPublishedModelForFileName(
+        supabase,
+        projectId,
+        fileName,
+      ) || await ensureModel(
+        supabase,
+        projectId,
+        fileName.slice(0, -4),
+        user.email,
+      );
+      const versionId = crypto.randomUUID();
+      const fileId = crypto.randomUUID();
+      const storagePath =
+        `projects/${projectId}/uploads/${versionId}/${fileName}`;
+      let versionCreated = false;
+      let fileCreated = false;
+      try {
+        const { error: versionError } = await supabase.from("model_versions")
+          .insert({
+            id: versionId,
+            model_id: modelId,
+            storage_path_ifc: storagePath,
+            storage_bucket: IFC_BUCKET,
+            file_name: fileName,
+            source_file_id: fileId,
+            upload_status: "pending",
+          });
+        if (versionError) throw versionError;
+        versionCreated = true;
+
+        const { error: fileError } = await supabase.from("files").insert({
+          id: fileId,
+          project_id: projectId,
+          filename: fileName,
+          original_name: fileName,
+          path: storagePath,
+          size: 0,
+          storage_bucket: IFC_BUCKET,
+          model_version_id: versionId,
+        });
+        if (fileError) throw fileError;
+        fileCreated = true;
+
+        const { data, error } = await supabase.storage.from(IFC_BUCKET)
+          .createSignedUploadUrl(storagePath);
+        if (error || !data) {
+          throw error || new Error("Kon uploadlink niet genereren.");
+        }
+        return json({
+          fileId,
+          versionId,
+          uploadUrl: data.signedUrl,
+          storagePath,
+        });
+      } catch (error) {
+        if (fileCreated) await supabase.from("files").delete().eq("id", fileId);
+        if (versionCreated) {
+          await supabase.from("model_versions").delete().eq("id", versionId);
+        }
+        throw error;
+      }
     }
     if (method === "POST" && parts[0] === "upload" && parts[1] === "confirm") {
       const body = await requestJson(request);
       const projectId = requireText(body.projectId, "Project ID", 100);
       await getProject(supabase, projectId);
       const fileId = requireText(body.fileId, "Bestand ID", 100);
-      const fileName = safeFileName(body.fileName);
-      const storagePath = requireText(body.storagePath, "Opslagpad", 1000);
-      const size = Math.max(0, Number(body.fileSize || 0));
+      const suppliedFileName = safeFileName(body.fileName);
+      const suppliedPath = requireText(body.storagePath, "Opslagpad", 1000);
+      const size = Number(body.fileSize);
+      if (!Number.isFinite(size) || size <= 0) {
+        throw new ApiError(400, "De IFC-bestandsgrootte is ongeldig.");
+      }
+
+      const { data: file, error: fileError } = await supabase.from("files")
+        .select(
+          "id, project_id, filename, path, storage_bucket, model_version_id",
+        )
+        .eq("id", fileId).eq("project_id", projectId).maybeSingle();
+      if (fileError) throw fileError;
+      if (!file?.model_version_id) {
+        throw new ApiError(404, "Uploadticket niet gevonden.");
+      }
+      if (file.filename !== suppliedFileName || file.path !== suppliedPath) {
+        throw new ApiError(
+          409,
+          "Uploadticket en bevestiging komen niet overeen.",
+        );
+      }
+
+      const { data: version, error: versionError } = await supabase.from(
+        "model_versions",
+      ).select("id, model_id, storage_path_ifc, storage_bucket, file_name")
+        .eq("id", file.model_version_id).maybeSingle();
+      if (versionError) throw versionError;
+      if (
+        !version || version.storage_path_ifc !== file.path ||
+        version.file_name !== file.filename
+      ) {
+        throw new ApiError(409, "De gereserveerde modelversie is ongeldig.");
+      }
+
+      const bucket = version.storage_bucket || IFC_BUCKET;
+      if (!await findStoredObject(supabase, bucket, version.storage_path_ifc)) {
+        throw new ApiError(409, "Het geüploade IFC-bestand ontbreekt.");
+      }
+
       const now = new Date().toISOString();
-      const { error } = await supabase.from("files").upsert({
-        id: fileId,
-        project_id: projectId,
-        filename: fileName,
-        original_name: fileName,
-        path: storagePath,
-        size,
-        storage_bucket: IFC_BUCKET,
+      const { error: versionUpdateError } = await supabase.from(
+        "model_versions",
+      ).update({
+        file_size: size,
+        upload_status: "uploaded",
         uploaded_at: now,
-      }, { onConflict: "id" });
-      if (error) throw error;
+        completed_at: now,
+      }).eq("id", version.id);
+      if (versionUpdateError) throw versionUpdateError;
+      const { error: fileUpdateError } = await supabase.from("files").update({
+        size,
+        uploaded_at: now,
+      }).eq("id", file.id);
+      if (fileUpdateError) throw fileUpdateError;
+      await publishModelVersion(supabase, String(version.model_id), version.id);
       await audit(
         supabase,
         user,
         "file_uploaded",
-        { fileName, fileSize: size },
+        { fileName: file.filename, fileSize: size },
         projectId,
       );
-      return json({ status: "ok", fileId });
+      return json({
+        status: "ok",
+        fileId,
+        modelId: version.model_id,
+        versionId: version.id,
+      });
     }
 
     if (method === "GET" && parts[0] === "files" && parts[2] === "signed-url") {
@@ -1071,9 +1293,10 @@ Deno.serve(async (request) => {
     if (
       method === "POST" && parts[0] === "statistics" && parts[1] === "reset"
     ) {
-      const { error } = await supabase.from("revit_audit_log").delete().gte(
-        "occurred_at",
-        "1970-01-01T00:00:00.000Z",
+      // The dashboard button resets scan analytics, not the security/audit log.
+      const { error } = await supabase.from("revit_audit_log").delete().eq(
+        "action",
+        "viewer_scan",
       );
       if (error) throw error;
       return json({ success: true });

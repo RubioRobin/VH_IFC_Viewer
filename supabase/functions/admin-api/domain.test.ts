@@ -1,6 +1,7 @@
 import {
   buildReservedFileName,
   buildReservedModelName,
+  calculateScanGrowth,
   matchQrAdminRoute,
   normalizeAccountEmail,
 } from "./domain.ts";
@@ -80,6 +81,23 @@ Deno.test("account e-mail is normalized and must be a usable address", () => {
     }
     if (!rejected) {
       throw new Error(`Invalid account e-mail was accepted: ${invalid}`);
+    }
+  }
+});
+
+Deno.test("scan growth compares only equal viewer-access periods", () => {
+  const cases = [
+    [10, 5, 100],
+    [5, 10, -50],
+    [3, 0, 100],
+    [0, 0, 0],
+  ] as const;
+  for (const [current, previous, expected] of cases) {
+    const actual = calculateScanGrowth(current, previous);
+    if (actual !== expected) {
+      throw new Error(
+        `Growth ${current}/${previous} was ${actual}, expected ${expected}.`,
+      );
     }
   }
 });

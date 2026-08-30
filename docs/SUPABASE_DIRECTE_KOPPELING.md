@@ -21,8 +21,9 @@ Supabase secret/service-role key.
   unieke routes. Gelijktijdige eerste exports komen daardoor atomair op
   hetzelfde project en model uit.
 - Alleen `viewer-link` maakt een download-URL van 15 minuten voor een actieve QR-share.
-- Bij een vervangende upload verplaatst `publish_model_version` de bestaande
-  share en QR atomair naar de nieuwe versie. De vorige IFC blijft zeven dagen
+- Bij een vervangende upload vanuit Revit **of het adminportaal** verplaatst
+  `publish_model_version` de bestaande share en QR atomair naar de nieuwe
+  versie. De vorige IFC blijft zeven dagen
   als herstelversie bewaard; `retention-cleanup` ruimt verlopen versies en hun
   Storage-objecten dagelijks op zonder bestaande deadlines te verlengen.
 - Een publieke viewerlink is altijd `/v/<share-token>`; `?model=` en `?fileId=`
@@ -45,8 +46,10 @@ Supabase secret/service-role key.
    `202608300001_lock_legacy_data_api.sql` uit. Deze migraties zijn
    niet-destructief, maken/upgraden de tabellen en verwijderen de permissieve
    prototypepolicies voor `anon` en `authenticated`. Voor de unieke
-   routingmigratie controleert het releaseproces eerst dat er geen bestaande
-   dubbele genormaliseerde projectcodes of modelidentiteiten zijn.
+   routingmigraties controleert het releaseproces eerst dat er geen bestaande
+   dubbele genormaliseerde projectcodes, modelidentiteiten of bronbestandlinks
+   zijn. Een eventueel aanwezige oude `public_links`-tabel wordt eveneens voor
+   directe Data API-toegang gesloten; `viewer-link` behoudt de UUID-capabilities.
 
 2. Stel in Supabase Edge Function Secrets in:
 
@@ -166,6 +169,10 @@ Controleer daarnaast het admincontract met een geldige adminsessie:
   blijvende sharetoken;
 - een tweede complete upload voor hetzelfde model houdt de bestaande
   `/v/<share-token>` bruikbaar en zet de vorige versie op zeven dagen retentie;
+- dashboarduploads schrijven altijd een nieuw Storage-object en een nieuwe
+  `model_versions`-rij; zij overschrijven de gepubliceerde IFC nooit in-place;
+- `statistics/detailed` telt uitsluitend succesvolle `viewer_scan`-events en
+  een statistiekreset verwijdert geen beheer- of beveiligingsauditregels;
 - een handmatige run van **Supabase model retention cleanup** geeft HTTP 200 en
   rapporteert alleen verlopen, niet-actuele versies;
 - een niet-admin JWT krijgt HTTP 403 en een ontbrekende JWT HTTP 401.
@@ -176,6 +183,10 @@ Oude records uit bucket `ifc-private` blijven bruikbaar. Kies in Revit **Link
 QR**, maak één share aan en de functie bewaart de juiste bucket op de
 modelversie. De viewer tekent vervolgens uit die bucket, niet blind uit
 `ifc-models`.
+
+Ook reeds geprinte `/v/<public_id>`-QR's uit de oude `public_links`-tabel blijven
+werken. Zij worden server-side door `viewer-link` opgezocht; de tabel zelf is
+niet meer anoniem via de Data API leesbaar.
 
 Voor bestanden zonder actieve share toont de admin-viewer bewust geen IFC: maak
 eerst een QR/share aan. Zo kan een willekeurig `fileId` geen privébestand
