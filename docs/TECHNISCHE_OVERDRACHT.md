@@ -29,7 +29,8 @@ De browser en de add-in ontvangen nooit een Supabase secret/service-role key.
 
 1. De gebruiker meldt zich in de add-in aan via Supabase Auth.
 2. `revit-api` valideert de Auth-JWT server-side via Supabase Auth.
-3. De add-in maakt een model en een uploadsessie aan.
+3. De add-in zorgt via genormaliseerde unieke database-identiteiten atomair dat
+   project en model bestaan, ook als twee exports gelijktijdig starten.
 4. De IFC gaat direct naar private bucket `ifc-models`; grote bestanden gaan
    via TUS in chunks van 6 MB en worden na netwerkverlies hervat.
 5. De functie valideert het opgeslagen object en markeert de modelversie als

@@ -747,6 +747,9 @@ Deno.serve(async (request) => {
         description: String(body.description || "").slice(0, 5000),
         status: String(body.status || "actief").slice(0, 60),
       }).select("id, name, code, description, status, created_at").single();
+      if (error?.code === "23505") {
+        throw new ApiError(409, "Deze projectcode bestaat al.");
+      }
       if (error) throw error;
       await audit(
         supabase,

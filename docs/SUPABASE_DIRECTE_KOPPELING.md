@@ -17,6 +17,9 @@ Supabase secret/service-role key.
 - `revit-api` valideert de gebruikerssessie server-side via Supabase Auth.
 - IFC-bestanden staan in private bucket `ifc-models`.
 - Grote IFC-bestanden gebruiken de directe Supabase Storage-hostnaam met TUS-resume.
+- Projectnummers en modelnamen hebben database-afgedwongen, genormaliseerde
+  unieke routes. Gelijktijdige eerste exports komen daardoor atomair op
+  hetzelfde project en model uit.
 - Alleen `viewer-link` maakt een download-URL van 15 minuten voor een actieve QR-share.
 - Bij een vervangende upload verplaatst `publish_model_version` de bestaande
   share en QR atomair naar de nieuwe versie. De vorige IFC blijft zeven dagen
@@ -41,7 +44,9 @@ Supabase secret/service-role key.
    `202607190002_direct_revit_schema.sql`, de versiepublicatie-migratie en
    `202608300001_lock_legacy_data_api.sql` uit. Deze migraties zijn
    niet-destructief, maken/upgraden de tabellen en verwijderen de permissieve
-   prototypepolicies voor `anon` en `authenticated`.
+   prototypepolicies voor `anon` en `authenticated`. Voor de unieke
+   routingmigratie controleert het releaseproces eerst dat er geen bestaande
+   dubbele genormaliseerde projectcodes of modelidentiteiten zijn.
 
 2. Stel in Supabase Edge Function Secrets in:
 

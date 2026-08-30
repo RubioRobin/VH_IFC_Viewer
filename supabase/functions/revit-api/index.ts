@@ -1,6 +1,7 @@
 // @deno-types="npm:@types/qrcode@1.5.6"
 import QRCode from "npm:qrcode@1.5.4";
 import { createSupabaseAdminClient } from "../_shared/supabase-admin.ts";
+import { normalizeModelIdentity, normalizeProjectCode } from "./domain.ts";
 
 const IFC_BUCKET = "ifc-models";
 const LEGACY_IFC_BUCKET = "ifc-private";
@@ -42,13 +43,6 @@ function hasViewerUrl(): boolean {
 function safeFileName(value: string): string {
   const result = (value || "unnamed.ifc").replace(/[^a-zA-Z0-9._-]/g, "_");
   return result.slice(0, 180) || "unnamed.ifc";
-}
-
-function normalizeProjectCode(value: unknown): string {
-  const raw = String(value || "").trim().slice(0, 100);
-  // Project Information is authoritative. Preserve the complete Revit Project
-  // Number (for example 25I2P435) and only normalise casing/outer whitespace.
-  return raw.toUpperCase();
 }
 
 function requireIfcFileName(value: unknown): string {
@@ -335,7 +329,7 @@ Deno.serve(async (request) => {
         result,
       ) => result.error)?.error;
       const bucketNames = new Set(
-        (buckets.data || []).map((bucket) => bucket.name),
+        (buckets.data || []).map((bucket: { name: string }) => bucket.name),
       );
       if (
         schemaError || buckets.error || !bucketNames.has(IFC_BUCKET) ||
@@ -392,19 +386,36 @@ Deno.serve(async (request) => {
       const name = String(body.projectName || code).trim().slice(0, 255);
       if (!name) throw new ApiError(400, "Projectnaam ontbreekt.");
 
-      let query = supabase.from("projects").select("id, name, code").limit(1);
-      query = code ? query.eq("code", code) : query.eq("name", name);
-      const { data: existing, error: lookupError } = await query.maybeSingle();
+      if (code) {
+        // A generated normalized column plus its unique index makes this
+        // conflict-safe when two Revit clients ensure the project at once.
+        const { data: created, error: createError } = await supabase
+          .from("projects")
+          .upsert({ id: crypto.randomUUID(), name, code }, {
+            onConflict: "code_normalized",
+            ignoreDuplicates: true,
+          })
+          .select("id, name, code")
+          .maybeSingle();
+        if (createError) throw createError;
+        if (created) return json(created, 201);
+
+        const { data: existing, error: lookupError } = await supabase
+          .from("projects").select("id, name, code")
+          .eq("code_normalized", code).single();
+        if (lookupError) throw lookupError;
+        return json(existing);
+      }
+
+      const { data: existing, error: lookupError } = await supabase
+        .from("projects").select("id, name, code").eq("name", name)
+        .order("created_at", { ascending: true }).limit(1).maybeSingle();
       if (lookupError) throw lookupError;
       if (existing) return json(existing);
 
-      const { data, error } = await supabase
-        .from("projects")
-        // Older VH databases use a text primary key without a database default.
-        // Supplying a UUID works for both that legacy schema and UUID-based ones.
-        .insert({ id: crypto.randomUUID(), name, code: code || null })
-        .select("id, name, code")
-        .single();
+      const { data, error } = await supabase.from("projects")
+        .insert({ id: crypto.randomUUID(), name, code: null })
+        .select("id, name, code").single();
       if (error) throw error;
       return json(data, 201);
     }
@@ -428,32 +439,28 @@ Deno.serve(async (request) => {
       if (projectError) throw projectError;
       if (!project) throw new ApiError(404, "Project niet gevonden.");
 
-      const compatibleModelNames = modelName.toLowerCase().endsWith(".ifc")
-        ? [modelName]
-        : [modelName, `${modelName}.ifc`];
-      const { data: existingModels, error: lookupError } = await supabase
+      const identity = normalizeModelIdentity(modelName);
+      if (!identity) throw new ApiError(400, "Modelnaam is ongeldig.");
+      const { data: created, error: createError } = await supabase
         .from("models")
-        .select("id")
-        .eq("project_id", String(project.id))
-        // The second value keeps reservations made by the pre-1.1.0 admin
-        // implementation usable; new reservations omit the extension.
-        .in("name", compatibleModelNames)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (lookupError) throw lookupError;
-      if (existingModels?.[0]) return json({ modelId: existingModels[0].id });
-
-      const { data, error } = await supabase
-        .from("models")
-        .insert({
+        .upsert({
+          id: crypto.randomUUID(),
           project_id: String(project.id),
           name: modelName,
           created_by: user!.email,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      return json({ modelId: data.id }, 201);
+        }, {
+          onConflict: "project_id,name_normalized",
+          ignoreDuplicates: true,
+        }).select("id").maybeSingle();
+      if (createError) throw createError;
+      if (created) return json({ modelId: created.id }, 201);
+
+      const { data: existing, error: lookupError } = await supabase
+        .from("models").select("id")
+        .eq("project_id", String(project.id))
+        .eq("name_normalized", identity).single();
+      if (lookupError) throw lookupError;
+      return json({ modelId: existing.id });
     }
 
     if (
