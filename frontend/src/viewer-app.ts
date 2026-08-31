@@ -13,6 +13,7 @@ import * as CUI from "@thatopen/ui-obc";
 import CameraControls from "camera-controls";
 import { appIcons } from "./globals";
 import { IfcEdgeOverlay } from "./viewer/ifc-edge-overlay";
+import { NavigationCube } from "./viewer/navigation-cube";
 import { ViewerTools, type ViewerVisibilityChange } from "./viewer/viewer-tools";
 import { getViewerBootstrap, getViewerModelName } from "./viewer/bootstrap";
 import {
@@ -738,7 +739,21 @@ const resizeViewer = () => {
 const app = document.getElementById("app");
 if (!app) throw new Error("Viewer root element #app ontbreekt.");
 app.append(viewerRoot);
-viewerRoot.querySelector(".basic-viewer__viewport")?.append(viewerTools.element);
+const viewerViewport = viewerRoot.querySelector<HTMLElement>(
+  ".basic-viewer__viewport",
+);
+if (!viewerViewport) throw new Error("Viewer viewport ontbreekt.");
+const navigationCube = new NavigationCube({
+  controls: cameraControls,
+  getCamera: () => world.camera.three,
+});
+viewerViewport.append(viewerTools.element, navigationCube.element);
+const disposeNavigationCube = (event: PageTransitionEvent) => {
+  if (event.persisted) return;
+  navigationCube.dispose();
+  window.removeEventListener("pagehide", disposeNavigationCube);
+};
+window.addEventListener("pagehide", disposeNavigationCube);
 
 if (fragmentsBenchmarkMode) {
   const benchmarkInput = document.createElement("input");
