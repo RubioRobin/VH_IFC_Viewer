@@ -1,6 +1,6 @@
-# Nieuwe versie - VH IFC Viewer 1.1.0 (werkversie)
+# Nieuwe versie - VH IFC Viewer 1.10.0
 
-Datum: 2026-07-20
+Datum: 2026-08-31
 
 Deze map bevat de nieuwe versie van de VH IFC Viewer add-in en website.
 
@@ -14,6 +14,7 @@ Belangrijk in deze versie:
 - QR-plaatsing gebruikt de juiste positie en maat van 20.6 mm.
 - Meldingen worden boven Revit geopend.
 - De website sorteert IFC-bestanden op natuurlijke volgorde, bijvoorbeeld GP5-02 voor GP5-10.
+- De panelen Model en Eigenschappen blijven permanent zichtbaar; de inklapknoppen zijn verwijderd.
 
 Let op:
 

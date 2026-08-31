@@ -1,4 +1,4 @@
-# VH IFC Viewer 1.1.0 installeren
+# VH IFC Viewer 1.10.0 installeren
 
 1. Sluit Revit 2025.
 2. Pak het release-zipbestand volledig uit.

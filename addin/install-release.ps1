@@ -102,7 +102,7 @@ if (-not $installedSignature.SignerCertificate -or
     $installedSignature.SignerCertificate.Thumbprint -ne $expectedSignerThumbprint) {
     throw "De geïnstalleerde DLL wijkt af van het gecontroleerde releasebestand."
 }
-Write-Host "VH IFC Viewer 1.1.0 is geïnstalleerd voor Revit 2025." -ForegroundColor Green
+Write-Host "VH IFC Viewer 1.10.0 is geïnstalleerd voor Revit 2025." -ForegroundColor Green
 Write-Host "Add-in: $targetDir" -ForegroundColor DarkGray
 Write-Host "Manifest: $targetManifest" -ForegroundColor DarkGray
 Write-Host "Ondertekenaar: $($installedSignature.SignerCertificate.Subject)" -ForegroundColor DarkGray

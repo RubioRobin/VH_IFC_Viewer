@@ -1,6 +1,6 @@
 {
     "name": "bim-backend",
-    "version": "1.1.0",
+    "version": "1.10.0",
     "description": "Simple backend for IFC Viewer",
     "main": "app.js",
     "scripts": {

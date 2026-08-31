@@ -1,4 +1,4 @@
-# VH IFC Viewer — Revit add-in 1.1.0
+# VH IFC Viewer — Revit add-in 1.10.0
 
 ## Actieve entrypoint
 
@@ -7,7 +7,7 @@ de knop **IFC Exporteren** aan. Die knop start `UploadExportCommand`. De add-in
 is gebouwd voor `net8.0-windows`, x64 en Revit 2025.
 
 `AdminCommand` en `LinkQRCommand` zijn compileerbare ondersteunende commando's,
-maar worden door `App.OnStartup` in 1.1.0 niet als aparte ribbonknop
+maar worden door `App.OnStartup` in 1.10.0 niet als aparte ribbonknop
 geregistreerd.
 
 ## Hoofdflow

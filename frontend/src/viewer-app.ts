@@ -487,7 +487,6 @@ async function loadLocalIfc(file: File) {
         userAgent: navigator.userAgent,
       };
     }
-    if (!panelMedia.matches) closePanel("model");
   } catch (error) {
     console.error("IFC file loading error:", error);
     if (fragmentsBenchmarkMode) {
@@ -647,11 +646,8 @@ const showSelectedProperties = async (modelIdMap: OBC.ModelIdMap) => {
   const hasSelection = Object.values(modelIdMap).some((localIds) => localIds.size > 0);
   propertiesHint.hidden = hasSelection;
   if (!hasSelection) {
-    if (window.matchMedia("(max-width: 799px)").matches) closePanel("properties");
     return;
   }
-
-  openPanel("properties");
 
   const loading = document.createElement("p");
   loading.className = "properties-loading";
@@ -711,9 +707,6 @@ const viewerRoot = BUI.Component.create<HTMLDivElement>(() => BUI.html`
       >
         <header class="viewer-panel__header">
           <h2>Model</h2>
-          <button type="button" class="viewer-panel__close" data-close-panel="model" aria-label="Modelpaneel sluiten">
-            <bim-icon icon=${appIcons.CLOSE} aria-hidden="true"></bim-icon>
-          </button>
         </header>
         <div class="viewer-panel__content">
         ${loadIfcButton}
@@ -736,30 +729,6 @@ const viewerRoot = BUI.Component.create<HTMLDivElement>(() => BUI.html`
           <strong>${publicModelName}</strong>
         </div>
       ` : null}
-      <nav class="viewer-panel-actions" aria-label="Viewerpanelen">
-        ${!isPublicViewer ? BUI.html`
-          <button
-            type="button"
-            class="viewer-panel-toggle"
-            data-open-panel="model"
-            aria-controls="viewer-model-panel"
-            aria-expanded="false"
-          >
-            <bim-icon icon=${appIcons.MODEL} aria-hidden="true"></bim-icon>
-            <span>Model</span>
-          </button>
-        ` : null}
-        <button
-          type="button"
-          class="viewer-panel-toggle"
-          data-open-panel="properties"
-          aria-controls="viewer-properties-panel"
-          aria-expanded="false"
-        >
-          <bim-icon icon=${appIcons.PROPERTIES} aria-hidden="true"></bim-icon>
-          <span>Eigenschappen</span>
-        </button>
-      </nav>
     </div>
     <aside
       id="viewer-properties-panel"
@@ -769,121 +738,14 @@ const viewerRoot = BUI.Component.create<HTMLDivElement>(() => BUI.html`
     >
       <header class="viewer-panel__header">
         <h2>Eigenschappen</h2>
-        <button type="button" class="viewer-panel__close" data-close-panel="properties" aria-label="Eigenschappen sluiten">
-          <bim-icon icon=${appIcons.CLOSE} aria-hidden="true"></bim-icon>
-        </button>
       </header>
       <div class="viewer-panel__content">
         ${propertiesHint}
         ${propertiesContent}
       </div>
     </aside>
-    <button type="button" class="viewer-panel-scrim" data-close-panels aria-label="Paneel sluiten"></button>
   </div>
 `);
-
-type ViewerPanelName = "model" | "properties";
-
-const panelMedia = window.matchMedia("(min-width: 1440px)");
-let activePanelName: ViewerPanelName | null = null;
-
-const getPanel = (name: ViewerPanelName) => (
-  viewerRoot.querySelector<HTMLElement>(`[data-viewer-panel="${name}"]`)
-);
-
-const syncPanelToggle = (name: ViewerPanelName, open: boolean) => {
-  const toggle = viewerRoot.querySelector<HTMLButtonElement>(`[data-open-panel="${name}"]`);
-  toggle?.setAttribute("aria-expanded", String(open));
-  toggle?.classList.toggle("is-active", open);
-};
-
-const updatePanelScrim = () => {
-  const hasOverlayPanel = !panelMedia.matches
-    && Array.from(viewerRoot.querySelectorAll<HTMLElement>("[data-viewer-panel]"))
-      .some((panel) => panel.classList.contains("is-open"));
-  viewerRoot.querySelector("[data-close-panels]")?.classList.toggle("is-active", hasOverlayPanel);
-};
-
-function closePanel(name: ViewerPanelName) {
-  const panel = getPanel(name);
-  if (!panel) return;
-  panel.classList.remove("is-open");
-  syncPanelToggle(name, false);
-  if (activePanelName === name) activePanelName = null;
-  updatePanelScrim();
-  window.requestAnimationFrame(() => {
-    world.renderer?.resize();
-    world.camera.updateAspect();
-  });
-}
-
-function closeAllPanels() {
-  for (const name of ["model", "properties"] as const) closePanel(name);
-}
-
-function openPanel(name: ViewerPanelName) {
-  const panel = getPanel(name);
-  if (!panel) return;
-
-  if (!panelMedia.matches) {
-    for (const otherName of ["model", "properties"] as const) {
-      if (otherName !== name) closePanel(otherName);
-    }
-  }
-
-  panel.classList.add("is-open");
-  activePanelName = name;
-  syncPanelToggle(name, true);
-  updatePanelScrim();
-  window.requestAnimationFrame(() => {
-    world.renderer?.resize();
-    world.camera.updateAspect();
-  });
-}
-
-const syncPanelsForViewport = () => {
-  if (panelMedia.matches) {
-    updatePanelScrim();
-    return;
-  }
-
-  const openPanels = Array.from(
-    viewerRoot.querySelectorAll<HTMLElement>("[data-viewer-panel].is-open"),
-  );
-  if (openPanels.length > 1) {
-    const keepName = activePanelName || openPanels[openPanels.length - 1].dataset.viewerPanel;
-    for (const panel of openPanels) {
-      if (panel.dataset.viewerPanel !== keepName) {
-        closePanel(panel.dataset.viewerPanel as ViewerPanelName);
-      }
-    }
-  }
-  updatePanelScrim();
-};
-
-viewerRoot.querySelectorAll<HTMLButtonElement>("[data-open-panel]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const name = button.dataset.openPanel as ViewerPanelName;
-    const panel = getPanel(name);
-    if (panel?.classList.contains("is-open")) {
-      closePanel(name);
-    } else {
-      openPanel(name);
-    }
-  });
-});
-
-viewerRoot.querySelectorAll<HTMLButtonElement>("[data-close-panel]").forEach((button) => {
-  button.addEventListener("click", () => {
-    closePanel(button.dataset.closePanel as ViewerPanelName);
-  });
-});
-
-viewerRoot.querySelector("[data-close-panels]")?.addEventListener("click", closeAllPanels);
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !panelMedia.matches) closeAllPanels();
-});
-panelMedia.addEventListener("change", syncPanelsForViewport);
 
 const resizeViewer = () => {
   const { width, height } = viewport.getBoundingClientRect();
@@ -910,8 +772,6 @@ if (fragmentsBenchmarkMode) {
   });
   document.body.append(benchmarkInput);
 }
-if (!isPublicViewer && panelMedia.matches) openPanel("model");
-
 window.addEventListener("resize", resizeViewer);
 await new Promise<void>((resolve) => {
   window.requestAnimationFrame(() => {

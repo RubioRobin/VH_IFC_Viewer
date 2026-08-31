@@ -1,6 +1,6 @@
 # Technische overdracht — directe IFC-keten
 
-**Status:** release 1.1.0 — augustus 2026
+**Status:** release 1.10.0 — augustus 2026
 **Actieve route:** Revit + adminportaal → Supabase → Vercel IFC-viewer
 **Legacy, niet gedeployed:** de Express-backend
 

@@ -7,15 +7,13 @@
   --vh-cream: #f4efe4;
   --vh-warning: #e8bd72;
   --vh-success: #9fc69c;
-  --vh-panel-width: clamp(18rem, 22vw, 20rem);
-  --vh-sheet-height: min(72vh, 38rem);
+  --vh-panel-width: clamp(15rem, 20vw, 20rem);
   --vh-control-height: 2.75rem;
   --vh-toolbar-label-size: 0.75rem;
   --vh-focus-ring: 2px solid var(--vh-cream);
   --vh-focus-offset: 2px;
   --vh-motion-fast: 140ms;
   --vh-motion-ease: cubic-bezier(0.2, 0, 0, 1);
-  --vh-panel-scrim: rgba(0, 0, 0, 0.54);
 
   --bim-ui_bg-base: var(--vh-ink);
   --bim-ui_bg-contrast-10: var(--vh-ink-raised);
@@ -152,84 +150,19 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-.viewer-panel-actions {
-  position: absolute;
-  top: 1rem;
-  right: 5.25rem;
-  z-index: 5;
-  display: flex;
-  gap: 0.45rem;
-}
-
-.viewer-panel-toggle,
-.viewer-panel__close {
-  display: inline-flex;
-  min-height: var(--vh-control-height);
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  color: var(--vh-cream);
-  cursor: pointer;
-  background: rgba(16, 17, 18, 0.9);
-  border: 1px solid rgba(193, 169, 121, 0.38);
-  border-radius: 0.35rem;
-  transition:
-    color var(--vh-motion-fast) var(--vh-motion-ease),
-    background-color var(--vh-motion-fast) var(--vh-motion-ease),
-    border-color var(--vh-motion-fast) var(--vh-motion-ease);
-}
-
-.viewer-panel-toggle {
-  padding: 0.55rem 0.75rem;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.viewer-panel-toggle bim-icon,
-.viewer-panel__close bim-icon {
-  width: 1.05rem;
-  height: 1.05rem;
-  color: var(--vh-gold);
-}
-
-.viewer-panel-toggle:hover,
-.viewer-panel-toggle.is-active,
-.viewer-panel__close:hover {
-  color: var(--vh-ink);
-  background: var(--vh-gold);
-  border-color: var(--vh-gold-light);
-}
-
-.viewer-panel-toggle:hover bim-icon,
-.viewer-panel-toggle.is-active bim-icon,
-.viewer-panel__close:hover bim-icon {
-  color: var(--vh-ink);
-}
-
 .basic-viewer__sidebar {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 8;
+  position: relative;
+  z-index: 2;
   box-sizing: border-box;
-  width: 100%;
-  height: var(--vh-sheet-height);
+  width: var(--vh-panel-width);
+  height: 100%;
+  flex: 0 0 var(--vh-panel-width);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   color: var(--vh-cream);
-  visibility: hidden;
   background: rgba(25, 27, 29, 0.98);
-  border-top: 1px solid rgba(193, 169, 121, 0.48);
-  border-radius: 0.85rem 0.85rem 0 0;
-  box-shadow: 0 -1.5rem 3rem rgba(0, 0, 0, 0.38);
-  opacity: 0;
-  transform: translateY(100%);
-  transition:
-    transform var(--vh-motion-fast) var(--vh-motion-ease),
-    opacity var(--vh-motion-fast) var(--vh-motion-ease),
-    visibility 0s linear var(--vh-motion-fast);
+  border: 0;
   --bim-ui_bg-base: var(--vh-ink);
   --bim-ui_bg-contrast-10: #151719;
   --bim-ui_bg-contrast-20: #1b1e20;
@@ -241,11 +174,12 @@ summary:focus-visible {
   --bim-ui_main-base: var(--vh-gold);
 }
 
-.basic-viewer__sidebar.is-open {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 0s;
+.basic-viewer__sidebar--left {
+  border-right: 1px solid rgba(193, 169, 121, 0.24);
+}
+
+.basic-viewer__sidebar--right {
+  border-left: 1px solid rgba(193, 169, 121, 0.24);
 }
 
 .viewer-panel__header {
@@ -253,7 +187,7 @@ summary:focus-visible {
   min-height: 4rem;
   box-sizing: border-box;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0.7rem 1rem;
   border-bottom: 1px solid rgba(193, 169, 121, 0.22);
 }
@@ -263,11 +197,6 @@ summary:focus-visible {
   color: var(--vh-gold);
   font-size: 1.05rem;
   font-weight: 650;
-}
-
-.viewer-panel__close {
-  width: var(--vh-control-height);
-  padding: 0;
 }
 
 .viewer-panel__content {
@@ -290,27 +219,6 @@ summary:focus-visible {
 .basic-viewer__sidebar bim-table,
 .basic-viewer__sidebar bim-label {
   color: var(--vh-cream);
-}
-
-.viewer-panel-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 7;
-  padding: 0;
-  visibility: hidden;
-  cursor: pointer;
-  background: var(--vh-panel-scrim);
-  border: 0;
-  opacity: 0;
-  transition:
-    opacity var(--vh-motion-fast) var(--vh-motion-ease),
-    visibility 0s linear var(--vh-motion-fast);
-}
-
-.viewer-panel-scrim.is-active {
-  visibility: visible;
-  opacity: 1;
-  transition-delay: 0s;
 }
 
 .properties-hint,
@@ -693,76 +601,52 @@ body.is-distance-measuring .viewer-snapping-indicator {
   display: block !important;
 }
 
-@media (min-width: 800px) and (max-width: 1439px) {
+@media (max-width: 799px) {
+  .basic-viewer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(15rem, 1fr) minmax(12rem, 38vh);
+  }
+
+  .basic-viewer__viewport {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
   .basic-viewer__sidebar {
-    top: 0;
-    bottom: 0;
-    left: auto;
-    width: var(--vh-panel-width);
-    height: 100%;
-    border-top: 0;
-    border-radius: 0;
-    box-shadow: -1.5rem 0 3rem rgba(0, 0, 0, 0.34);
-    transform: translateX(100%);
+    width: auto;
+    height: auto;
+    border-top: 1px solid rgba(193, 169, 121, 0.24);
   }
 
   .basic-viewer__sidebar--left {
-    right: auto;
-    left: 0;
-    box-shadow: 1.5rem 0 3rem rgba(0, 0, 0, 0.34);
-    transform: translateX(-100%);
-  }
-
-  .basic-viewer__sidebar.is-open {
-    transform: translateX(0);
-  }
-}
-
-@media (min-width: 1440px) {
-  .basic-viewer__sidebar {
-    position: relative;
-    inset: auto;
-    z-index: 2;
-    width: 0;
-    height: 100%;
-    flex: 0 0 0;
-    visibility: hidden;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    opacity: 0;
-    transform: none;
-    transition:
-      flex-basis var(--vh-motion-fast) var(--vh-motion-ease),
-      width var(--vh-motion-fast) var(--vh-motion-ease),
-      opacity var(--vh-motion-fast) var(--vh-motion-ease),
-      visibility 0s linear var(--vh-motion-fast);
-  }
-
-  .basic-viewer__sidebar--left {
-    order: -1;
-    border-right: 1px solid rgba(193, 169, 121, 0.24);
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .basic-viewer__sidebar--right {
-    border-left: 1px solid rgba(193, 169, 121, 0.24);
+    grid-column: 2;
+    grid-row: 2;
   }
 
-  .basic-viewer__sidebar.is-open {
-    width: var(--vh-panel-width);
-    flex-basis: var(--vh-panel-width);
-    visibility: visible;
-    opacity: 1;
-    transform: none;
-    transition-delay: 0s;
+  .basic-viewer[data-viewer-mode="public"] .basic-viewer__sidebar--right {
+    grid-column: 1 / -1;
   }
 
-  .viewer-panel-scrim {
-    display: none;
+  .viewer-panel__header {
+    min-height: 3rem;
+    padding: 0.45rem 0.75rem;
   }
-}
 
-@media (max-width: 799px) {
+  .viewer-panel__header h2 {
+    font-size: 0.95rem;
+  }
+
+  .viewer-panel__content {
+    height: calc(100% - 3rem);
+    padding: 0.75rem;
+  }
+
   .viewer-brand {
     top: 0.8rem;
     left: 0.8rem;
@@ -772,28 +656,6 @@ body.is-distance-measuring .viewer-snapping-indicator {
     top: 4.75rem;
     left: 0.8rem;
     max-width: calc(100% - 1.6rem);
-  }
-
-  .viewer-panel-actions {
-    top: 0.8rem;
-    right: 0.8rem;
-  }
-
-  .viewer-panel-toggle {
-    width: var(--vh-control-height);
-    padding: 0;
-  }
-
-  .viewer-panel-toggle span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
   }
 
   .viewer-tools {
@@ -808,6 +670,36 @@ body.is-distance-measuring .viewer-snapping-indicator {
   .viewer-tools-menu,
   .viewer-tools__feedback {
     bottom: 6.35rem;
+  }
+}
+
+@media (max-width: 519px) {
+  .basic-viewer[data-viewer-mode="local"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(12rem, 44vh) minmax(9rem, 28vh) minmax(9rem, 28vh);
+  }
+
+  .basic-viewer[data-viewer-mode="local"] .basic-viewer__sidebar--left {
+    grid-column: 1;
+    grid-row: 2;
+    border-right: 0;
+  }
+
+  .basic-viewer[data-viewer-mode="local"] .basic-viewer__sidebar--right {
+    grid-column: 1;
+    grid-row: 3;
+    border-left: 0;
+  }
+
+  .basic-viewer[data-viewer-mode="public"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(14rem, 60vh) minmax(10rem, 40vh);
+  }
+
+  .basic-viewer[data-viewer-mode="public"] .basic-viewer__sidebar--right {
+    grid-column: 1;
+    grid-row: 2;
+    border-left: 0;
   }
 }
 
