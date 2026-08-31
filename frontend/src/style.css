@@ -301,21 +301,6 @@ summary:focus-visible {
   color: var(--vh-cream);
 }
 
-.properties-technical {
-  margin-top: 0.8rem;
-  border-top: 1px solid rgba(244, 239, 228, 0.1);
-}
-
-.properties-technical summary {
-  min-height: var(--vh-control-height);
-  display: flex;
-  align-items: center;
-  color: var(--vh-gold);
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
 .viewer-tools-overlay {
   position: absolute;
   inset: 0;

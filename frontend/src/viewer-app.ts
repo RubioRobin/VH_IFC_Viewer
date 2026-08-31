@@ -654,37 +654,17 @@ const showSelectedProperties = async (modelIdMap: OBC.ModelIdMap) => {
   loading.textContent = "Eigenschappen ophalen…";
   propertiesContent.append(loading);
 
-  const [itemsData] = CUI.tables.itemsData({
-    components,
-    modelIdMap,
-    emptySelectionWarning: false,
-    itemsDataConfig: {
-      attributesDefault: true,
-      relationsDefault: { attributes: false, relations: false },
-      relations: {
-        IsDefinedBy: { attributes: true, relations: true },
-        DefinesOcurrence: { attributes: false, relations: false },
-        ContainedInStructure: { attributes: true, relations: false },
-        ContainsElements: { attributes: false, relations: false },
-        Decomposes: { attributes: false, relations: false },
-      },
-    },
-  });
-
-  const technicalDetails = document.createElement("details");
-  technicalDetails.className = "properties-technical";
-  const technicalSummary = document.createElement("summary");
-  technicalSummary.textContent = "Technische IFC-data";
-  technicalDetails.append(technicalSummary, itemsData);
-
   try {
     const summary = await createPropertySummary(modelIdMap, requestId);
     if (requestId !== propertyRequestId) return;
-    propertiesContent.replaceChildren(summary, technicalDetails);
+    propertiesContent.replaceChildren(summary);
   } catch (error) {
     console.error("IFC property summary error:", error);
     if (requestId === propertyRequestId) {
-      propertiesContent.replaceChildren(technicalDetails);
+      const errorMessage = document.createElement("p");
+      errorMessage.className = "properties-loading";
+      errorMessage.textContent = "Eigenschappen konden niet worden opgehaald.";
+      propertiesContent.replaceChildren(errorMessage);
     }
   }
 };
