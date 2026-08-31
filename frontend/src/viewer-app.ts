@@ -775,7 +775,7 @@ if (fragmentsBenchmarkMode) {
 window.addEventListener("resize", resizeViewer);
 await new Promise<void>((resolve) => {
   window.requestAnimationFrame(() => {
-    if (resizeViewer()) world.renderer.enabled = true;
+    if (resizeViewer() && world.renderer) world.renderer.enabled = true;
     postproduction.enabled = true;
     resolve();
   });
@@ -807,17 +807,21 @@ const fitModelToView = () => {
   }
 };
 
-const placeModelOnGrid = (model: { object: THREE.Object3D; box: THREE.Box3 }) => {
-  model.object.updateMatrixWorld(true);
-  const boundingBox = model.box;
-  if (boundingBox.isEmpty()) return;
-
-  const gridHeight = grid.getWorldPosition(new THREE.Vector3()).y;
-  model.object.position.y += gridHeight - boundingBox.min.y;
-  model.object.updateMatrixWorld(true);
-};
-
 const getModelWorldBounds = (model: { box: THREE.Box3 }) => model.box.clone();
+
+const updateGroundGridHeight = () => {
+  let minimumModelHeight = Infinity;
+
+  for (const bounds of loadedModelBounds.values()) {
+    if (bounds.isEmpty()) continue;
+    minimumModelHeight = Math.min(minimumModelHeight, bounds.min.y);
+  }
+
+  grid.position.y = Number.isFinite(minimumModelHeight)
+    ? minimumModelHeight
+    : 0;
+  grid.updateMatrixWorld(true);
+};
 
 fragments.list.onItemSet.add(async ({ key, value: model }) => {
   ifcEdgeOverlay.addModel(model);
@@ -826,8 +830,8 @@ fragments.list.onItemSet.add(async ({ key, value: model }) => {
   world.scene.three.add(model.object);
   await fragments.core.update(true);
   await viewerTools.onModelLoaded(model);
-  placeModelOnGrid(model);
   loadedModelBounds.set(key, getModelWorldBounds(model));
+  updateGroundGridHeight();
   model.object.visible = true;
   fitModelToView();
 });
@@ -835,12 +839,14 @@ fragments.list.onItemSet.add(async ({ key, value: model }) => {
 fragments.list.onItemDeleted.add((key) => {
   ifcEdgeOverlay.removeModel(key);
   loadedModelBounds.delete(key);
+  updateGroundGridHeight();
   updateMinimumCameraDistance();
 });
 
 fragments.list.onCleared.add(() => {
   ifcEdgeOverlay.clear();
   loadedModelBounds.clear();
+  updateGroundGridHeight();
   updateMinimumCameraDistance();
 });
 

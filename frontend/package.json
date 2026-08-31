@@ -30,7 +30,7 @@
     "@supabase/supabase-js": "2.95.3",
     "@thatopen/components": "~3.4.8",
     "@thatopen/components-front": "~3.4.2",
-    "@thatopen/fragments": "~3.4.3",
+    "@thatopen/fragments": "3.4.7",
     "@thatopen/ui": "~3.4.0",
     "@thatopen/ui-obc": "~3.4.0",
     "camera-controls": "^3.1.2",
