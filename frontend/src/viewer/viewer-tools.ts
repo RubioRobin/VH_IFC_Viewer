@@ -1,4 +1,4 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
 import * as FRAGS from "@thatopen/fragments";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
@@ -34,13 +34,6 @@ interface TransparentMaterialState {
 const GOLD = new THREE.Color("#c1a979");
 const SHELL_OPACITY = 0.4;
 
-const formatMillimeters = (distanceInMeters: number) => {
-  const millimeters = Math.abs(distanceInMeters) * 1000;
-  return `${new Intl.NumberFormat("nl-NL", {
-    maximumFractionDigits: millimeters < 10 ? 1 : 0,
-  }).format(millimeters)} mm`;
-};
-
 export class ViewerTools {
   readonly element = document.createElement("div");
 
@@ -60,9 +53,6 @@ export class ViewerTools {
     THREE.MeshLambertMaterial,
     TransparentMaterialState
   >();
-  private readonly status = document.createElement("div");
-  private readonly menu = document.createElement("div");
-  private moreButton: HTMLButtonElement | null = null;
   private readonly snappingIndicatorObserver = new MutationObserver(
     (mutations) => {
       for (const mutation of mutations) {
@@ -85,7 +75,6 @@ export class ViewerTools {
   private hasSelection = false;
   private hasMeasurements = false;
   private visibilityChanged = false;
-  private statusTimer: number | undefined;
 
   constructor(options: ViewerToolsOptions) {
     this.components = options.components;
@@ -102,7 +91,6 @@ export class ViewerTools {
     this.buildInterface();
     this.bindEvents();
     this.guardSnappingIndicators();
-    this.setStatus("Selecteer een IFC-element of kies een gereedschap.");
   }
 
   get isShellTransparent() {
@@ -198,6 +186,7 @@ export class ViewerTools {
       appIcons.FOCUS,
       () => this.onFitView(),
     );
+    fitButton.classList.add("viewer-tool-button--fit-view");
     const distanceButton = this.createButton(
       "distance",
       "Meten",
@@ -212,52 +201,42 @@ export class ViewerTools {
       () => this.toggleTransparency(),
       true,
     );
-    this.moreButton = this.createButton("more", "Meer", appIcons.MORE, () =>
-      this.toggleMenu(),
+    const hideButton = this.createButton(
+      "hide",
+      "Verberg selectie",
+      appIcons.HIDE,
+      () => this.hideSelection(),
     );
-    this.moreButton.setAttribute("aria-haspopup", "menu");
-    this.moreButton.setAttribute("aria-expanded", "false");
-    this.moreButton.setAttribute("aria-controls", "viewer-tools-menu");
+    const isolateButton = this.createButton(
+      "isolate",
+      "Isoleer selectie",
+      appIcons.ISOLATE,
+      () => this.isolateSelection(),
+    );
+    const clearMeasurementsButton = this.createButton(
+      "clear-measures",
+      "Wis maten",
+      appIcons.DELETE,
+      () => this.clearMeasurements(),
+    );
+    const showAllButton = this.createButton(
+      "show-all",
+      "Toon alles",
+      appIcons.SHOW,
+      () => this.showAll(),
+    );
 
     toolbar.append(
       fitButton,
       distanceButton,
       transparentButton,
-      this.moreButton,
+      hideButton,
+      isolateButton,
+      clearMeasurementsButton,
+      showAllButton,
     );
 
-    this.menu.id = "viewer-tools-menu";
-    this.menu.className = "viewer-tools-menu";
-    this.menu.setAttribute("role", "menu");
-    this.menu.setAttribute("aria-label", "Meer viewerfuncties");
-    this.menu.hidden = true;
-    this.menu.append(
-      this.createMenuButton("hide", "Verberg selectie", appIcons.HIDE, () =>
-        this.hideSelection(),
-      ),
-      this.createMenuButton(
-        "isolate",
-        "Isoleer selectie",
-        appIcons.ISOLATE,
-        () => this.isolateSelection(),
-      ),
-      this.createMenuButton(
-        "clear-measures",
-        "Wis maten",
-        appIcons.DELETE,
-        () => this.clearMeasurements(),
-      ),
-      this.createMenuButton("show-all", "Toon alles", appIcons.SHOW, () =>
-        this.showAll(),
-      ),
-    );
-
-    this.status.className = "viewer-tools__feedback";
-    this.status.setAttribute("role", "status");
-    this.status.setAttribute("aria-live", "polite");
-    this.status.setAttribute("aria-atomic", "true");
-
-    this.element.append(this.menu, toolbar, this.status);
+    this.element.append(toolbar);
     this.syncContextActions();
   }
 
@@ -285,36 +264,7 @@ export class ViewerTools {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      void this.runAction(action);
-    });
-
-    this.buttons.set(key, button);
-    return button;
-  }
-
-  private createMenuButton(
-    key: string,
-    label: string,
-    icon: string,
-    action: () => void | Promise<void>,
-  ) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "viewer-tools-menu__button";
-    button.setAttribute("role", "menuitem");
-
-    const iconElement = document.createElement("bim-icon");
-    iconElement.setAttribute("icon", icon);
-    iconElement.setAttribute("aria-hidden", "true");
-
-    const text = document.createElement("span");
-    text.textContent = label;
-    button.append(iconElement, text);
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.closeMenu();
-      void this.runAction(action);
+      this.runAction(action);
     });
 
     this.buttons.set(key, button);
@@ -326,14 +276,9 @@ export class ViewerTools {
       capture: true,
     });
     window.addEventListener("keydown", this.onKeyDown);
-    document.addEventListener("pointerdown", this.onDocumentPointerDown);
-    this.lengthMeasurement.list.onItemAdded.add((line) => {
+    this.lengthMeasurement.list.onItemAdded.add(() => {
       this.hasMeasurements = true;
       this.syncContextActions();
-      this.setStatus(
-        `Afstand: ${formatMillimeters(line.start.distanceTo(line.end))}`,
-        "success",
-      );
       window.queueMicrotask(() => {
         if (this.activeTool === "distance") this.setActiveTool("none");
       });
@@ -344,29 +289,14 @@ export class ViewerTools {
     if (this.activeTool !== "distance" || event.button !== 0) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void this.lengthMeasurement.create();
+    this.lengthMeasurement.create();
   };
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "Escape") return;
-    if (!this.menu.hidden) {
-      this.closeMenu(true);
-      return;
-    }
     if (this.activeTool !== "none") {
       this.setActiveTool("none");
-      this.setStatus("Gereedschap gestopt.");
     }
-  };
-
-  private readonly onDocumentPointerDown = (event: PointerEvent) => {
-    if (this.menu.hidden || !(event.target instanceof Node)) return;
-    if (
-      this.menu.contains(event.target) ||
-      this.moreButton?.contains(event.target)
-    )
-      return;
-    this.closeMenu();
   };
 
   private async runAction(action: () => void | Promise<void>) {
@@ -374,24 +304,16 @@ export class ViewerTools {
       await action();
     } catch (error) {
       console.error("Viewer tool error:", error);
-      this.setStatus(
-        error instanceof Error
-          ? error.message
-          : "Het gereedschap kon niet worden uitgevoerd.",
-        "warning",
-      );
     }
   }
 
   private toggleDistance() {
     if (this.activeTool === "distance") {
       this.setActiveTool("none");
-      this.setStatus("Afstand meten gestopt.");
       return;
     }
 
     this.setActiveTool("distance");
-    this.setStatus("Klik twee punten, lijnen of vlakken. Esc stopt het meten.");
   }
 
   private setActiveTool(tool: ActiveTool) {
@@ -414,7 +336,6 @@ export class ViewerTools {
     this.hasMeasurements = false;
     this.syncContextActions();
     this.setActiveTool("none");
-    this.setStatus("Alle maten zijn gewist.", "success");
   }
 
   private hideMeasurementPicker() {
@@ -515,12 +436,6 @@ export class ViewerTools {
   private async toggleTransparency() {
     this.shellTransparent = !this.shellTransparent;
     this.setButtonActive("transparent", this.shellTransparent);
-    this.setStatus(
-      this.shellTransparent
-        ? "IFC-shell is 60% doorzichtig."
-        : "IFC-shell is weer volledig dekkend.",
-      "success",
-    );
 
     const opacityUpdates: Promise<void>[] = [];
     for (const model of this.fragments.list.values()) {
@@ -544,12 +459,7 @@ export class ViewerTools {
 
   private async hideSelection() {
     const selection = this.getSelection();
-    if (OBC.ModelIdMapUtils.isEmpty(selection)) {
-      this.setStatus("Selecteer eerst één of meer IFC-elementen.", "warning");
-      return;
-    }
-
-    const selectedCount = this.countItems(selection);
+    if (OBC.ModelIdMapUtils.isEmpty(selection)) return;
 
     await this.hider.set(false, selection);
     if (this.shellTransparent) this.stabilizeTransparentMaterials();
@@ -557,21 +467,11 @@ export class ViewerTools {
     await this.highlighter.clear("select");
     this.visibilityChanged = true;
     this.syncContextActions();
-    this.setStatus(
-      `${selectedCount} ${selectedCount === 1 ? "element" : "elementen"} verborgen.`,
-      "success",
-      true,
-    );
   }
 
   private async isolateSelection() {
     const selection = this.getSelection();
-    if (OBC.ModelIdMapUtils.isEmpty(selection)) {
-      this.setStatus("Selecteer eerst één of meer IFC-elementen.", "warning");
-      return;
-    }
-
-    const selectedCount = this.countItems(selection);
+    if (OBC.ModelIdMapUtils.isEmpty(selection)) return;
 
     const visibilityUpdates: Promise<void>[] = [];
     for (const [modelId, model] of this.fragments.list) {
@@ -594,11 +494,6 @@ export class ViewerTools {
     await this.highlighter.clear("select");
     this.visibilityChanged = true;
     this.syncContextActions();
-    this.setStatus(
-      `${selectedCount} ${selectedCount === 1 ? "element" : "elementen"} geïsoleerd.`,
-      "success",
-      true,
-    );
   }
 
   private async showAll() {
@@ -608,7 +503,6 @@ export class ViewerTools {
     await this.highlighter.clear("select");
     this.visibilityChanged = false;
     this.syncContextActions();
-    this.setStatus("Alle IFC-elementen zijn weer zichtbaar.", "success");
   }
 
   private getSelection() {
@@ -624,35 +518,6 @@ export class ViewerTools {
     }
   }
 
-  private countItems(items: OBC.ModelIdMap) {
-    return Object.values(items).reduce(
-      (total, localIds) => total + localIds.size,
-      0,
-    );
-  }
-
-  private toggleMenu() {
-    const willOpen = this.menu.hidden;
-    this.menu.hidden = !willOpen;
-    this.moreButton?.setAttribute("aria-expanded", String(willOpen));
-    this.moreButton?.classList.toggle("viewer-tool-button--active", willOpen);
-
-    if (willOpen) {
-      const firstEnabled = this.menu.querySelector<HTMLButtonElement>(
-        "button:not(:disabled)",
-      );
-      window.requestAnimationFrame(() => firstEnabled?.focus());
-    }
-  }
-
-  private closeMenu(restoreFocus = false) {
-    if (this.menu.hidden) return;
-    this.menu.hidden = true;
-    this.moreButton?.setAttribute("aria-expanded", "false");
-    this.moreButton?.classList.remove("viewer-tool-button--active");
-    if (restoreFocus) this.moreButton?.focus();
-  }
-
   private syncContextActions() {
     const hideButton = this.buttons.get("hide");
     const isolateButton = this.buttons.get("isolate");
@@ -663,38 +528,5 @@ export class ViewerTools {
     if (isolateButton) isolateButton.disabled = !this.hasSelection;
     if (clearButton) clearButton.disabled = !this.hasMeasurements;
     if (showAllButton) showAllButton.disabled = !this.visibilityChanged;
-  }
-
-  private setStatus(
-    message: string,
-    state: "info" | "success" | "warning" = "info",
-    withUndo = false,
-  ) {
-    window.clearTimeout(this.statusTimer);
-    this.status.replaceChildren();
-
-    const text = document.createElement("span");
-    text.textContent = message;
-    this.status.append(text);
-
-    if (withUndo) {
-      const undoButton = document.createElement("button");
-      undoButton.type = "button";
-      undoButton.textContent = "Ongedaan maken";
-      undoButton.addEventListener(
-        "click",
-        () => void this.runAction(() => this.showAll()),
-      );
-      this.status.append(undoButton);
-    }
-
-    this.status.dataset.state = state;
-    this.status.classList.add("is-visible");
-
-    if (!withUndo) {
-      this.statusTimer = window.setTimeout(() => {
-        this.status.classList.remove("is-visible");
-      }, 4500);
-    }
   }
 }

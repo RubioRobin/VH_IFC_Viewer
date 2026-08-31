@@ -313,6 +313,7 @@ summary:focus-visible {
   inset: 0;
   z-index: 4;
   pointer-events: none;
+  container: viewer-tools / inline-size;
 }
 
 .viewer-tools {
@@ -323,6 +324,7 @@ summary:focus-visible {
   box-sizing: border-box;
   width: min(30rem, calc(100% - 1.4rem));
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
   padding: 0.38rem;
   background: rgba(16, 17, 18, 0.95);
   border: 1px solid rgba(193, 169, 121, 0.46);
@@ -357,16 +359,6 @@ summary:focus-visible {
     border-color var(--vh-motion-fast) var(--vh-motion-ease);
 }
 
-.viewer-tool-button:not(:first-child)::before {
-  position: absolute;
-  top: 16%;
-  bottom: 16%;
-  left: -1px;
-  width: 1px;
-  content: "";
-  background: rgba(244, 239, 228, 0.12);
-}
-
 .viewer-tool-button bim-icon {
   display: block;
   width: 1.2rem;
@@ -384,7 +376,7 @@ summary:focus-visible {
   text-align: center;
 }
 
-.viewer-tool-button:hover,
+.viewer-tool-button:hover:not(:disabled),
 .viewer-tool-button--active {
   color: var(--vh-cream);
   background: rgba(193, 169, 121, 0.12);
@@ -407,119 +399,68 @@ summary:focus-visible {
   color: var(--vh-ink);
 }
 
-.viewer-tools-menu {
-  position: absolute;
-  bottom: 6.2rem;
-  left: 50%;
-  z-index: 2;
-  display: grid;
-  box-sizing: border-box;
-  width: min(20rem, calc(100% - 1.4rem));
-  gap: 0.25rem;
-  padding: 0.45rem;
-  background: rgba(25, 27, 29, 0.98);
-  border: 1px solid rgba(193, 169, 121, 0.46);
-  border-radius: 0.55rem;
-  box-shadow: 0 1.2rem 2.8rem rgba(0, 0, 0, 0.46);
-  pointer-events: auto;
-  transform: translateX(-50%);
-  backdrop-filter: blur(14px);
-}
-
-.viewer-tools-menu[hidden] {
-  display: none;
-}
-
-.viewer-tools-menu__button {
-  display: grid;
-  min-height: var(--vh-control-height);
-  grid-template-columns: 1.25rem 1fr;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem 0.75rem;
-  color: var(--vh-cream);
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 0.35rem;
-}
-
-.viewer-tools-menu__button bim-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-  color: var(--vh-gold);
-}
-
-.viewer-tools-menu__button:hover:not(:disabled) {
-  background: rgba(193, 169, 121, 0.12);
-  border-color: rgba(193, 169, 121, 0.34);
-}
-
-.viewer-tools-menu__button:disabled {
+.viewer-tool-button:disabled {
   color: rgba(244, 239, 228, 0.38);
   cursor: not-allowed;
 }
 
-.viewer-tools-menu__button:disabled bim-icon {
+.viewer-tool-button:disabled bim-icon {
   color: rgba(193, 169, 121, 0.38);
 }
 
-.viewer-tools__feedback {
-  position: absolute;
-  bottom: 6.25rem;
-  left: 50%;
-  z-index: 3;
-  display: flex;
-  max-width: min(28rem, calc(100% - 1.4rem));
-  box-sizing: border-box;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem 0.7rem;
-  color: var(--vh-cream);
-  font-size: 0.8rem;
-  line-height: 1.35;
-  visibility: hidden;
-  pointer-events: none;
-  background: rgba(25, 27, 29, 0.98);
-  border: 1px solid rgba(193, 169, 121, 0.42);
-  border-radius: 0.4rem;
-  box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.35);
-  opacity: 0;
-  transform: translate(-50%, 0.4rem);
-  transition:
-    opacity var(--vh-motion-fast) var(--vh-motion-ease),
-    transform var(--vh-motion-fast) var(--vh-motion-ease),
-    visibility 0s linear var(--vh-motion-fast);
-}
+@media (min-width: 800px) {
+  .viewer-tools {
+    width: min(34rem, calc(100% - 1.4rem));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 0.3rem;
+  }
 
-.viewer-tools__feedback.is-visible {
-  visibility: visible;
-  pointer-events: auto;
-  opacity: 1;
-  transform: translate(-50%, 0);
-  transition-delay: 0s;
-}
+  .viewer-tool-button {
+    width: auto;
+    min-height: 2.8rem;
+    grid-template-columns: 1rem max-content;
+    grid-template-rows: none;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.8rem;
+  }
 
-.viewer-tools__feedback[data-state="warning"] {
-  border-color: rgba(232, 189, 114, 0.7);
-}
+  .viewer-tool-button--fit-view {
+    display: none;
+  }
 
-.viewer-tools__feedback[data-state="success"] {
-  border-color: rgba(159, 198, 156, 0.65);
-}
+  .viewer-tool-button bim-icon {
+    width: 1rem;
+    height: 1rem;
+  }
 
-.viewer-tools__feedback button {
-  flex: 0 0 auto;
-  min-height: 2rem;
-  padding: 0.25rem 0.55rem;
-  color: var(--vh-ink);
-  font-size: 0.75rem;
-  font-weight: 650;
-  cursor: pointer;
-  background: var(--vh-gold);
-  border: 0;
-  border-radius: 0.3rem;
+  .viewer-tool-button span {
+    width: auto;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  @container viewer-tools (min-width: 40rem) {
+    .viewer-tools {
+      width: auto;
+      max-width: calc(100% - 1.4rem);
+      grid-template-columns: repeat(6, max-content);
+    }
+
+    .viewer-tool-button {
+      gap: 0.35rem;
+      padding: 0.4rem 0.55rem;
+    }
+
+    .viewer-tool-button bim-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+    }
+
+    .viewer-tool-button span {
+      font-size: 0.64rem;
+    }
+  }
 }
 
 .loading-progress {
@@ -663,13 +604,8 @@ body.is-distance-measuring .viewer-snapping-indicator {
   }
 
   .viewer-tool-button {
-    min-height: 4.3rem;
-    padding-inline: 0.2rem;
-  }
-
-  .viewer-tools-menu,
-  .viewer-tools__feedback {
-    bottom: 6.35rem;
+    min-height: 3.8rem;
+    padding-inline: 0.15rem;
   }
 }
 
